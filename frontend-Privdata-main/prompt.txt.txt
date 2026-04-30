@@ -1,0 +1,379 @@
+Quiero que trabajes directamente sobre este proyecto frontend y hagas un refactor de coherencia funcional, semántica y estructural, manteniendo el estilo visual actual lo más posible.
+
+OBJETIVO GENERAL
+Ajusta la web para que quede coherente con el MVP del sistema PrivData, alineando frontend, dominio y navegación con los modelos definidos para backend.
+
+NO quiero un rediseño completo.
+NO quiero módulos nuevos innecesarios.
+NO quiero sobreingeniería.
+SÍ quiero consistencia entre panel admin y portal titular.
+SÍ quiero que el frontend quede preparado para crecer hacia un enfoque de mantenedores.
+
+==================================================
+1. CONTEXTO DEL SISTEMA
+==================================================
+
+Este sistema tiene dos experiencias distintas:
+
+1) PANEL ADMIN
+Uso interno de la organización para gestionar protección de datos personales.
+
+2) PORTAL TITULAR
+Uso del titular de datos para revisar consentimientos, ejercer derechos ARCO y hacer seguimiento.
+
+El frontend actual ya existe y debe refactorizarse sobre su estructura actual.
+
+==================================================
+2. MODELOS MVP QUE DEBES RESPETAR
+==================================================
+
+AUTH SERVICE
+- users
+- roles
+- permissions
+- role_permissions
+- user_roles
+- refresh_tokens
+
+ORGANIZATION SERVICE (MVP)
+- organizations
+- departments
+- persons
+- organization_settings
+
+Interpretación obligatoria:
+- users = cuentas técnicas de acceso
+- persons = personas reales del dominio
+- panel admin = cuentas internas con roles técnicos
+- portal titular = persona/titular autenticado
+- no mezclar cuentas internas con titulares
+- no duplicar conceptos de forma innecesaria
+
+==================================================
+3. IDEA BASE DEL PROYECTO QUE DEBES PRESERVAR
+==================================================
+
+Este proyecto debe quedar preparado para un enfoque de mantenedores.
+
+Eso significa que el frontend debe ser coherente con una arquitectura donde existirán mantenedores como:
+- mantenedor de roles
+- mantenedor de permisos
+- mantenedor de usuarios internos
+- mantenedor de titulares/personas
+- mantenedor de configuración organizacional
+
+No quiero que implementes ahora todos esos mantenedores completos si no existen.
+Sí quiero que las pantallas, labels, componentes y navegación no contradigan esa dirección.
+
+Especialmente:
+- “Usuarios” debe representar cuentas internas del sistema
+- “Titulares” debe representar personas titulares de datos
+- el sistema debe poder crecer después hacia un mantenedor de roles y permisos sin romper el front
+- evita hardcodear conceptos que impidan esa evolución
+
+==================================================
+4. PROBLEMAS ACTUALES A CORREGIR
+==================================================
+
+Corrige las incoherencias actuales entre admin y portal.
+
+Debes asumir estas correcciones como obligatorias:
+
+1) “Usuarios” en admin NO es igual a “Titulares”
+- Usuarios = cuentas internas
+- Titulares = personas titulares de datos
+
+2) El portal NO es una extensión del panel admin
+- debe sentirse como experiencia del titular
+- no como una tabla administrativa disfrazada
+
+3) “Titulares” debe ser coherente con el modelo persons
+- visualmente puede seguir llamándose “Titulares”
+- pero semánticamente debe representar personas titulares del dominio
+
+4) ARCO debe estar unificado
+- no puede haber tipos distintos entre admin y portal
+- debe existir un catálogo coherente y consistente
+- usa los mismos nombres en toda la interfaz
+
+5) Consentimientos debe representar el mismo dominio desde dos perspectivas
+- Admin: vista formal/administrativa
+- Portal: vista amigable y accionable
+- no deben parecer conceptos distintos
+
+6) Debe quedar clara la separación entre:
+- cuentas internas de administración
+- personas titulares
+- titular autenticado del portal
+
+==================================================
+5. ESTRUCTURA FUNCIONAL QUE DEBE QUEDAR
+==================================================
+
+A. PANEL ADMIN
+Módulos permitidos para MVP:
+
+1. Dashboard
+2. Usuarios
+3. Titulares
+4. Consentimientos
+5. Solicitudes ARCO
+6. Auditoría
+
+Interpretación correcta de cada módulo:
+
+1) Dashboard
+- resumen general del sistema
+- métricas de titulares, consentimientos, solicitudes y pendientes
+- actividad reciente
+- solicitudes recientes
+
+2) Usuarios
+- gestión de cuentas internas del sistema
+- representa cuentas técnicas de acceso
+- debe mostrar nombre, correo, rol, estado, fecha creación
+- se puede crear usuario interno
+- no debe confundirse con titulares
+
+3) Titulares
+- registro/listado de personas titulares de datos
+- debe mostrar nombre, rut, email, teléfono, cantidad de consentimientos, fecha registro
+- semánticamente representa persons del dominio para el caso de titulares
+- puede mantener el nombre visual “Titulares”
+
+4) Consentimientos
+- gestión formal de consentimientos otorgados
+- tabla administrativa
+- puede incluir titular, finalidad, categoría, estado, versión, hash, fecha
+- debe alinearse con lo que el titular ve en el portal
+
+5) Solicitudes ARCO
+- gestión interna de solicitudes de derechos
+- listado administrativo
+- responsable
+- estado
+- vencimiento
+- tipos coherentes con portal
+
+6) Auditoría
+- registro de eventos del sistema
+- acciones relevantes internas y del dominio
+- búsqueda por acción, usuario o detalle
+
+B. PORTAL TITULAR
+Módulos permitidos para MVP:
+
+1. Inicio
+2. Consentimientos
+3. Derechos ARCO
+4. Seguimiento
+
+Interpretación correcta:
+
+1) Inicio
+- bienvenida al titular autenticado
+- resumen personal
+- accesos rápidos
+- no debe sentirse como un dashboard admin
+
+2) Consentimientos
+- vista amigable de consentimientos otorgados
+- agrupados por categoría
+- toggle cuando corresponda
+- indicar si es necesario, opcional o no revocable
+- mostrar desde cuándo aplica
+
+3) Derechos ARCO
+- formulario de solicitud
+- selección del derecho desde un catálogo unificado
+- datos del titular
+- alcance
+- descripción
+- declaración de veracidad
+- experiencia simple y enfocada
+
+4) Seguimiento
+- estado de solicitudes enviadas
+- línea de avance o timeline
+- fechas, plazos, hitos y resultado
+- descarga de constancia cuando aplique
+
+==================================================
+6. REGLAS DE CONSISTENCIA VISUAL Y SEMÁNTICA
+==================================================
+
+Aplica estas reglas en toda la web:
+
+1) Unificar terminología
+Usa como base:
+- Usuarios = cuentas internas del sistema
+- Titulares = personas titulares de datos
+- Consentimientos = permisos/autorizaciones de tratamiento de datos
+- Solicitudes ARCO = solicitudes de ejercicio de derechos
+- Portal Titular = experiencia del titular autenticado
+
+2) No mezclar cuentas con personas
+- En admin “Usuarios” no debe incluir titulares salvo que la UI lo explique explícitamente
+- En portal el titular no debe verse como administrador o usuario interno
+
+3) Unificar catálogo ARCO
+Debes revisar y corregir cualquier inconsistencia de nombres o tipos entre admin y portal
+
+4) Revisar subtítulos y textos de apoyo
+Los subtítulos deben explicar bien el propósito de cada pantalla sin contradecir el modelo MVP
+
+5) Mantener el diseño actual
+- no rehagas la UI desde cero
+- no cambies la identidad visual
+- haz un refactor semántico, estructural y funcional
+
+==================================================
+7. AJUSTES ESPECÍFICOS QUE DEBES REVISAR
+==================================================
+
+Revisa especialmente:
+
+- si “Titulares” debe mantenerse como label visible pero alineado internamente a persons
+- si “Usuarios” se entiende claramente como cuentas internas
+- si el portal usa textos demasiado administrativos
+- si los tipos ARCO están inconsistentes
+- si las tarjetas del portal usan terminología distinta al módulo admin equivalente
+- si el dashboard admin usa métricas compatibles con el resto del sistema
+- si “Sistemas que usan mis datos” necesita reinterpretarse como lista de finalidades, categorías o fuentes de tratamiento dentro del MVP
+- si hay elementos que deberían quedar como futuro y no como funcionalidad principal del MVP
+
+==================================================
+8. QUÉ QUIERO QUE HAGAS SOBRE EL PROYECTO
+==================================================
+
+Trabaja sobre el código del frontend y realiza estas tareas:
+
+1) Analiza la estructura actual del proyecto
+- rutas
+- layouts
+- componentes
+- módulos
+- labels
+- textos visibles
+- navegación
+- duplicidades
+- componentes reutilizables
+
+2) Detecta incoherencias
+- entre admin y portal
+- entre componentes y dominio
+- entre navegación y significado funcional
+- entre labels y propósito real de la pantalla
+
+3) Refactoriza el frontend
+- corrige nombres
+- corrige títulos y subtítulos
+- corrige labels
+- corrige navegación
+- corrige textos visibles
+- corrige agrupación de módulos
+- corrige semántica de vistas
+- mantén el estilo visual actual
+
+4) Deja el frontend listo para crecer
+- prepara el código para que luego se puedan agregar mantenedores sin romper la estructura
+- especialmente mantenedor de roles y permisos
+- evita estructuras rígidas o nombres que dificulten esa evolución
+
+==================================================
+9. DECISIONES DE DISEÑO QUE DEBES APLICAR
+==================================================
+
+Aplica estas decisiones salvo que el código actual exija una adaptación mínima:
+
+A) PANEL ADMIN
+Mantener estos módulos:
+- Dashboard
+- Usuarios
+- Titulares
+- Consentimientos
+- Solicitudes ARCO
+- Auditoría
+
+B) PORTAL TITULAR
+Mantener estos módulos:
+- Inicio
+- Consentimientos
+- Derechos ARCO
+- Seguimiento
+
+C) USERS
+Interpretar “Usuarios” siempre como cuentas internas del sistema.
+
+D) PERSONS / TITULARES
+Interpretar “Titulares” como personas titulares del dominio.
+
+E) MANTENEDORES
+Aunque no implementes todos ahora, deja la estructura visual y semántica preparada para:
+- mantenimiento de roles
+- mantenimiento de permisos
+- mantenimiento de usuarios internos
+- mantenimiento de titulares/personas
+- mantenimiento de configuración organizacional
+
+==================================================
+10. RESTRICCIONES IMPORTANTES
+==================================================
+
+- No rompas la estructura del proyecto innecesariamente
+- No cambies de framework
+- No cambies librerías salvo que sea imprescindible
+- No rehagas toda la app desde cero
+- No inventes nuevas funcionalidades que no estén justificadas por el MVP
+- No agregues complejidad legal o funcional que no corresponda a esta etapa
+- Mantén el foco en coherencia, claridad, dominio y preparación para mantenedores
+
+==================================================
+11. RESULTADO ESPERADO
+==================================================
+
+Quiero que me entregues y/o implementes:
+
+1. Diagnóstico breve de incoherencias detectadas
+2. Propuesta de estructura final coherente
+3. Cambios concretos por pantalla admin
+4. Cambios concretos por pantalla portal
+5. Cambios de naming obligatorios
+6. Cambios opcionales recomendados
+7. Refactor efectivo del código si ya es posible hacerlo
+8. Código limpio, ordenado y coherente con el MVP
+
+==================================================
+12. FORMA DE TRABAJAR
+==================================================
+
+Trabaja iterativamente sobre el proyecto.
+
+Prioriza este orden:
+
+FASE 1
+- analizar estructura
+- detectar incoherencias
+- proponer ajustes
+
+FASE 2
+- aplicar refactor de textos, navegación, labels y jerarquía
+
+FASE 3
+- mejorar componentes si hace falta
+- dejar la estructura lista para crecimiento hacia mantenedores
+
+==================================================
+13. CRITERIO FINAL DE ÉXITO
+==================================================
+
+El refactor será exitoso si al terminar:
+
+- el admin y el portal ya no se contradicen
+- “Usuarios” significa cuentas internas
+- “Titulares” significa personas titulares
+- el portal se siente una experiencia del titular y no del admin
+- ARCO está unificado
+- Consentimientos está alineado entre admin y portal
+- el frontend queda preparado para una evolución con mantenedores
+- el sistema se siente coherente con el MVP de Auth y Organization

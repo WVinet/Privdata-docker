@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Fondos — off-white cálido, nada de azul frío */
+    --background: 32 18% 96%;
+    --foreground: 20 25% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 25% 10%;
+
+    /* Primario — verde esmeralda profundo */
+    --primary: 164 58% 28%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secundario — verde esmeralda muy pálido */
+    --secondary: 164 25% 91%;
+    --secondary-foreground: 20 25% 10%;
+
+    /* Muted — arena apagada */
+    --muted: 32 15% 91%;
+    --muted-foreground: 20 12% 44%;
+
+    /* Accent — miel/dorado cálido para highlights */
+    --accent: 40 88% 52%;
+    --accent-foreground: 20 25% 10%;
+
+    /* Semánticos */
+    --destructive: 4 82% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 148 55% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 36 90% 48%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 196 80% 42%;
+    --info-foreground: 0 0% 100%;
+
+    /* Bordes — cálidos, no azulados */
+    --border: 32 18% 86%;
+    --input: 32 18% 86%;
+    --ring: 164 58% 28%;
+
+    /* Radio base — esquinas más redondeadas */
+    --radius: 0.75rem;
+
+    /* Sidebar — carbón verdoso, siempre oscura */
+    --sidebar-background: 164 18% 10%;
+    --sidebar-foreground: 150 12% 76%;
+    --sidebar-primary: 40 88% 56%;
+    --sidebar-primary-foreground: 20 25% 10%;
+    --sidebar-accent: 164 18% 16%;
+    --sidebar-accent-foreground: 150 12% 93%;
+    --sidebar-border: 164 18% 16%;
+    --sidebar-ring: 40 88% 56%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}

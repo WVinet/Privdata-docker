@@ -1,0 +1,47 @@
+services:
+  postgres-auth:
+    image: postgres:16
+    container_name: privdata-postgres-auth
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+      - ./authservice-PrivData/docker/init:/docker-entrypoint-initdb.d
+
+  auth-service:
+    build: ./authservice-PrivData
+    container_name: privdata-auth-service
+    depends_on:
+      - postgres-auth
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+    ports:
+      - "8080:8080"
+
+  bff-api:
+    build: ./bff-api
+    container_name: privdata-bff-api
+    depends_on:
+      - auth-service
+    environment:
+      SERVER_PORT: 8085
+      SERVICES_AUTH_URL: http://auth-service:8080
+    ports:
+      - "8085:8085"
+
+  frontend:
+    build: ./frontend-Privdata-main
+    container_name: privdata-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - bff-api
+
+volumes:
+  postgres_auth_data:
