@@ -1,5 +1,7 @@
 package com.privdata.bff_api.client;
 
+import com.privdata.bff_api.dtos.request.LoginRequestDTO;
+import com.privdata.bff_api.dtos.request.RegisterRequestDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -23,11 +25,10 @@ public class AuthClient {
         this.restClient = restClient;
     }
 
-    //MEtodo para hacer login contra auth-service
-    public Map<String, Object> login(Map<String, Object> requestBody) {
+    public Map<String, Object> login(LoginRequestDTO requestBody) {
         try {
             return restClient.post()
-                    .uri(authserviceUrl + "/auth/login")
+                    .uri(authserviceUrl + "/api/auth/login")
                     .body(requestBody)
                     .retrieve()
                     .body(Map.class);
@@ -42,10 +43,41 @@ public class AuthClient {
         }
     }
 
+    public Map<String, Object> register(RegisterRequestDTO requestBody) {
+        try {
+            return restClient.post()
+                    .uri(authserviceUrl + "/api/auth/register")
+                    .body(requestBody)
+                    .retrieve()
+                    .body(Map.class);
+
+        } catch (HttpClientErrorException.BadRequest ex) {
+            return Map.of(
+                    "success", false,
+                    "message", "Solicitud inválida",
+                    "data", ex.getResponseBodyAsString()
+            );
+
+        } catch (HttpClientErrorException.Conflict ex) {
+            return Map.of(
+                    "success", false,
+                    "message", "El usuario ya existe",
+                    "data", ex.getResponseBodyAsString()
+            );
+
+        } catch (HttpClientErrorException ex) {
+            return Map.of(
+                    "success", false,
+                    "message", "Error desde AuthService",
+                    "data", ex.getMessage()
+            );
+        }
+    }
+
     public Map<String, Object> me(String authorization) {
         try {
             return restClient.get()
-                    .uri(authserviceUrl + "/auth/me")
+                    .uri(authserviceUrl + "/api/auth/me")
                     .header("Authorization", authorization)
                     .retrieve()
                     .body(Map.class);

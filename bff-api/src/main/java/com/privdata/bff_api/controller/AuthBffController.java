@@ -1,6 +1,10 @@
 package com.privdata.bff_api.controller;
 
+import com.privdata.bff_api.dtos.request.LoginRequestDTO;
+import com.privdata.bff_api.dtos.request.RegisterRequestDTO;
 import com.privdata.bff_api.service.AuthBffService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -17,8 +21,12 @@ public class AuthBffController {
 
     //Endpoint login del BFF
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody Map<String, Object> request){
-        return authBffService.login(request);
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDTO request) {
+        return ResponseEntity.ok(authBffService.login(request));
+    }
+    @PostMapping("/register")
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequestDTO request) {
+        return ResponseEntity.ok(authBffService.register(request));
     }
 
     @GetMapping("/me")

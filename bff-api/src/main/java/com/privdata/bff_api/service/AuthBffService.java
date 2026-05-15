@@ -1,6 +1,8 @@
 package com.privdata.bff_api.service;
 
 import com.privdata.bff_api.client.AuthClient;
+import com.privdata.bff_api.dtos.request.LoginRequestDTO;
+import com.privdata.bff_api.dtos.request.RegisterRequestDTO;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -14,9 +16,12 @@ public class AuthBffService {
         this.authClient = authClient;
     }
 
-    //logica login
-    public Map<String, Object> login (Map<String , Object> resquest){
-        return authClient.login(resquest);
+    public Map<String, Object> login(LoginRequestDTO request) {
+        return authClient.login(request);
+    }
+
+    public Map<String, Object> register(RegisterRequestDTO request) {
+        return authClient.register(request);
     }
 
     public Map<String, Object> me(String authorization){
