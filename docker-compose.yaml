@@ -12,6 +12,18 @@ services:
       - postgres_auth_data:/var/lib/postgresql/data
       - ./authservice-PrivData/docker/init:/docker-entrypoint-initdb.d
 
+  postgres-organization:
+    image: postgres:16
+    container_name: privdata-postgres-organization
+    environment:
+      POSTGRES_DB: organization_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_organization_data:/var/lib/postgresql/data
+
   auth-service:
     build: ./authservice-PrivData
     container_name: privdata-auth-service
@@ -24,14 +36,32 @@ services:
     ports:
       - "8080:8080"
 
+  organization-service:
+    build: ./organizationService
+    container_name: privdata-organization-service
+    depends_on:
+      - postgres-organization
+    environment:
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-organization:5432/organization_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+    ports:
+      - "8081:8081"
+
   bff-api:
     build: ./bff-api
     container_name: privdata-bff-api
     depends_on:
       - auth-service
+      - organization-service
     environment:
       SERVER_PORT: 8085
       SERVICES_AUTH_URL: http://auth-service:8080
+      SERVICES_ORGANIZATION_URL: http://organization-service:8081
+      SERVICES_ARCO_URL: http://arco-service:8082
+      SERVICES_COMPLIANCE_URL: http://compliance-service:8083
+      FRONTEND_URL: http://localhost:5173
     ports:
       - "8085:8085"
 
@@ -45,3 +75,4 @@ services:
 
 volumes:
   postgres_auth_data:
+  postgres_organization_data:

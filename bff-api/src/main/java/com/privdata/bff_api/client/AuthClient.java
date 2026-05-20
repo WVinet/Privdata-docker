@@ -25,6 +25,13 @@ public class AuthClient {
         this.restClient = restClient;
     }
 
+    public String health() {
+        return restClient.get()
+                .uri("/api/health")
+                .retrieve()
+                .body(String.class);
+    }
+
     public Map<String, Object> login(LoginRequestDTO requestBody) {
         try {
             return restClient.post()
