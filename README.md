@@ -399,9 +399,10 @@ Proyecto de título enfocado en:
 
 # Equipo de desarrollo
 
+- Arelis Tovar
+- Camilo Queupil
 - Wilfred Vinet
-- Belén
-- Valentina
+
 
 ---
 
