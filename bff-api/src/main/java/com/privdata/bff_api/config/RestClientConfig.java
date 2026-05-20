@@ -35,4 +35,13 @@ public class RestClientConfig {
                 .baseUrl(baseUrl)
                 .build();
     }
+
+    @Bean
+    public RestClient complianceRestClient(
+            @Value("${services.compliance.url}") String baseUrl
+    ) {
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .build();
+    }
 }

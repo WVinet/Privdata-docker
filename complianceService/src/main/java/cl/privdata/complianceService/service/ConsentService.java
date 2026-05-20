@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -28,6 +29,7 @@ import cl.privdata.complianceService.repository.ConsentDataCategoryRepository;
 import cl.privdata.complianceService.repository.ConsentEventRepository;
 import cl.privdata.complianceService.repository.ConsentRepository;
 
+@Service
 public class ConsentService {
 
     private final ConsentRepository consentRepository;

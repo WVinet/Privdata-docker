@@ -36,6 +36,18 @@ services:
     volumes:
       - postgres_arco_data:/var/lib/postgresql/data
 
+  postgres-compliance:
+    image: postgres:16
+    container_name: privdata-postgres-compliance
+    environment:
+      POSTGRES_DB: compliance_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_compliance_data:/var/lib/postgresql/data
+
   auth-service:
     build: ./authservice-PrivData
     container_name: privdata-auth-service
@@ -64,6 +76,7 @@ services:
   arco-service:
     build: ./Arco-service
     container_name: privdata-arco-service
+    restart: on-failure
     depends_on:
       - postgres-arco
     environment:
@@ -74,6 +87,20 @@ services:
     ports:
       - "8082:8082"
 
+  compliance-service:
+    build: ./complianceService
+    container_name: privdata-compliance-service
+    restart: on-failure
+    depends_on:
+      - postgres-compliance
+    environment:
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-compliance:5432/compliance_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+    ports:
+      - "8083:8083"
+
   bff-api:
     build: ./bff-api
     container_name: privdata-bff-api
@@ -81,6 +108,7 @@ services:
       - auth-service
       - organization-service
       - arco-service
+      - compliance-service
     environment:
       SERVER_PORT: 8085
       SERVICES_AUTH_URL: http://auth-service:8080
@@ -103,3 +131,4 @@ volumes:
   postgres_auth_data:
   postgres_organization_data:
   postgres_arco_data:
+  postgres_compliance_data:

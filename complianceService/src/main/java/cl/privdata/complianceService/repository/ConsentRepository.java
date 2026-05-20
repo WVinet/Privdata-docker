@@ -9,7 +9,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import cl.privdata.complianceService.model.Consent;
 import cl.privdata.complianceService.model.enums.ConsentStatus;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public interface ConsentRepository extends JpaRepository<Consent, UUID> {
 
     Page<Consent> findByDataSubjectId(UUID dataSubjectId, Pageable pageable);

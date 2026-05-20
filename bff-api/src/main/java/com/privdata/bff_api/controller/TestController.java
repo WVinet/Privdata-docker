@@ -2,6 +2,7 @@ package com.privdata.bff_api.controller;
 
 import com.privdata.bff_api.client.ArcoClient;
 import com.privdata.bff_api.client.AuthClient;
+import com.privdata.bff_api.client.ComplianceClient;
 import com.privdata.bff_api.client.OrganizationClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +17,7 @@ public class TestController {
     private final OrganizationClient organizationClient;
     private final AuthClient authClient;
     private final ArcoClient arcoClient;
+    private final ComplianceClient complianceClient;
 
     @GetMapping("/api/bff/health")
     public String health(){
@@ -35,5 +37,10 @@ public class TestController {
     @GetMapping("/arco")
     public String arco() {
         return arcoClient.health();
+    }
+
+    @GetMapping("/compliance")
+    public String compliance() {
+        return complianceClient.health();
     }
 }
