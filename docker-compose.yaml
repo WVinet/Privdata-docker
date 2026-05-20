@@ -51,6 +51,7 @@ services:
   auth-service:
     build: ./authservice-PrivData
     container_name: privdata-auth-service
+    restart: on-failure
     depends_on:
       - postgres-auth
     environment:
@@ -63,6 +64,7 @@ services:
   organization-service:
     build: ./organizationService
     container_name: privdata-organization-service
+    restart: on-failure
     depends_on:
       - postgres-organization
     environment:
