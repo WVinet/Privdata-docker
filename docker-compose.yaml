@@ -24,6 +24,18 @@ services:
     volumes:
       - postgres_organization_data:/var/lib/postgresql/data
 
+  postgres-arco:
+    image: postgres:16
+    container_name: privdata-postgres-arco
+    environment:
+      POSTGRES_DB: arco_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_arco_data:/var/lib/postgresql/data
+
   auth-service:
     build: ./authservice-PrivData
     container_name: privdata-auth-service
@@ -49,12 +61,26 @@ services:
     ports:
       - "8081:8081"
 
+  arco-service:
+    build: ./Arco-service
+    container_name: privdata-arco-service
+    depends_on:
+      - postgres-arco
+    environment:
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-arco:5432/arco_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+    ports:
+      - "8082:8082"
+
   bff-api:
     build: ./bff-api
     container_name: privdata-bff-api
     depends_on:
       - auth-service
       - organization-service
+      - arco-service
     environment:
       SERVER_PORT: 8085
       SERVICES_AUTH_URL: http://auth-service:8080
@@ -76,3 +102,4 @@ services:
 volumes:
   postgres_auth_data:
   postgres_organization_data:
+  postgres_arco_data:

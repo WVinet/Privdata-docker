@@ -10,8 +10,26 @@ import org.springframework.web.client.RestClient;
 public class RestClientConfig {
 
     @Bean
+    public RestClient authRestClient(
+            @Value("${services.auth.url}") String baseUrl
+    ) {
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .build();
+    }
+
+    @Bean
     public RestClient organizationRestClient(
             @Value("${services.organization.url}") String baseUrl
+    ) {
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .build();
+    }
+
+    @Bean
+    public RestClient arcoRestClient(
+            @Value("${services.arco.url}") String baseUrl
     ) {
         return RestClient.builder()
                 .baseUrl(baseUrl)

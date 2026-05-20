@@ -1,5 +1,6 @@
 package com.privdata.bff_api.controller;
 
+import com.privdata.bff_api.client.ArcoClient;
 import com.privdata.bff_api.client.AuthClient;
 import com.privdata.bff_api.client.OrganizationClient;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +15,11 @@ public class TestController {
 
     private final OrganizationClient organizationClient;
     private final AuthClient authClient;
+    private final ArcoClient arcoClient;
 
     @GetMapping("/api/bff/health")
     public String health(){
-        return "Privdate BFF funcionando correctamente";
+        return "Privdata BFF funcionando correctamente";
     }
 
     @GetMapping("/auth")
@@ -28,5 +30,10 @@ public class TestController {
     @GetMapping("/organization")
     public String organization() {
         return organizationClient.health();
+    }
+
+    @GetMapping("/arco")
+    public String arco() {
+        return arcoClient.health();
     }
 }
