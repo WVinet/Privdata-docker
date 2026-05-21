@@ -5,6 +5,7 @@ import com.privdata.authservice.dto.request.RegisterRequestDTO;
 import com.privdata.authservice.dto.response.LoginResponseDTO;
 import com.privdata.authservice.dto.response.MeResponseDTO;
 import com.privdata.authservice.dto.response.RegisterResponseDTO;
+import com.privdata.authservice.dto.response.UserResponseDTO;
 import com.privdata.authservice.enums.UserStatus;
 import com.privdata.authservice.exception.InvalidCredentialsException;
 import com.privdata.authservice.model.Role;
@@ -25,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -129,6 +131,41 @@ public class AuthServiceImpl implements AuthService {
                 user.getPersonId(),
                 user.getStatus(),
                 authorities
+        );
+    }
+
+    @Override
+    public List<UserResponseDTO> listUsers(UUID organizationId) {
+        List<User> users = organizationId != null
+                ? userRepository.findByOrganizationId(organizationId)
+                : userRepository.findAll();
+        return users.stream().map(this::toUserResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    public UserResponseDTO getUserById(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        return toUserResponse(user);
+    }
+
+    private UserResponseDTO toUserResponse(User user) {
+        List<String> roles = user.getUserRoles().stream()
+                .filter(ur -> Boolean.TRUE.equals(ur.getActive()))
+                .map(ur -> ur.getRole().getName())
+                .collect(Collectors.toList());
+
+        return new UserResponseDTO(
+                user.getId(),
+                user.getEmail(),
+                user.getOrganizationId(),
+                user.getPersonId(),
+                user.getStatus(),
+                user.isActive(),
+                roles,
+                user.getLastLoginAt(),
+                user.getCreatedAt(),
+                user.getUpdatedAt()
         );
     }
 

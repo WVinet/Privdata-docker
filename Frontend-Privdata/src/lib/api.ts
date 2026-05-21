@@ -76,4 +76,51 @@ export const usersApi = {
     api.get<ApiResponse<AuthUser[]>>("/auth/users"),
 }
 
+// ── Organization-service ──────────────────────────────────────────────────────
+export interface Organization {
+  id: string
+  name: string
+  legalName: string
+  rut: string
+  businessType: string | null
+  email: string | null
+  phone: string | null
+  address: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OrganizationCreateRequest {
+  name: string
+  legalName: string
+  rut: string
+  businessType?: string
+  email?: string
+  phone?: string
+  address?: string
+}
+
+export interface OrganizationUpdateRequest extends OrganizationCreateRequest {}
+
+export const organizationsApi = {
+  list: () =>
+    api.get<{ data: Organization[]; success: boolean; message: string }>("/organizations"),
+
+  getById: (id: string) =>
+    api.get<{ data: Organization; success: boolean; message: string }>(`/organizations/${id}`),
+
+  create: (body: OrganizationCreateRequest) =>
+    api.post<{ data: Organization; success: boolean; message: string }>("/organizations", body),
+
+  update: (id: string, body: OrganizationUpdateRequest) =>
+    api.put<{ data: Organization; success: boolean; message: string }>(`/organizations/${id}`, body),
+
+  updateStatus: (id: string, isActive: boolean) =>
+    api.patch<{ data: Organization; success: boolean; message: string }>(
+      `/organizations/${id}/status`,
+      { isActive }
+    ),
+}
+
 export default api
