@@ -5,7 +5,11 @@ import com.privdata.authservice.dto.request.RegisterRequestDTO;
 import com.privdata.authservice.dto.response.LoginResponseDTO;
 import com.privdata.authservice.dto.response.MeResponseDTO;
 import com.privdata.authservice.dto.response.RegisterResponseDTO;
+import com.privdata.authservice.dto.response.UserResponseDTO;
 import com.privdata.authservice.model.SecurityUser;
+
+import java.util.List;
+import java.util.UUID;
 
 public interface AuthService {
 
@@ -15,6 +19,10 @@ public interface AuthService {
 
     MeResponseDTO me(SecurityUser securityUser);
 
-    void assignRoleToUser(java.util.UUID userId, String roleName);
+    void assignRoleToUser(UUID userId, String roleName);
+
+    List<UserResponseDTO> listUsers(UUID organizationId);
+
+    UserResponseDTO getUserById(UUID userId);
 
 }

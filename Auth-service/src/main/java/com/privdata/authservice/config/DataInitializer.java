@@ -1,17 +1,16 @@
 package com.privdata.authservice.config;
 
-import com.privdata.authservice.model.Permission;
-import com.privdata.authservice.model.Role;
-import com.privdata.authservice.model.RolePermissions;
-import com.privdata.authservice.repository.PermissionRepository;
-import com.privdata.authservice.repository.RolePermissionRepository;
-import com.privdata.authservice.repository.RoleRepository;
+import com.privdata.authservice.enums.UserStatus;
+import com.privdata.authservice.model.*;
+import com.privdata.authservice.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -20,12 +19,17 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AdminProperties adminProperties;
 
     @Override
     public void run(String... args){
         seedRoles();
         seedPermissions();
         seedRolePermissions();
+        seedSuperAdmin();
     }
 
     private void seedRoles(){
@@ -131,6 +135,35 @@ public class DataInitializer implements CommandLineRunner {
         assignPermissionToRole("END_USER", "ARCO", "VIEW");
         assignPermissionToRole("END_USER", "ARCO", "CREATE");
         assignPermissionToRole("END_USER", "RAT", "VIEW");
+    }
+
+    private void seedSuperAdmin() {
+        if (userRepository.existsByEmail(adminProperties.getEmail())) return;
+
+        Role superAdminRole = roleRepository.findByName("SUPER_ADMIN")
+                .orElseThrow(() -> new RuntimeException("Rol SUPER_ADMIN no encontrado"));
+
+        User admin = new User();
+        admin.setEmail(adminProperties.getEmail());
+        admin.setPasswordHash(passwordEncoder.encode(adminProperties.getPassword()));
+        admin.setOrganizationId(UUID.fromString(adminProperties.getOrganizationId()));
+        admin.setPersonId(UUID.fromString(adminProperties.getPersonId()));
+        admin.setStatus(UserStatus.ACTIVE);
+        admin.setActive(true);
+        admin.setFailedLoginAttempts(0);
+        admin.setLockedUntil(LocalDateTime.now());
+        admin.setPasswordChangedAt(LocalDateTime.now());
+
+        User savedAdmin = userRepository.save(admin);
+
+        UserRole userRole = new UserRole();
+        userRole.setUser(savedAdmin);
+        userRole.setRole(superAdminRole);
+        userRole.setActive(true);
+        userRole.setAssignedBy(savedAdmin.getId());
+        userRole.setExpiresAt(LocalDateTime.now().plusYears(99));
+
+        userRoleRepository.save(userRole);
     }
 
     private void assignAllPermissionsToRole(String roleName) {

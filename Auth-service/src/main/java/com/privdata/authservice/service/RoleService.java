@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -23,8 +24,8 @@ public class RoleService {
                 ));
     }
 
-    public Role findById(Integer id){
-        return roleRepository.findById(id)
+    public Role findById(UUID UUID){
+        return roleRepository.findById(UUID)
                 .orElseThrow(()-> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "El rol no existe"

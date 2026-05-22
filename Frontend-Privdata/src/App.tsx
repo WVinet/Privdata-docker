@@ -4,13 +4,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { AppLayout } from "@/components/AppLayout"
 import LoginPage from "@/pages/LoginPage"
 import DashboardPage from "@/pages/DashboardPage"
-import UsersPage from "@/pages/UsersPage"
 import TitularesPage from "@/pages/TitularesPage"
 import ConsentsPage from "@/pages/ConsentsPage"
 import ArcoPage from "@/pages/ArcoPage"
 import AuditPage from "@/pages/AuditPage"
 import TitularPortalPage from "@/pages/TitularPortalPage"
 import NotFound from "@/pages/NotFound"
+// Mantenedores
+import OrganizacionesPage from "@/pages/admin/OrganizacionesPage"
+import UsersPage from "@/pages/UsersPage"
 import RolesPage from "@/pages/RolesPage"
 
 const queryClient = new QueryClient()
@@ -31,13 +33,17 @@ function App() {
 
           {/* Rutas protegidas (AppLayout verifica auth) */}
           <Route element={<AppLayout />}>
+            {/* Módulos operativos */}
             <Route path="/dashboard"       element={<DashboardPage />} />
-            <Route path="/usuarios"        element={<UsersPage />} />
             <Route path="/titulares"       element={<TitularesPage />} />
             <Route path="/consentimientos" element={<ConsentsPage />} />
             <Route path="/arco"            element={<ArcoPage />} />
             <Route path="/auditoria"       element={<AuditPage />} />
-            <Route path="/roles" element={<RolesPage />} />
+
+            {/* Mantenedores */}
+            <Route path="/admin/organizaciones" element={<OrganizacionesPage />} />
+            <Route path="/admin/usuarios"       element={<UsersPage />} />
+            <Route path="/admin/roles"          element={<RolesPage />} />
           </Route>
 
           {/* 404 */}

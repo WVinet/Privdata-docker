@@ -27,4 +27,36 @@ public class AuthBffService {
     public Map<String, Object> me(String authorization){
         return authClient.me(authorization);
     }
+
+    public Object getUsers(String authorization, String organizationId) {
+        return authClient.getUsers(authorization, organizationId);
+    }
+
+    public Object getUserById(String authorization, String userId) {
+        return authClient.getUserById(authorization, userId);
+    }
+
+    public Object assignRole(String authorization, String userId, Map<String, Object> body) {
+        return authClient.assignRole(authorization, userId, body);
+    }
+
+    public Object getRoles(String authorization) {
+        return authClient.getRoles(authorization);
+    }
+
+    public Object createRole(String authorization, Map<String, Object> body) {
+        return authClient.createRole(authorization, body);
+    }
+
+    public Object getPermissions(String authorization) {
+        return authClient.getPermissions(authorization);
+    }
+
+    public Object assignPermission(String authorization, String roleId, Map<String, Object> body) {
+        return authClient.assignPermission(authorization, roleId, body);
+    }
+
+    public Object removePermission(String authorization, String roleId, String permissionId) {
+        return authClient.removePermission(authorization, roleId, permissionId);
+    }
 }

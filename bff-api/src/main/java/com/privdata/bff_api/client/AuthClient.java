@@ -80,11 +80,54 @@ public class AuthClient {
                     .body(Map.class);
 
         } catch (HttpClientErrorException.Unauthorized ex) {
-            return Map.of(
-                    "success", false,
-                    "message", "Sesión inválida o expirada",
-                    "data", null
-            );
+            return Map.of("success", false, "message", "Sesión inválida o expirada", "data", null);
+        }
+    }
+
+    public Object getUsers(String authorization, String organizationId) {
+        String uri = organizationId != null
+                ? "/api/auth/users?organizationId=" + organizationId
+                : "/api/auth/users";
+        return forward("GET", uri, authorization, null);
+    }
+
+    public Object getUserById(String authorization, String userId) {
+        return forward("GET", "/api/auth/users/" + userId, authorization, null);
+    }
+
+    public Object assignRole(String authorization, String userId, Map<String, Object> body) {
+        return forward("POST", "/api/auth/users/" + userId + "/roles", authorization, body);
+    }
+
+    public Object getRoles(String authorization) {
+        return forward("GET", "/api/auth/roles", authorization, null);
+    }
+
+    public Object createRole(String authorization, Map<String, Object> body) {
+        return forward("POST", "/api/auth/roles", authorization, body);
+    }
+
+    public Object getPermissions(String authorization) {
+        return forward("GET", "/api/auth/permissions", authorization, null);
+    }
+
+    public Object assignPermission(String authorization, String roleId, Map<String, Object> body) {
+        return forward("POST", "/api/auth/roles/" + roleId + "/permissions", authorization, body);
+    }
+
+    public Object removePermission(String authorization, String roleId, String permissionId) {
+        return forward("DELETE", "/api/auth/roles/" + roleId + "/permissions/" + permissionId, authorization, null);
+    }
+
+    private Object forward(String method, String uri, String authorization, Object body) {
+        try {
+            var spec = authRestClient.method(org.springframework.http.HttpMethod.valueOf(method))
+                    .uri(uri)
+                    .header("Authorization", authorization);
+            if (body != null) spec = spec.body(body);
+            return spec.retrieve().body(Object.class);
+        } catch (HttpClientErrorException ex) {
+            return Map.of("success", false, "message", ex.getStatusText(), "data", null);
         }
     }
 }

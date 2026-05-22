@@ -11,11 +11,13 @@ import {
   ChevronRight,
   Eye,
   X,
+  Building2,
+  ShieldCheck,
+  ScrollText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { useState } from "react"
-import { ShieldCheck } from "lucide-react"
 
 interface NavItem {
   label: string
@@ -24,14 +26,49 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard",          path: "/dashboard",        icon: LayoutDashboard },
-  { label: "Usuarios",           path: "/usuarios",         icon: Users },
-  { label: "Titulares",          path: "/titulares",        icon: UserCheck },
-  { label: "Consentimientos",    path: "/consentimientos",  icon: FileCheck },
-  { label: "Solicitudes ARCO",   path: "/arco",             icon: ClipboardList },
-  { label: "Auditoría",          path: "/auditoria",        icon: DatabaseZap },
-  { label: "Roles y permisos", path: "/roles", icon: ShieldCheck },
+  { label: "Dashboard",        path: "/dashboard",       icon: LayoutDashboard },
+  { label: "Titulares",        path: "/titulares",       icon: UserCheck },
+  { label: "Consentimientos",  path: "/consentimientos", icon: FileCheck },
+  { label: "Solicitudes ARCO", path: "/arco",            icon: ClipboardList },
+  { label: "RAT",              path: "/rat",             icon: ScrollText },
+  { label: "Auditoría",        path: "/auditoria",       icon: DatabaseZap },
 ]
+
+const adminItems: NavItem[] = [
+  { label: "Organizaciones",   path: "/admin/organizaciones", icon: Building2 },
+  { label: "Usuarios",         path: "/admin/usuarios",       icon: Users },
+  { label: "Roles y permisos", path: "/admin/roles",          icon: ShieldCheck },
+]
+
+function NavLink({ item, collapsed, mobile, onMobileClose }: {
+  item: NavItem
+  collapsed: boolean
+  mobile: boolean
+  onMobileClose?: () => void
+}) {
+  const location = useLocation()
+  const isActive = location.pathname === item.path
+  const Icon = item.icon
+  return (
+    <li>
+      <Link
+        to={item.path}
+        onClick={mobile ? onMobileClose : undefined}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+          isActive
+            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+          collapsed && !mobile && "justify-center px-2"
+        )}
+        title={collapsed && !mobile ? item.label : undefined}
+      >
+        <Icon className="w-4 h-4 shrink-0" />
+        {(!collapsed || mobile) && <span>{item.label}</span>}
+      </Link>
+    </li>
+  )
+}
 
 interface AppSidebarProps {
   /** Mobile drawer: open state */
@@ -92,47 +129,49 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4">
-        {(!collapsed || mobile) && (
-          <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-            Módulos
-          </p>
-        )}
-        <ul className="space-y-1 px-2">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path
-            const Icon = item.icon
-            return (
-              <li key={item.path}>
-                <Link
-                  to={item.path}
-                  onClick={mobile ? onMobileClose : undefined}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-                    collapsed && !mobile && "justify-center px-2"
-                  )}
-                  title={collapsed && !mobile ? item.label : undefined}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {(!collapsed || mobile) && <span>{item.label}</span>}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
+      <nav className="flex-1 overflow-y-auto py-4 space-y-4">
+        {/* Módulos operativos */}
+        <div>
+          {(!collapsed || mobile) && (
+            <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+              Módulos
+            </p>
+          )}
+          <ul className="space-y-1 px-2">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.path}
+                item={item}
+                collapsed={collapsed}
+                mobile={mobile}
+                onMobileClose={onMobileClose}
+              />
+            ))}
+          </ul>
+        </div>
 
-        {/*
-          ── MANTENEDORES (próximas versiones) ──────────────────────────────
-          Aquí se agregarán los módulos de mantenimiento cuando estén listos:
-          - Roles          → /admin/roles
-          - Permisos       → /admin/permisos
-          - Configuración  → /admin/configuracion
-          Mantener esta sección separada de los módulos operativos de arriba.
-          ──────────────────────────────────────────────────────────────────
-        */}
+        {/* Mantenedores */}
+        <div>
+          {(!collapsed || mobile) && (
+            <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+              Mantenedores
+            </p>
+          )}
+          {(collapsed && !mobile) && (
+            <div className="mx-2 my-1 border-t border-sidebar-border" />
+          )}
+          <ul className="space-y-1 px-2">
+            {adminItems.map((item) => (
+              <NavLink
+                key={item.path}
+                item={item}
+                collapsed={collapsed}
+                mobile={mobile}
+                onMobileClose={onMobileClose}
+              />
+            ))}
+          </ul>
+        </div>
       </nav>
 
       {/* DEV — Acceso al Portal Titular (solo desarrollo) */}
