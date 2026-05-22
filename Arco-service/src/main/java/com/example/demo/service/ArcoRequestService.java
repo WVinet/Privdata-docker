@@ -29,16 +29,17 @@ public class ArcoRequestService {
         solicitudArco.setDataSubjectId(request.getDataSubjectId());
         solicitudArco.setAssignedToUserId(request.getAssignedToUserId());
         solicitudArco.setRequestType(request.getRequestType());
-        solicitudArco.setStatus(ArcoStatus.EN_GESTION);
+        solicitudArco.setStatus(ArcoStatus.RECIBIDA);
         solicitudArco.setIdentityVerificationStatus(
                 ArcoIdentityVerificationStatus.ACCESS_ACCEPTED);
         solicitudArco.setRequestChannel(request.getRequestChannel());
-        solicitudArco.setSubmittedAt(LocalDateTime.now());
-        solicitudArco.setDueDate(LocalDateTime.now().plusDays(15));
+        LocalDateTime now = LocalDateTime.now();
+        solicitudArco.setSubmittedAt(now);
+        solicitudArco.setDueDate(now.plusDays(30)); // Art. 11 Ley 21.719: 30 días corridos
         solicitudArco.setDescription(request.getDescription());
 
-        solicitudArco.setResolutionSummary("");
-        solicitudArco.setResolvedAt(LocalDateTime.now().plusMonths(1));
+        solicitudArco.setResolutionSummary(null);
+        solicitudArco.setResolvedAt(null);
 
 
         return arcoRequestRepository.save(solicitudArco);

@@ -5,6 +5,7 @@ import com.privdata.authservice.dto.request.RegisterRequestDTO;
 import com.privdata.authservice.dto.response.LoginResponseDTO;
 import com.privdata.authservice.dto.response.MeResponseDTO;
 import com.privdata.authservice.dto.response.RegisterResponseDTO;
+import com.privdata.authservice.dto.response.UserResponseDTO;
 import com.privdata.authservice.model.SecurityUser;
 import com.privdata.authservice.service.AuthService;
 import com.privdata.authservice.shared.ApiResponseDTO;
@@ -15,6 +16,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -23,6 +27,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
+    @PreAuthorize("hasAuthority('USER_CREATE')")
     public ResponseEntity<ApiResponseDTO<RegisterResponseDTO>> register(@Valid @RequestBody RegisterRequestDTO request) {
         RegisterResponseDTO response = authService.register(request);
 
@@ -30,6 +35,22 @@ public class AuthController {
                 new ApiResponseDTO<>(true, "Usuario registrado correctamente", response);
 
         return ResponseEntity.ok(apiResponseDTO);
+    }
+
+    @GetMapping("/users")
+    @PreAuthorize("hasAuthority('USER_VIEW')")
+    public ResponseEntity<ApiResponseDTO<List<UserResponseDTO>>> listUsers(
+            @RequestParam(required = false) UUID organizationId
+    ) {
+        List<UserResponseDTO> users = authService.listUsers(organizationId);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Usuarios obtenidos correctamente", users));
+    }
+
+    @GetMapping("/users/{userId}")
+    @PreAuthorize("hasAuthority('USER_VIEW')")
+    public ResponseEntity<ApiResponseDTO<UserResponseDTO>> getUserById(@PathVariable UUID userId) {
+        UserResponseDTO user = authService.getUserById(userId);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Usuario obtenido correctamente", user));
     }
 
     @PostMapping("/login")
