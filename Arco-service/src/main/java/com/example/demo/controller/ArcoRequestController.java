@@ -1,10 +1,10 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.arcoRequest.ArcoRequestCreateDTO;
+import com.example.demo.dto.arcoRequest.ArcoRequestResponseDTO;
 import com.example.demo.dto.arcoRequest.ArcoRequestStatusUpdateDTO;
 import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
 import com.example.demo.enums.arcoRequest.ArcoStatus;
-import com.example.demo.model.ArcoRequest;
 import com.example.demo.service.ArcoRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class ArcoRequestController {
     private final ArcoRequestService arcoRequestService;
 
     @GetMapping
-    public ResponseEntity<List<ArcoRequest>> listar(
+    public ResponseEntity<List<ArcoRequestResponseDTO>> listar(
             @RequestParam(required = false) UUID organizationId,
             @RequestParam(required = false) UUID dataSubjectId,
             @RequestParam(required = false) ArcoStatus status) {
@@ -41,31 +41,31 @@ public class ArcoRequestController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ArcoRequest> buscarPorId(@PathVariable UUID id) {
+    public ResponseEntity<ArcoRequestResponseDTO> buscarPorId(@PathVariable UUID id) {
         return ResponseEntity.ok(arcoRequestService.buscarPorId(id));
     }
 
     @PostMapping
-    public ResponseEntity<ArcoRequest> crearSolicitud(@Valid @RequestBody ArcoRequestCreateDTO dto) {
+    public ResponseEntity<ArcoRequestResponseDTO> crearSolicitud(@Valid @RequestBody ArcoRequestCreateDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(arcoRequestService.crearSolicitud(dto));
     }
 
     @PatchMapping("/{id}/estado")
-    public ResponseEntity<ArcoRequest> cambiarEstado(
+    public ResponseEntity<ArcoRequestResponseDTO> cambiarEstado(
             @PathVariable UUID id,
             @Valid @RequestBody ArcoRequestStatusUpdateDTO dto) {
         return ResponseEntity.ok(arcoRequestService.cambiarEstado(id, dto));
     }
 
     @PatchMapping("/{id}/verificacion-identidad")
-    public ResponseEntity<ArcoRequest> actualizarVerificacionIdentidad(
+    public ResponseEntity<ArcoRequestResponseDTO> actualizarVerificacionIdentidad(
             @PathVariable UUID id,
             @RequestParam ArcoIdentityVerificationStatus nuevoEstado) {
         return ResponseEntity.ok(arcoRequestService.actualizarVerificacionIdentidad(id, nuevoEstado));
     }
 
     @PatchMapping("/{id}/resolucion")
-    public ResponseEntity<ArcoRequest> actualizarResolucion(
+    public ResponseEntity<ArcoRequestResponseDTO> actualizarResolucion(
             @PathVariable UUID id,
             @RequestParam String resolutionSummary) {
         return ResponseEntity.ok(arcoRequestService.actualizarResolucion(id, resolutionSummary));

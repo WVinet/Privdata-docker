@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.arcoRequest.ArcoRequestCreateDTO;
+import com.example.demo.dto.arcoRequest.ArcoRequestResponseDTO;
 import com.example.demo.dto.arcoRequest.ArcoRequestStatusUpdateDTO;
 import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
 import com.example.demo.enums.arcoRequest.ArcoStatus;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,29 +27,39 @@ public class ArcoRequestService {
     private final ArcoRequestRepository arcoRequestRepository;
     private final ArcoRequestStatusHistoryRepository statusHistoryRepository;
 
-    public List<ArcoRequest> listar() {
-        return arcoRequestRepository.findAll();
+    public List<ArcoRequestResponseDTO> listar() {
+        return arcoRequestRepository.findAll().stream()
+                .map(ArcoRequestResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    public ArcoRequest buscarPorId(UUID id) {
-        return arcoRequestRepository.findById(id)
-                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
+    public ArcoRequestResponseDTO buscarPorId(UUID id) {
+        return ArcoRequestResponseDTO.fromEntity(
+                arcoRequestRepository.findById(id)
+                        .orElseThrow(() -> new ArcoRequestNotFoundException(id))
+        );
     }
 
-    public List<ArcoRequest> listarPorOrganizacion(UUID organizationId) {
-        return arcoRequestRepository.findByOrganizationId(organizationId);
+    public List<ArcoRequestResponseDTO> listarPorOrganizacion(UUID organizationId) {
+        return arcoRequestRepository.findByOrganizationId(organizationId).stream()
+                .map(ArcoRequestResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    public List<ArcoRequest> listarPorTitular(UUID dataSubjectId) {
-        return arcoRequestRepository.findByDataSubjectId(dataSubjectId);
+    public List<ArcoRequestResponseDTO> listarPorTitular(UUID dataSubjectId) {
+        return arcoRequestRepository.findByDataSubjectId(dataSubjectId).stream()
+                .map(ArcoRequestResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    public List<ArcoRequest> listarPorEstado(ArcoStatus status) {
-        return arcoRequestRepository.findByStatus(status);
+    public List<ArcoRequestResponseDTO> listarPorEstado(ArcoStatus status) {
+        return arcoRequestRepository.findByStatus(status).stream()
+                .map(ArcoRequestResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
     @Transactional
-    public ArcoRequest crearSolicitud(ArcoRequestCreateDTO dto) {
+    public ArcoRequestResponseDTO crearSolicitud(ArcoRequestCreateDTO dto) {
         ArcoRequest solicitud = new ArcoRequest();
         solicitud.setOrganizationId(dto.getOrganizationId());
         solicitud.setDataSubjectId(dto.getDataSubjectId());
@@ -60,12 +72,13 @@ public class ArcoRequestService {
         solicitud.setSubmittedAt(LocalDateTime.now());
         solicitud.setDueDate(
                 BusinessDaysCalculator.calcularFechaLimite(LocalDateTime.now(), dto.getRequestType()));
-        return arcoRequestRepository.save(solicitud);
+        return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
     }
 
     @Transactional
-    public ArcoRequest cambiarEstado(UUID id, ArcoRequestStatusUpdateDTO dto) {
-        ArcoRequest solicitud = buscarPorId(id);
+    public ArcoRequestResponseDTO cambiarEstado(UUID id, ArcoRequestStatusUpdateDTO dto) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
         ArcoStatus estadoAnterior = solicitud.getStatus();
 
         solicitud.setStatus(dto.getNewStatus());
@@ -84,20 +97,22 @@ public class ArcoRequestService {
         historial.setComment(dto.getComment());
         statusHistoryRepository.save(historial);
 
-        return solicitud;
+        return ArcoRequestResponseDTO.fromEntity(solicitud);
     }
 
     @Transactional
-    public ArcoRequest actualizarVerificacionIdentidad(UUID id, ArcoIdentityVerificationStatus nuevoEstado) {
-        ArcoRequest solicitud = buscarPorId(id);
+    public ArcoRequestResponseDTO actualizarVerificacionIdentidad(UUID id, ArcoIdentityVerificationStatus nuevoEstado) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
         solicitud.setIdentityVerificationStatus(nuevoEstado);
-        return arcoRequestRepository.save(solicitud);
+        return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
     }
 
     @Transactional
-    public ArcoRequest actualizarResolucion(UUID id, String resolutionSummary) {
-        ArcoRequest solicitud = buscarPorId(id);
+    public ArcoRequestResponseDTO actualizarResolucion(UUID id, String resolutionSummary) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
         solicitud.setResolutionSummary(resolutionSummary);
-        return arcoRequestRepository.save(solicitud);
+        return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
     }
 }
