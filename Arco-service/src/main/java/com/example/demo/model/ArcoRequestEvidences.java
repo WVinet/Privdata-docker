@@ -5,14 +5,14 @@ import java.util.UUID;
 
 import com.example.demo.enums.arcoRequestEvidence.ArcoEvidenceType;
 import com.example.demo.enums.arcoRequestEvidence.ArcoFileType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.CreationTimestamp;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 
 @Entity
 @Getter
@@ -20,38 +20,36 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ArcoRequestEvidences {
+
     @Id
     @GeneratedValue
     private UUID id;
-    
-//    @Column(name = "arco_request_id", nullable = false)
-//    private UUID arcoRequestId;
-    
-    @Column(name = "uploaded_by_user_id", nullable = false)
+
+    @Column(name = "uploaded_by_user_id", nullable = true)
     private UUID uploadedByUserId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "evidence_type", nullable = false) 
+    @Column(name = "evidence_type", nullable = false)
     private ArcoEvidenceType evidenceType;
 
-    @Column(name = "file_name", nullable = false)
+    @Column(name = "file_name", nullable = false, length = 255)
     private String fileName;
 
-    @Column(name = "file_url", nullable = false)
+    @Column(name = "file_url", nullable = false, length = 500)
     private String fileUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "file_type", nullable = false) 
+    @Column(name = "file_type", nullable = false, length = 100)
     private ArcoFileType fileType;
 
-    @Column(name = "notas", nullable = false)
+    @Column(name = "notes", nullable = true, columnDefinition = "TEXT")
     private String notes;
 
-    @UpdateTimestamp
-    @Column(name = "uploaded_at", nullable = false)
+    @CreationTimestamp
+    @Column(name = "uploaded_at", nullable = false, updatable = false)
     private LocalDateTime uploadedAt;
 
-    //relaciones
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "arco_request_id", nullable = false)
     private ArcoRequest arcoRequest;
