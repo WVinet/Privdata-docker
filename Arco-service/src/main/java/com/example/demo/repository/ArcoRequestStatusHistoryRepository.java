@@ -1,13 +1,14 @@
 package com.example.demo.repository;
 
-import java.util.UUID;
-
+import com.example.demo.model.ArcoRequestStatusHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.example.demo.model.ArcoRequestStatusHistory;
+import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface ArcoRequestStatusHistoryRepository extends JpaRepository <ArcoRequestStatusHistory, UUID> {
+public interface ArcoRequestStatusHistoryRepository extends JpaRepository<ArcoRequestStatusHistory, UUID> {
 
+    List<ArcoRequestStatusHistory> findByArcoRequest_IdOrderByChangedAtAsc(UUID arcoRequestId);
 }
