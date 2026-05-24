@@ -9,7 +9,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Eye,
   X,
   Building2,
   ShieldCheck,
@@ -35,7 +34,7 @@ const navItems: NavItem[] = [
 ]
 
 const adminItems: NavItem[] = [
-  { label: "Organizaciones",   path: "/admin/organizaciones", icon: Building2 },
+  { label: "Mi Organización",  path: "/admin/organizacion",   icon: Building2 },
   { label: "Usuarios",         path: "/admin/usuarios",       icon: Users },
   { label: "Roles y permisos", path: "/admin/roles",          icon: ShieldCheck },
 ]
@@ -175,7 +174,7 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
       </nav>
 
       {/* DEV — Acceso al Portal Titular (solo desarrollo) */}
-      <div className="border-t border-sidebar-border px-2 py-2 shrink-0">
+      {/* <div className="border-t border-sidebar-border px-2 py-2 shrink-0">
         <Link
           to="/portal"
           onClick={mobile ? onMobileClose : undefined}
@@ -201,7 +200,7 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
             </>
           )}
         </Link>
-      </div>
+      </div> */}
 
       {/* Footer — usuario */}
       <div className="border-t border-sidebar-border p-3 shrink-0">
@@ -221,7 +220,7 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
             <div className="flex-1 overflow-hidden">
               <p className="text-xs font-semibold text-sidebar-accent-foreground truncate">{user?.email}</p>
               <p className="text-xs text-sidebar-foreground/50 truncate capitalize">
-                {user?.authorities?.find((a) => a.startsWith("ROLE_"))?.replace("ROLE_", "").toLowerCase() ?? "usuario"}
+                {user?.authorities?.find((a) => a.startsWith("ROLE_"))?.replace("ROLE_", "").toUpperCase() ?? "usuario"}
               </p>
             </div>
             <button

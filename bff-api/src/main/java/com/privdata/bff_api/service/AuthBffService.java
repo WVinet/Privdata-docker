@@ -59,4 +59,8 @@ public class AuthBffService {
     public Object removePermission(String authorization, String roleId, String permissionId) {
         return authClient.removePermission(authorization, roleId, permissionId);
     }
+
+    public Object activateAccount(String authorization, Map<String, Object> body) {
+        return authClient.activateAccount(authorization, body);
+    }
 }

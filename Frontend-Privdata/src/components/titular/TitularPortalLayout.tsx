@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { Home, Bell, Scale, ClipboardList, Menu, X } from "lucide-react"
+import { Home, Bell, Scale, ClipboardList, Menu, X, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type TitularTab = "inicio" | "consentimientos" | "arco" | "seguimiento"
@@ -10,6 +10,7 @@ interface TitularPortalLayoutProps {
   userName: string
   rut: string
   lastAccess: string
+  onLogout: () => void
   children: ReactNode
 }
 
@@ -26,6 +27,7 @@ function SidebarContent({
   userName,
   rut,
   lastAccess,
+  onLogout,
   onClose,
 }: Omit<TitularPortalLayoutProps, "children"> & { onClose?: () => void }) {
   const formattedAccess = new Date(lastAccess).toLocaleString("es-CL", {
@@ -134,9 +136,25 @@ function SidebarContent({
             </p>
           </div>
         </div>
-        <p className="text-xs" style={{ color: "hsl(var(--primary-foreground) / 0.4)" }}>
+        <p className="text-xs mb-3" style={{ color: "hsl(var(--primary-foreground) / 0.4)" }}>
           Último acceso: {formattedAccess}
         </p>
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all text-left"
+          style={{ color: "hsl(var(--primary-foreground) / 0.6)" }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = "hsl(var(--primary-foreground) / 0.08)"
+            ;(e.currentTarget as HTMLElement).style.color = "hsl(var(--primary-foreground))"
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = "transparent"
+            ;(e.currentTarget as HTMLElement).style.color = "hsl(var(--primary-foreground) / 0.6)"
+          }}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          <span>Cerrar sesión</span>
+        </button>
       </div>
     </div>
   )
@@ -148,6 +166,7 @@ export default function TitularPortalLayout({
   userName,
   rut,
   lastAccess,
+  onLogout,
   children,
 }: TitularPortalLayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -162,6 +181,7 @@ export default function TitularPortalLayout({
           userName={userName}
           rut={rut}
           lastAccess={lastAccess}
+          onLogout={onLogout}
         />
       </aside>
 
@@ -179,6 +199,7 @@ export default function TitularPortalLayout({
               userName={userName}
               rut={rut}
               lastAccess={lastAccess}
+              onLogout={onLogout}
               onClose={() => setDrawerOpen(false)}
             />
           </aside>
@@ -228,21 +249,33 @@ export default function TitularPortalLayout({
             </span>
           </div>
 
-          {/* User badge */}
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
-            style={{
-              background: "hsl(var(--primary-foreground) / 0.12)",
-              color: "hsl(var(--primary-foreground))",
-            }}
-          >
+          {/* User badge + logout */}
+          <div className="flex items-center gap-2">
             <div
-              className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0"
-              style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+              style={{
+                background: "hsl(var(--primary-foreground) / 0.12)",
+                color: "hsl(var(--primary-foreground))",
+              }}
             >
-              {userName.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+              <div
+                className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0"
+                style={{ background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}
+              >
+                {userName.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+              </div>
+              <span className="font-medium hidden sm:inline">{userName}</span>
             </div>
-            <span className="font-medium hidden sm:inline">{userName}</span>
+            <button
+              onClick={onLogout}
+              title="Cerrar sesión"
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: "hsl(var(--primary-foreground) / 0.7)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "hsl(var(--primary-foreground))")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "hsl(var(--primary-foreground) / 0.7)")}
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </header>
 

@@ -23,6 +23,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AdminProperties adminProperties;
+    private final TitularProperties titularProperties;
 
     @Override
     public void run(String... args){
@@ -30,6 +31,7 @@ public class DataInitializer implements CommandLineRunner {
         seedPermissions();
         seedRolePermissions();
         seedSuperAdmin();
+        seedTestTitular();
     }
 
     private void seedRoles(){
@@ -138,10 +140,25 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedSuperAdmin() {
-        if (userRepository.existsByEmail(adminProperties.getEmail())) return;
-
         Role superAdminRole = roleRepository.findByName("SUPER_ADMIN")
                 .orElseThrow(() -> new RuntimeException("Rol SUPER_ADMIN no encontrado"));
+
+        if (userRepository.existsByEmail(adminProperties.getEmail())) {
+            // Patch missing organizationId / personId for existing admin (back-fill)
+            userRepository.findByEmail(adminProperties.getEmail()).ifPresent(existing -> {
+                boolean changed = false;
+                if (existing.getOrganizationId() == null) {
+                    existing.setOrganizationId(UUID.fromString(adminProperties.getOrganizationId()));
+                    changed = true;
+                }
+                if (existing.getPersonId() == null) {
+                    existing.setPersonId(UUID.fromString(adminProperties.getPersonId()));
+                    changed = true;
+                }
+                if (changed) userRepository.save(existing);
+            });
+            return;
+        }
 
         User admin = new User();
         admin.setEmail(adminProperties.getEmail());
@@ -189,6 +206,35 @@ public class DataInitializer implements CommandLineRunner {
                 rolePermissionRepository.save(rolePermission);
             }
         }
+    }
+
+    private void seedTestTitular() {
+        if (userRepository.existsByEmail(titularProperties.getEmail())) return;
+
+        Role endUserRole = roleRepository.findByName("END_USER")
+                .orElseThrow(() -> new RuntimeException("Rol END_USER no encontrado"));
+
+        User titular = new User();
+        titular.setEmail(titularProperties.getEmail());
+        titular.setPasswordHash(passwordEncoder.encode(titularProperties.getPassword()));
+        titular.setOrganizationId(UUID.fromString(adminProperties.getOrganizationId()));
+        titular.setPersonId(UUID.fromString(titularProperties.getPersonId()));
+        titular.setStatus(UserStatus.ACTIVE);
+        titular.setActive(true);
+        titular.setFailedLoginAttempts(0);
+        titular.setLockedUntil(LocalDateTime.now());
+        titular.setPasswordChangedAt(LocalDateTime.now());
+
+        User savedTitular = userRepository.save(titular);
+
+        UserRole userRole = new UserRole();
+        userRole.setUser(savedTitular);
+        userRole.setRole(endUserRole);
+        userRole.setActive(true);
+        userRole.setAssignedBy(savedTitular.getId());
+        userRole.setExpiresAt(LocalDateTime.now().plusYears(99));
+
+        userRoleRepository.save(userRole);
     }
 
     private void assignPermissionToRole(String roleName, String module, String action) {
