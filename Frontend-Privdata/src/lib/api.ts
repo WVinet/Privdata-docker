@@ -15,7 +15,7 @@ import type {
   ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel,
   CreateArcoRequest, UpdateArcoStatus,
 } from "@/types/arco"
-import type { Consent, TreatmentActivity } from "@/types/compliance"
+import type { Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus } from "@/types/compliance"
 
 export type { ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel, CreateArcoRequest, UpdateArcoStatus }
 export type { Organization, OrganizationCreateRequest, OrganizationUpdateRequest, Department, DepartmentCreateRequest }
@@ -173,6 +173,15 @@ export const complianceApi = {
 
   getRat: (organizationId: string) =>
     api.get<ApiResponse<TreatmentActivity[]>>(`/compliance/rat`, { params: { organizationId } }),
+
+  revokeConsent: (consentId: string) =>
+    api.post<ApiResponse<Consent>>(`/compliance/consents/${consentId}/revoke`),
+
+  getDataCategories: () =>
+    api.get<ApiResponse<DataCategory[]>>(`/compliance/data-categories`),
+
+  listConsents: (params?: { status?: ConsentStatus; page?: number; size?: number }) =>
+    api.get<ConsentPage>(`/compliance/consents`, { params }),
 }
 
 export default api

@@ -27,9 +27,25 @@ public class ComplianceClient {
         return forward("GET", "/api/compliance/consents/data-subject/" + dataSubjectId, null);
     }
 
+    public Object revokeConsent(String consentId, Object body) {
+        return forward("POST", "/api/compliance/consents/" + consentId + "/revoke", body);
+    }
+
     public Object getRat(String organizationId) {
         String uri = "/api/compliance/rat" + (organizationId != null ? "?organizationId=" + organizationId + "&status=ACTIVE" : "");
         return forward("GET", uri, null);
+    }
+
+    public Object getDataCategories() {
+        return forward("GET", "/api/compliance/data-categories", null);
+    }
+
+    public Object listConsents(String status, Integer page, Integer size) {
+        StringBuilder uri = new StringBuilder("/api/compliance/consents?size=")
+                .append(size != null ? size : 100)
+                .append("&page=").append(page != null ? page : 0);
+        if (status != null && !status.isBlank()) uri.append("&status=").append(status);
+        return forward("GET", uri.toString(), null);
     }
 
     private Object forward(String method, String uri, Object body) {

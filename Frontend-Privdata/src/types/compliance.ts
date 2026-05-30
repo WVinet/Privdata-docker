@@ -32,6 +32,14 @@ export interface Consent {
   categoryIds: string[]
 }
 
+export interface ConsentPage {
+  content: Consent[]
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
+}
+
 export interface TreatmentActivity {
   id: string
   organizationId: string

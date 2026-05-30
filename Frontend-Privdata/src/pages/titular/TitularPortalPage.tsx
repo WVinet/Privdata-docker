@@ -125,7 +125,10 @@ function TitularPortalContent({
           />
         )}
         {activeTab === "consentimientos" && (
-          <TitularConsentimientos consents={[]} />
+          <TitularConsentimientos
+            dataSubjectId={personId}
+            organizationId={orgId}
+          />
         )}
         {activeTab === "arco" && (
           <TitularArco

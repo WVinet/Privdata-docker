@@ -17,4 +17,16 @@ public class ComplianceBffService {
     public Object getRat(String organizationId) {
         return complianceClient.getRat(organizationId);
     }
+
+    public Object revokeConsent(String consentId) {
+        return complianceClient.revokeConsent(consentId, null);
+    }
+
+    public Object getDataCategories() {
+        return complianceClient.getDataCategories();
+    }
+
+    public Object listConsents(String status, Integer page, Integer size) {
+        return complianceClient.listConsents(status, page, size);
+    }
 }
