@@ -15,7 +15,10 @@ import type {
   ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel,
   CreateArcoRequest, UpdateArcoStatus,
 } from "@/types/arco"
-import type { Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus } from "@/types/compliance"
+import type {
+  Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus,
+  ConsentDefinition, ConsentCreateRequest,
+} from "@/types/compliance"
 
 export type { ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel, CreateArcoRequest, UpdateArcoStatus }
 export type { Organization, OrganizationCreateRequest, OrganizationUpdateRequest, Department, DepartmentCreateRequest }
@@ -182,6 +185,24 @@ export const complianceApi = {
 
   listConsents: (params?: { status?: ConsentStatus; page?: number; size?: number }) =>
     api.get<ConsentPage>(`/compliance/consents`, { params }),
+
+  createConsent: (body: ConsentCreateRequest) =>
+    api.post<ApiResponse<Consent>>(`/compliance/consents`, body),
+
+  grantConsent: (consentId: string) =>
+    api.post<ApiResponse<Consent>>(`/compliance/consents/${consentId}/grant`),
+
+  getConsentDefinitions: (organizationId: string) =>
+    api.get<ConsentDefinition[]>(`/compliance/consent-definitions`, { params: { organizationId } }),
+
+  createConsentDefinition: (body: { organizationId: string; title: string; description?: string; required: boolean; legalBasis: string }) =>
+    api.post<ConsentDefinition>(`/compliance/consent-definitions`, body),
+
+  setConsentDefinitionActive: (id: string, value: boolean) =>
+    api.patch<ConsentDefinition>(`/compliance/consent-definitions/${id}/active`, null, { params: { value } }),
+
+  getPendingConsents: (organizationId: string, personId: string) =>
+    api.get<ConsentDefinition[]>(`/compliance/consents/pending`, { params: { organizationId, personId } }),
 }
 
 export default api

@@ -40,4 +40,40 @@ public class ComplianceBffController {
     public ResponseEntity<?> getDataCategories() {
         return ResponseEntity.ok(service.getDataCategories());
     }
+
+    @PostMapping("/consents")
+    public ResponseEntity<?> createConsent(@RequestBody Object body) {
+        return ResponseEntity.ok(service.createConsent(body));
+    }
+
+    @PostMapping("/consents/{consentId}/grant")
+    public ResponseEntity<?> grantConsent(@PathVariable String consentId) {
+        return ResponseEntity.ok(service.grantConsent(consentId));
+    }
+
+    @GetMapping("/consents/pending")
+    public ResponseEntity<?> getPendingConsents(
+            @RequestParam String organizationId,
+            @RequestParam String personId
+    ) {
+        return ResponseEntity.ok(service.getPendingConsents(organizationId, personId));
+    }
+
+    @GetMapping("/consent-definitions")
+    public ResponseEntity<?> getConsentDefinitions(@RequestParam String organizationId) {
+        return ResponseEntity.ok(service.getConsentDefinitions(organizationId));
+    }
+
+    @PostMapping("/consent-definitions")
+    public ResponseEntity<?> createConsentDefinition(@RequestBody Object body) {
+        return ResponseEntity.ok(service.createConsentDefinition(body));
+    }
+
+    @PatchMapping("/consent-definitions/{id}/active")
+    public ResponseEntity<?> setConsentDefinitionActive(
+            @PathVariable String id,
+            @RequestParam boolean value
+    ) {
+        return ResponseEntity.ok(service.setConsentDefinitionActive(id, value));
+    }
 }

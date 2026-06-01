@@ -11,6 +11,7 @@ interface TitularPortalLayoutProps {
   rut: string
   lastAccess: string
   onLogout: () => void
+  pendingConsentsCount?: number
   children: ReactNode
 }
 
@@ -28,6 +29,7 @@ function SidebarContent({
   rut,
   lastAccess,
   onLogout,
+  pendingConsentsCount = 0,
   onClose,
 }: Omit<TitularPortalLayoutProps, "children"> & { onClose?: () => void }) {
   const formattedAccess = new Date(lastAccess).toLocaleString("es-CL", {
@@ -79,6 +81,7 @@ function SidebarContent({
         </p>
         {navItems.map(({ id, label, Icon }) => {
           const isActive = activeTab === id
+          const badge = id === "consentimientos" && pendingConsentsCount > 0 ? pendingConsentsCount : 0
           return (
             <button
               key={id}
@@ -103,10 +106,15 @@ function SidebarContent({
               }}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              <span>{label}</span>
-              {isActive && (
+              <span className="flex-1">{label}</span>
+              {badge > 0 && (
+                <span className="min-w-[1.1rem] h-[1.1rem] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                  {badge}
+                </span>
+              )}
+              {isActive && badge === 0 && (
                 <span
-                  className="ml-auto w-1.5 h-1.5 rounded-full"
+                  className="w-1.5 h-1.5 rounded-full"
                   style={{ background: "hsl(var(--accent))" }}
                 />
               )}
@@ -167,6 +175,7 @@ export default function TitularPortalLayout({
   rut,
   lastAccess,
   onLogout,
+  pendingConsentsCount = 0,
   children,
 }: TitularPortalLayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -182,6 +191,7 @@ export default function TitularPortalLayout({
           rut={rut}
           lastAccess={lastAccess}
           onLogout={onLogout}
+          pendingConsentsCount={pendingConsentsCount}
         />
       </aside>
 
@@ -200,6 +210,7 @@ export default function TitularPortalLayout({
               rut={rut}
               lastAccess={lastAccess}
               onLogout={onLogout}
+              pendingConsentsCount={pendingConsentsCount}
               onClose={() => setDrawerOpen(false)}
             />
           </aside>

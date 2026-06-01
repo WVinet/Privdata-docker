@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { Toaster } from "sonner"
 import { Loader2 } from "lucide-react"
-import { personsApi } from "@/lib/api"
+import { personsApi, complianceApi } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
 import TitularPortalLayout, { type TitularTab } from "@/components/titular/TitularPortalLayout"
 import TitularInicio from "@/components/titular/TitularInicio"
@@ -80,6 +80,14 @@ function TitularPortalContent({
     enabled: !!orgId && !!personId,
   })
 
+  const { data: pendingData } = useQuery({
+    queryKey: ["consents-pending", orgId, personId],
+    queryFn: () => complianceApi.getPendingConsents(orgId, personId).then((r) => r.data ?? []),
+    enabled: !!orgId && !!personId,
+    refetchOnWindowFocus: true,
+  })
+
+  const pendingConsentsCount = pendingData?.length ?? 0
   const person = personData?.data
 
   if (isLoading) {
@@ -110,6 +118,7 @@ function TitularPortalContent({
         rut={displayRut}
         lastAccess={lastAccess}
         onLogout={onLogout}
+        pendingConsentsCount={pendingConsentsCount}
       >
         {activeTab === "inicio" && (
           <TitularInicio

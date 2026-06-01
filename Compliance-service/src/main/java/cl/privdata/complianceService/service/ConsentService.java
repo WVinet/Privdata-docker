@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 import cl.privdata.complianceService.DTO.request.ConsentActionRequestDTO;
 import cl.privdata.complianceService.DTO.request.ConsentCategoriesUpdateRequestDTO;
 import cl.privdata.complianceService.DTO.request.ConsentCreateRequestDTO;
+import cl.privdata.complianceService.DTO.response.ConsentDefinitionResponseDTO;
 import cl.privdata.complianceService.DTO.response.ConsentEventResponseDTO;
 import cl.privdata.complianceService.DTO.response.ConsentResponseDTO;
 import cl.privdata.complianceService.model.Consent;
@@ -35,15 +36,18 @@ public class ConsentService {
     private final ConsentRepository consentRepository;
     private final ConsentEventRepository consentEventRepository;
     private final ConsentDataCategoryRepository consentDataCategoryRepository;
+    private final ConsentDefinitionService consentDefinitionService;
 
     public ConsentService(
             ConsentRepository consentRepository,
             ConsentEventRepository consentEventRepository,
-            ConsentDataCategoryRepository consentDataCategoryRepository
+            ConsentDataCategoryRepository consentDataCategoryRepository,
+            ConsentDefinitionService consentDefinitionService
     ) {
         this.consentRepository = consentRepository;
         this.consentEventRepository = consentEventRepository;
         this.consentDataCategoryRepository = consentDataCategoryRepository;
+        this.consentDefinitionService = consentDefinitionService;
     }
 
     public Page<ConsentResponseDTO> getAll(UUID dataSubjectId, ConsentStatus status, Pageable pageable) {
@@ -81,8 +85,11 @@ public class ConsentService {
         Consent consent = new Consent();
         consent.setOrganizationId(request.getOrganizationId());
         consent.setDataSubjectId(request.getDataSubjectId());
-        consent.setPurposeId(request.getPurposeId());
-        consent.setPolicyVersionId(request.getPolicyVersionId());
+        consent.setDefinitionId(request.getDefinitionId());
+        UUID purposeRef = request.getDefinitionId() != null ? request.getDefinitionId() : request.getPurposeId();
+        UUID policyRef = request.getDefinitionId() != null ? request.getDefinitionId() : request.getPolicyVersionId();
+        consent.setPurposeId(purposeRef);
+        consent.setPolicyVersionId(policyRef);
         consent.setStatus(ConsentStatus.ACTIVE);
         consent.setGrantedAt(now);
         consent.setRevokedAt(null);
@@ -242,6 +249,10 @@ public class ConsentService {
         return toResponse(saved);
     }
 
+    public List<ConsentDefinitionResponseDTO> getPending(UUID organizationId, UUID personId) {
+        return consentDefinitionService.getPendingForPerson(organizationId, personId);
+    }
+
     public List<ConsentEventResponseDTO> getEvents(UUID consentId) {
         findConsentOrThrow(consentId);
 
@@ -265,6 +276,7 @@ public class ConsentService {
         response.setId(consent.getId());
         response.setOrganizationId(consent.getOrganizationId());
         response.setDataSubjectId(consent.getDataSubjectId());
+        response.setDefinitionId(consent.getDefinitionId());
         response.setPurposeId(consent.getPurposeId());
         response.setPolicyVersionId(consent.getPolicyVersionId());
         response.setStatus(consent.getStatus());

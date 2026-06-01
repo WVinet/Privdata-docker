@@ -17,6 +17,7 @@ export interface Consent {
   id: string
   organizationId: string
   dataSubjectId: string
+  definitionId?: string
   purposeId: string
   policyVersionId: string
   status: ConsentStatus
@@ -38,6 +39,26 @@ export interface ConsentPage {
   totalPages: number
   size: number
   number: number
+}
+
+export interface ConsentDefinition {
+  id: string
+  organizationId: string
+  title: string
+  description: string | null
+  required: boolean
+  legalBasis: LegalBasis
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ConsentCreateRequest {
+  organizationId: string
+  dataSubjectId: string
+  definitionId: string
+  collectionMethod: CollectionMethod
+  notes?: string
 }
 
 export interface TreatmentActivity {

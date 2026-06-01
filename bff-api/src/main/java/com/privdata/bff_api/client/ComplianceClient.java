@@ -48,6 +48,30 @@ public class ComplianceClient {
         return forward("GET", uri.toString(), null);
     }
 
+    public Object createConsent(Object body) {
+        return forward("POST", "/api/compliance/consents", body);
+    }
+
+    public Object grantConsent(String consentId, Object body) {
+        return forward("POST", "/api/compliance/consents/" + consentId + "/grant", body);
+    }
+
+    public Object getPendingConsents(String organizationId, String personId) {
+        return forward("GET", "/api/compliance/consents/pending?organizationId=" + organizationId + "&personId=" + personId, null);
+    }
+
+    public Object getConsentDefinitions(String organizationId) {
+        return forward("GET", "/api/compliance/consent-definitions?organizationId=" + organizationId, null);
+    }
+
+    public Object createConsentDefinition(Object body) {
+        return forward("POST", "/api/compliance/consent-definitions", body);
+    }
+
+    public Object setConsentDefinitionActive(String id, boolean value) {
+        return forward("PATCH", "/api/compliance/consent-definitions/" + id + "/active?value=" + value, null);
+    }
+
     private Object forward(String method, String uri, Object body) {
         try {
             var spec = complianceRestClient
