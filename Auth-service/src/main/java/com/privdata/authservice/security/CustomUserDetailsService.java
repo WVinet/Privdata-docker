@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +26,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final RolePermissionRepository rolePermissionsRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
 
         User user = userRepository.findByEmail(email)
@@ -35,19 +37,21 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         Set<GrantedAuthority> authorities = new HashSet<>();
 
-        for (UserRole userRole : userRoles){
+        for (UserRole userRole : userRoles) {
             Role role = userRole.getRole();
+            if (role == null) continue;
+
+            // Rol con prefijo ROLE_ (convención Spring Security)
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
 
             List<RolePermissions> rolePermissions = rolePermissionsRepository.findByRoleAndIsActiveTrue(role);
 
-            for (RolePermissions rolePermission : rolePermissions){
+            for (RolePermissions rolePermission : rolePermissions) {
                 Permission permission = rolePermission.getPermission();
-
-                String authorityName = permission.getModule() + "_" + permission.getAction();
-
-                authorities.add(new SimpleGrantedAuthority(authorityName));
+                if (permission == null) continue;
+                authorities.add(new SimpleGrantedAuthority(
+                        permission.getModule() + "_" + permission.getAction()));
             }
-
         }
 
         return new SecurityUser(

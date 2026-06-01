@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import cl.privdata.complianceService.DTO.request.ConsentActionRequestDTO;
 import cl.privdata.complianceService.DTO.request.ConsentCategoriesUpdateRequestDTO;
 import cl.privdata.complianceService.DTO.request.ConsentCreateRequestDTO;
+import cl.privdata.complianceService.DTO.response.ConsentDefinitionResponseDTO;
 import cl.privdata.complianceService.DTO.response.ConsentEventResponseDTO;
 import cl.privdata.complianceService.DTO.response.ConsentResponseDTO;
 import cl.privdata.complianceService.model.enums.ConsentStatus;
@@ -82,6 +83,14 @@ public class ConsentController {
             @RequestBody ConsentActionRequestDTO request
     ) {
         return ResponseEntity.ok(consentService.grant(id, request));
+    }
+
+    @GetMapping("/pending")
+    public ResponseEntity<List<ConsentDefinitionResponseDTO>> getPending(
+            @RequestParam UUID organizationId,
+            @RequestParam UUID personId
+    ) {
+        return ResponseEntity.ok(consentService.getPending(organizationId, personId));
     }
 
     @GetMapping("/{id}/events")

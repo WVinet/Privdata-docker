@@ -1,7 +1,10 @@
 package com.privdata.authservice.controller;
 
+import com.privdata.authservice.dto.request.ActivateAccountRequestDTO;
+import com.privdata.authservice.dto.request.InviteRequestDTO;
 import com.privdata.authservice.dto.request.LoginRequestDTO;
 import com.privdata.authservice.dto.request.RegisterRequestDTO;
+import com.privdata.authservice.dto.response.InviteResponseDTO;
 import com.privdata.authservice.dto.response.LoginResponseDTO;
 import com.privdata.authservice.dto.response.MeResponseDTO;
 import com.privdata.authservice.dto.response.RegisterResponseDTO;
@@ -53,6 +56,13 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponseDTO<>(true, "Usuario obtenido correctamente", user));
     }
 
+    @PostMapping("/invite")
+    @PreAuthorize("hasAuthority('USER_CREATE')")
+    public ResponseEntity<ApiResponseDTO<InviteResponseDTO>> invite(@Valid @RequestBody InviteRequestDTO request) {
+        InviteResponseDTO response = authService.invite(request);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Invitación creada correctamente", response));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponseDTO<LoginResponseDTO>> login(@Valid @RequestBody LoginRequestDTO request) {
         LoginResponseDTO response = authService.login(request);
@@ -73,6 +83,16 @@ public class AuthController {
         return ResponseEntity.ok(
                 new ApiResponseDTO<>(true, "Usuario autenticado obtenido correctamente", response)
         );
+    }
+
+    @PostMapping("/me/activate")
+    public ResponseEntity<ApiResponseDTO<LoginResponseDTO>> activateAccount(
+            Authentication authentication,
+            @Valid @RequestBody ActivateAccountRequestDTO request
+    ) {
+        SecurityUser securityUser = (SecurityUser) authentication.getPrincipal();
+        LoginResponseDTO response = authService.activateAccount(securityUser, request);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Cuenta activada correctamente", response));
     }
 
     @PostMapping("/users/{userId}/roles")

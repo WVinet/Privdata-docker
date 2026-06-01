@@ -13,8 +13,8 @@ export default function LoginPage() {
   const [showPwd, setShowPwd]   = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState("")
-  const navigate  = useNavigate()
-  const { login } = useAuth()
+  const navigate           = useNavigate()
+  const { login, getUser } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,7 +23,14 @@ export default function LoginPage() {
     const { ok, message } = await login(email, password)
     setLoading(false)
     if (ok) {
-      navigate("/dashboard")
+      const user = getUser()
+      if (user?.status === "PENDING") {
+        navigate("/completar-perfil")
+      } else if (user?.authorities.includes("ROLE_END_USER")) {
+        navigate("/portal")
+      } else {
+        navigate("/dashboard")
+      }
     } else {
       setError(message)
     }

@@ -4,6 +4,8 @@ import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
+import { arcoApi } from "@/lib/api"
+import type { ArcoRequestType } from "@/types/arco"
 
 type ArcoRight = {
   id: string
@@ -120,16 +122,28 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
+const RIGHT_TO_TYPE: Record<string, ArcoRequestType> = {
+  access:         "ACCESO",
+  rectification:  "RECTIFICACION",
+  suppression:    "SUPRESION",
+  opposition:     "OPOSICION",
+  portability:    "PORTABILIDAD",
+  blocking:       "BLOQUEO_TEMPORAL",
+}
+
 interface Props {
   rut: string
   email: string
+  organizationId: string
+  dataSubjectId: string
   onSolicitudCreated: () => void
 }
 
-export default function TitularArco({ rut, email, onSolicitudCreated }: Props) {
+export default function TitularArco({ rut, email, organizationId, dataSubjectId, onSolicitudCreated }: Props) {
   const [selectedRight, setSelectedRight] = useState<ArcoRight | null>(null)
-  const [token, setToken] = useState("")
+  const [requestId, setRequestId] = useState("")
   const [successOpen, setSuccessOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const {
     register,
@@ -141,18 +155,38 @@ export default function TitularArco({ rut, email, onSolicitudCreated }: Props) {
     defaultValues: { email, dataScope: "", description: "", declaration: false },
   })
 
-  function generateToken() {
-    const part = () => Math.random().toString(36).slice(2, 8).toUpperCase()
-    return `TKN-${part()}-${part()}`
-  }
-
-  function onSubmit(_data: FormData) {
+  async function onSubmit(data: FormData) {
     if (!selectedRight) {
       toast.error("Selecciona un derecho ARCO antes de enviar.")
       return
     }
-    setToken(generateToken())
-    setSuccessOpen(true)
+    if (!organizationId || !dataSubjectId) {
+      toast.error("Tu cuenta no tiene organización o persona configurada. Contacta al administrador.")
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await arcoApi.create({
+        organizationId,
+        dataSubjectId,
+        requestType: RIGHT_TO_TYPE[selectedRight.id],
+        requestChannel: "WEB_PORTAL",
+        description: data.description
+          ? `${data.dataScope} — ${data.description}`
+          : data.dataScope,
+      })
+      if (!res.data?.success || !res.data?.data) {
+        toast.error(res.data?.message ?? "No se pudo enviar la solicitud. Intenta nuevamente.")
+        return
+      }
+      const id = res.data.data.id ?? "—"
+      setRequestId(id)
+      setSuccessOpen(true)
+    } catch {
+      toast.error("No se pudo enviar la solicitud. Intenta nuevamente.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function handleSuccessClose() {
@@ -376,13 +410,20 @@ export default function TitularArco({ rut, email, onSolicitudCreated }: Props) {
           <div className="flex gap-3 pt-1">
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+              disabled={submitting}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60 flex items-center gap-2"
               style={{
                 background: "hsl(var(--primary))",
                 color: "hsl(var(--primary-foreground))",
               }}
             >
-              Enviar solicitud →
+              {submitting && (
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+              )}
+              {submitting ? "Enviando…" : "Enviar solicitud →"}
             </button>
             <button
               type="button"
@@ -437,18 +478,18 @@ export default function TitularArco({ rut, email, onSolicitudCreated }: Props) {
               recibir respuesta.
             </Dialog.Description>
 
-            {/* Token */}
+            {/* ID de seguimiento */}
             <div
-              className="rounded-xl px-4 py-3 mb-4 font-mono text-sm font-bold tracking-widest"
+              className="rounded-xl px-4 py-3 mb-4 font-mono text-xs font-bold tracking-wider break-all"
               style={{
                 background: "hsl(var(--secondary))",
                 color: "hsl(var(--primary))",
               }}
             >
-              {token}
+              {requestId}
             </div>
             <p className="text-xs mb-6" style={{ color: "hsl(var(--muted-foreground))" }}>
-              Guarda este código para hacer seguimiento de tu solicitud.
+              Guarda este ID para hacer seguimiento de tu solicitud.
             </p>
 
             <div className="flex gap-2">

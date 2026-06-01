@@ -21,7 +21,7 @@ export interface MeResponse {
   email: string
   organizationId: string
   personId: string
-  status: "ACTIVE" | "INACTIVE" | "LOCKED"
+  status: "ACTIVE" | "INACTIVE" | "LOCKED" | "PENDING"
   authorities: string[] // mezcla ROLE_ADMIN y ARCO_VIEW
 }
 
@@ -56,8 +56,9 @@ export interface AuthUser {
   email: string
   organizationId: string
   personId: string
-  status: "ACTIVE" | "INACTIVE" | "LOCKED"
+  status: "ACTIVE" | "INACTIVE" | "LOCKED" | "PENDING"
   isActive: boolean
+  roles?: string[]
   createdAt: string
   updatedAt: string
 }
