@@ -3,9 +3,10 @@ package com.example.demo.model;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import com.example.demo.enums.arcoRequestStatusHistory.ArcoHistoryStatus;
+import com.example.demo.enums.arcoRequest.ArcoStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.CreationTimestamp;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,30 +19,30 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ArcoRequestStatusHistory {
+
     @Id
     @GeneratedValue
     private UUID id;
 
-//    @Column(name = "arco_request_id", nullable = false)
-//    private UUID arcoRequestId;
+    @Column(name = "changed_by_user_id", nullable = true)
+    private UUID changedByUserId;
 
-    @Column(name = "change_by_user_id", nullable = false)
-    private UUID changeByUserId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "previous_status", nullable = false)
+    private ArcoStatus previousStatus;
 
-    //ambos enums usan el mismo enum
-    @Column(name="previous_status",nullable= false) //enum
-    private ArcoHistoryStatus previousStatus;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "new_status", nullable = false)
+    private ArcoStatus newStatus;
 
-    @Column(name="new_status",nullable= false) //enum
-    private ArcoHistoryStatus newStatus;
+    @CreationTimestamp
+    @Column(name = "changed_at", nullable = false, updatable = false)
+    private LocalDateTime changedAt;
 
-    @UpdateTimestamp
-    @Column(name="change_at",nullable= false)
-    private LocalDateTime changeAt;
-
-    @Column(name="comment",nullable= false)
+    @Column(name = "comment", nullable = true, columnDefinition = "TEXT")
     private String comment;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "arco_request_id", nullable = false)
     private ArcoRequest arcoRequest;

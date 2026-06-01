@@ -5,6 +5,7 @@ import com.example.demo.dto.CreateArcoRequestDTO;
 import com.example.demo.dto.UpdateArcoStatusDTO;
 import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
 import com.example.demo.enums.arcoRequest.ArcoStatus;
+import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.model.ArcoRequest;
 import com.example.demo.repository.ArcoRequestRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class ArcoRequestService {
 
     private final ArcoRequestRepository arcoRequestRepository;
+    private final ArcoRequestStatusHistoryRepository statusHistoryRepository;
 
     public List<ArcoResponseDTO> findAll(UUID organizationId) {
         List<ArcoRequest> list = organizationId != null
