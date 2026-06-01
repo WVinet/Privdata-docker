@@ -31,7 +31,8 @@ public class AuthController {
 
     @PostMapping("/register")
     @PreAuthorize("hasAuthority('USER_CREATE')")
-    public ResponseEntity<ApiResponseDTO<RegisterResponseDTO>> register(@Valid @RequestBody RegisterRequestDTO request) {
+    public ResponseEntity<ApiResponseDTO<RegisterResponseDTO>> register(
+            @Valid @RequestBody RegisterRequestDTO request) {
         RegisterResponseDTO response = authService.register(request);
 
         ApiResponseDTO<RegisterResponseDTO> apiResponseDTO =

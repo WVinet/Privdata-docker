@@ -8,6 +8,7 @@ import com.example.demo.enums.arcoRequest.ArcoStatus;
 import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.model.ArcoRequest;
 import com.example.demo.repository.ArcoRequestRepository;
+import com.example.demo.repository.ArcoRequestStatusHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -49,7 +50,7 @@ public class ArcoRequestService {
         req.setAssignedToUserId(dto.getAssignedToUserId());
         req.setRequestType(dto.getRequestType());
         req.setStatus(ArcoStatus.RECIBIDA);
-        req.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.ACCESS_ACCEPTED);
+        req.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.VERIFICADA);
         req.setRequestChannel(dto.getRequestChannel());
         LocalDateTime now = LocalDateTime.now();
         req.setSubmittedAt(now);

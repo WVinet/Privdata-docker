@@ -209,6 +209,8 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedTestTitular() {
+
+        UUID titularPersonId = UUID.fromString(titularProperties.getPersonId());
         if (userRepository.existsByEmail(titularProperties.getEmail())) return;
 
         Role endUserRole = roleRepository.findByName("END_USER")
@@ -218,7 +220,7 @@ public class DataInitializer implements CommandLineRunner {
         titular.setEmail(titularProperties.getEmail());
         titular.setPasswordHash(passwordEncoder.encode(titularProperties.getPassword()));
         titular.setOrganizationId(UUID.fromString(adminProperties.getOrganizationId()));
-        titular.setPersonId(UUID.fromString(titularProperties.getPersonId()));
+        titular.setPersonId(titularPersonId);
         titular.setStatus(UserStatus.ACTIVE);
         titular.setActive(true);
         titular.setFailedLoginAttempts(0);
