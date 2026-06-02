@@ -67,7 +67,9 @@ public class ArcoRequestController {
     @PatchMapping("/{id}/resolucion")
     public ResponseEntity<ArcoRequestResponseDTO> actualizarResolucion(
             @PathVariable UUID id,
-            @RequestParam String resolutionSummary) {
-        return ResponseEntity.ok(arcoRequestService.actualizarResolucion(id, resolutionSummary));
+            @RequestBody UpdateArcoStatusDTO dto) {
+        return ResponseEntity.ok(new ApiResponseDTO<>(
+                true, "Estado actualizado correctamente",
+                arcoRequestService.updateStatus(id, dto)));
     }
 }

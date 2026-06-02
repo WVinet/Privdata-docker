@@ -22,6 +22,9 @@ public class Consent {
     @Column(name = "data_subject_id", nullable = false)
     private UUID dataSubjectId;
 
+    @Column(name = "definition_id")
+    private UUID definitionId;
+
     @Column(name = "purpose_id", nullable = false)
     private UUID purposeId;
 
@@ -97,6 +100,14 @@ public class Consent {
 
     public void setDataSubjectId(UUID dataSubjectId) {
         this.dataSubjectId = dataSubjectId;
+    }
+
+    public UUID getDefinitionId() {
+        return definitionId;
+    }
+
+    public void setDefinitionId(UUID definitionId) {
+        this.definitionId = definitionId;
     }
 
     public UUID getPurposeId() {

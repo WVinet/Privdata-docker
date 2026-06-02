@@ -35,8 +35,8 @@ public class ArcoRequest {
 
     @Column(name = "data_subject_id", nullable = false)
     private UUID dataSubjectId;
-
-    @Column(name = "assigned_to_user_id", nullable = true)
+  
+    @Column(name ="assigned_to_user_id", nullable = true)
     private UUID assignedToUserId;
 
     @Enumerated(EnumType.STRING)
@@ -45,8 +45,8 @@ public class ArcoRequest {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private ArcoStatus status;
-
+    private ArcoStatus status; //pasar a enum, Listo
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "identity_verification_status", nullable = false)
     private ArcoIdentityVerificationStatus identityVerificationStatus;
