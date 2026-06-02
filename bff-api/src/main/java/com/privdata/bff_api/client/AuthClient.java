@@ -5,10 +5,13 @@ import com.privdata.bff_api.dtos.request.RegisterRequestDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.util.HashMap;
 import java.util.Map;
+
 
 @Component
 @RequiredArgsConstructor
@@ -119,15 +122,39 @@ public class AuthClient {
         return forward("DELETE", "/api/auth/roles/" + roleId + "/permissions/" + permissionId, authorization, null);
     }
 
+    public Object invite(String authorization, Map<String, Object> body) {
+        return forward("POST", "/api/auth/invite", authorization, body);
+    }
+
+    public Object activateAccount(String authorization, Map<String, Object> body) {
+        return forward("POST", "/api/auth/me/activate", authorization, body);
+    }
+
     private Object forward(String method, String uri, String authorization, Object body) {
         try {
             var spec = authRestClient.method(org.springframework.http.HttpMethod.valueOf(method))
                     .uri(uri)
                     .header("Authorization", authorization);
-            if (body != null) spec = spec.body(body);
+            if (body != null) spec = spec.contentType(org.springframework.http.MediaType.APPLICATION_JSON).body(body);
             return spec.retrieve().body(Object.class);
         } catch (HttpClientErrorException ex) {
-            return Map.of("success", false, "message", ex.getStatusText(), "data", null);
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", ex.getStatusText());
+            err.put("data", null);
+            return err;
+        } catch (HttpServerErrorException ex) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "Error interno en Auth-service: " + ex.getStatusCode());
+            err.put("data", null);
+            return err;
+        } catch (ResourceAccessException ex) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "Auth-service no disponible");
+            err.put("data", null);
+            return err;
         }
     }
 }

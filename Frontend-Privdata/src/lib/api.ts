@@ -4,6 +4,25 @@ import type {
   Role, Permission, AuthUser, RegisterRequest,
   AssignRoleRequest, CreateRoleRequest,
 } from "@/types/auth"
+import type {
+  Organization, OrganizationCreateRequest, OrganizationUpdateRequest,
+  Department, DepartmentCreateRequest,
+} from "@/types/organization"
+import type {
+  Person, InvitePersonRequest, UpdatePersonRequest, InvitePersonResponse,
+} from "@/types/person"
+import type {
+  ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel,
+  CreateArcoRequest, UpdateArcoStatus,
+} from "@/types/arco"
+import type {
+  Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus,
+  ConsentDefinition, ConsentCreateRequest,
+} from "@/types/compliance"
+
+export type { ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel, CreateArcoRequest, UpdateArcoStatus }
+export type { Organization, OrganizationCreateRequest, OrganizationUpdateRequest, Department, DepartmentCreateRequest }
+export type { Person, InvitePersonRequest, UpdatePersonRequest, InvitePersonResponse }
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "/api"
 
@@ -32,7 +51,7 @@ api.interceptors.response.use(
   }
 )
 
-// ── Endpoints existentes en AuthService ───────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────────────────
 export const authApi = {
   login: (body: LoginRequest) =>
     api.post<ApiResponse<LoginResponse>>("/auth/login", body),
@@ -45,16 +64,12 @@ export const authApi = {
 
   assignRole: (userId: string, body: AssignRoleRequest) =>
     api.post<ApiResponse<null>>(`/auth/users/${userId}/roles`, body),
+
+  activateAccount: (newPassword: string) =>
+    api.post<ApiResponse<{ token: string }>>("/auth/me/activate", { newPassword }),
 }
 
-// ── Endpoints debe agregar al AuthService ─────────────────────
-// GET  /auth/roles
-// POST /auth/roles
-// GET  /auth/permissions
-// GET  /auth/users
-// POST /auth/roles/{id}/permissions
-// DELETE /auth/roles/{id}/permissions/{permId}
-
+// ── Roles & Permissions ───────────────────────────────────────────────────────
 export const rolesApi = {
   list: () =>
     api.get<ApiResponse<Role[]>>("/auth/roles"),
@@ -76,51 +91,118 @@ export const usersApi = {
     api.get<ApiResponse<AuthUser[]>>("/auth/users"),
 }
 
-// ── Organization-service ──────────────────────────────────────────────────────
-export interface Organization {
-  id: string
-  name: string
-  legalName: string
-  rut: string
-  businessType: string | null
-  email: string | null
-  phone: string | null
-  address: string | null
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-export interface OrganizationCreateRequest {
-  name: string
-  legalName: string
-  rut: string
-  businessType?: string
-  email?: string
-  phone?: string
-  address?: string
-}
-
-export interface OrganizationUpdateRequest extends OrganizationCreateRequest {}
-
+// ── Organizations ─────────────────────────────────────────────────────────────
 export const organizationsApi = {
   list: () =>
-    api.get<{ data: Organization[]; success: boolean; message: string }>("/organizations"),
+    api.get<ApiResponse<Organization[]>>("/organizations"),
 
   getById: (id: string) =>
-    api.get<{ data: Organization; success: boolean; message: string }>(`/organizations/${id}`),
+    api.get<ApiResponse<Organization>>(`/organizations/${id}`),
 
   create: (body: OrganizationCreateRequest) =>
-    api.post<{ data: Organization; success: boolean; message: string }>("/organizations", body),
+    api.post<ApiResponse<Organization>>("/organizations", body),
 
   update: (id: string, body: OrganizationUpdateRequest) =>
-    api.put<{ data: Organization; success: boolean; message: string }>(`/organizations/${id}`, body),
+    api.put<ApiResponse<Organization>>(`/organizations/${id}`, body),
 
   updateStatus: (id: string, isActive: boolean) =>
-    api.patch<{ data: Organization; success: boolean; message: string }>(
-      `/organizations/${id}/status`,
+    api.patch<ApiResponse<Organization>>(`/organizations/${id}/status`, { isActive }),
+}
+
+// ── Departments ───────────────────────────────────────────────────────────────
+export const departmentsApi = {
+  list: (organizationId: string) =>
+    api.get<ApiResponse<Department[]>>(`/organizations/${organizationId}/departments`),
+
+  create: (organizationId: string, body: DepartmentCreateRequest) =>
+    api.post<ApiResponse<Department>>(`/organizations/${organizationId}/departments`, body),
+
+  updateStatus: (organizationId: string, departmentId: string, isActive: boolean) =>
+    api.patch<ApiResponse<Department>>(
+      `/organizations/${organizationId}/departments/${departmentId}/status`,
       { isActive }
     ),
+}
+
+// ── Persons ───────────────────────────────────────────────────────────────────
+export const personsApi = {
+  getById: (organizationId: string, personId: string) =>
+    api.get<ApiResponse<Person>>(`/organizations/${organizationId}/persons/${personId}`),
+
+  list: (organizationId: string, departmentId?: string) =>
+    api.get<ApiResponse<Person[]>>(
+      `/organizations/${organizationId}/persons`,
+      { params: departmentId ? { departmentId } : undefined }
+    ),
+
+  invite: (organizationId: string, body: InvitePersonRequest) =>
+    api.post<ApiResponse<InvitePersonResponse>>(`/organizations/${organizationId}/persons/invite`, body),
+
+  update: (organizationId: string, personId: string, body: UpdatePersonRequest) =>
+    api.put<ApiResponse<Person>>(`/organizations/${organizationId}/persons/${personId}`, body),
+
+  updateStatus: (organizationId: string, personId: string, isActive: boolean) =>
+    api.patch<ApiResponse<Person>>(
+      `/organizations/${organizationId}/persons/${personId}/status`,
+      { isActive }
+    ),
+}
+
+// ── ARCO ──────────────────────────────────────────────────────────────────────
+export const arcoApi = {
+  list: (organizationId?: string) =>
+    api.get<ApiResponse<ArcoRequest[]>>(
+      "/arco",
+      { params: organizationId ? { organizationId } : undefined }
+    ),
+
+  getById: (id: string) =>
+    api.get<ApiResponse<ArcoRequest>>(`/arco/${id}`),
+
+  findByDataSubject: (dataSubjectId: string) =>
+    api.get<ApiResponse<ArcoRequest[]>>(`/arco/by-subject/${dataSubjectId}`),
+
+  create: (body: CreateArcoRequest) =>
+    api.post<ApiResponse<ArcoRequest>>("/arco", body),
+
+  updateStatus: (id: string, body: UpdateArcoStatus) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/${id}/status`, body),
+}
+
+// ── Compliance ────────────────────────────────────────────────────────────────
+export const complianceApi = {
+  getConsentsBySubject: (dataSubjectId: string) =>
+    api.get<ApiResponse<Consent[]>>(`/compliance/consents/data-subject/${dataSubjectId}`),
+
+  getRat: (organizationId: string) =>
+    api.get<ApiResponse<TreatmentActivity[]>>(`/compliance/rat`, { params: { organizationId } }),
+
+  revokeConsent: (consentId: string) =>
+    api.post<ApiResponse<Consent>>(`/compliance/consents/${consentId}/revoke`),
+
+  getDataCategories: () =>
+    api.get<ApiResponse<DataCategory[]>>(`/compliance/data-categories`),
+
+  listConsents: (params?: { status?: ConsentStatus; page?: number; size?: number }) =>
+    api.get<ConsentPage>(`/compliance/consents`, { params }),
+
+  createConsent: (body: ConsentCreateRequest) =>
+    api.post<ApiResponse<Consent>>(`/compliance/consents`, body),
+
+  grantConsent: (consentId: string) =>
+    api.post<ApiResponse<Consent>>(`/compliance/consents/${consentId}/grant`),
+
+  getConsentDefinitions: (organizationId: string) =>
+    api.get<ConsentDefinition[]>(`/compliance/consent-definitions`, { params: { organizationId } }),
+
+  createConsentDefinition: (body: { organizationId: string; title: string; description?: string; required: boolean; legalBasis: string }) =>
+    api.post<ConsentDefinition>(`/compliance/consent-definitions`, body),
+
+  setConsentDefinitionActive: (id: string, value: boolean) =>
+    api.patch<ConsentDefinition>(`/compliance/consent-definitions/${id}/active`, null, { params: { value } }),
+
+  getPendingConsents: (organizationId: string, personId: string) =>
+    api.get<ConsentDefinition[]>(`/compliance/consents/pending`, { params: { organizationId, personId } }),
 }
 
 export default api

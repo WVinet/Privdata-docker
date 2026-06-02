@@ -51,14 +51,14 @@
     /* Radio base — esquinas más redondeadas */
     --radius: 0.75rem;
 
-    /* Sidebar — carbón verdoso, siempre oscura */
-    --sidebar-background: 164 18% 10%;
-    --sidebar-foreground: 150 12% 76%;
+    /* Sidebar — verde esmeralda, igual que el portal titular */
+    --sidebar-background: 164 58% 20%;
+    --sidebar-foreground: 164 25% 82%;
     --sidebar-primary: 40 88% 56%;
     --sidebar-primary-foreground: 20 25% 10%;
-    --sidebar-accent: 164 18% 16%;
-    --sidebar-accent-foreground: 150 12% 93%;
-    --sidebar-border: 164 18% 16%;
+    --sidebar-accent: 164 52% 26%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 164 50% 16%;
     --sidebar-ring: 40 88% 56%;
   }
 }

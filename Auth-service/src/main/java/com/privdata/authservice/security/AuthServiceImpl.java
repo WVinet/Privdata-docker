@@ -1,7 +1,10 @@
 package com.privdata.authservice.security;
 
+import com.privdata.authservice.dto.request.ActivateAccountRequestDTO;
+import com.privdata.authservice.dto.request.InviteRequestDTO;
 import com.privdata.authservice.dto.request.LoginRequestDTO;
 import com.privdata.authservice.dto.request.RegisterRequestDTO;
+import com.privdata.authservice.dto.response.InviteResponseDTO;
 import com.privdata.authservice.dto.response.LoginResponseDTO;
 import com.privdata.authservice.dto.response.MeResponseDTO;
 import com.privdata.authservice.dto.response.RegisterResponseDTO;
@@ -87,6 +90,48 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public InviteResponseDTO invite(InviteRequestDTO request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El correo ya se encuentra registrado"
+            );
+        }
+
+        if (userRepository.existsByPersonId(request.getPersonId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La persona ya tiene un usuario registrado"
+            );
+        }
+
+        Role role = roleService.findByName(request.getRoleName());
+
+        String tempPassword = "Tmp1@" + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
+
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(tempPassword));
+        user.setStatus(UserStatus.PENDING);
+        user.setActive(true);
+        user.setOrganizationId(request.getOrganizationId());
+        user.setPersonId(request.getPersonId());
+
+        User savedUser = userRepository.save(user);
+
+        UserRole userRole = new UserRole();
+        userRole.setUser(savedUser);
+        userRole.setRole(role);
+        userRole.setActive(true);
+        userRole.setAssignedAt(LocalDateTime.now());
+        userRole.setAssignedBy(savedUser.getId());
+        userRole.setExpiresAt(LocalDateTime.now().plusYears(99));
+        userRoleRepository.save(userRole);
+
+        return new InviteResponseDTO(savedUser.getId(), savedUser.getEmail(), tempPassword);
+    }
+
+    @Override
     public LoginResponseDTO login(LoginRequestDTO request) {
 
         User user = userRepository.findByEmail(request.getEmail())
@@ -167,6 +212,19 @@ public class AuthServiceImpl implements AuthService {
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );
+    }
+
+    @Override
+    public LoginResponseDTO activateAccount(SecurityUser securityUser, ActivateAccountRequestDTO request) {
+        User user = userRepository.findById(securityUser.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
+
+        SecurityUser updated = (SecurityUser) customUserDetailsService.loadUserByUsername(user.getEmail());
+        return new LoginResponseDTO(jwtService.generateToken(updated));
     }
 
     @Override

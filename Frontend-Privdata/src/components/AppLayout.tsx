@@ -5,11 +5,28 @@ import { useState } from "react"
 import { Menu } from "lucide-react"
 
 export function AppLayout() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, getUser } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />
+  }
+
+  const user = getUser()
+  if (user?.status === "PENDING") {
+    return <Navigate to="/completar-perfil" replace />
+  }
+
+  const authorities = user?.authorities ?? []
+  const isEndUser =
+    authorities.includes("ROLE_END_USER") ||
+    // Fallback: no tiene ningún permiso de gestión interna
+    (!authorities.some((a) =>
+      ["USER_VIEW", "ARCO_RESOLVE", "RAT_VIEW", "AUDIT_VIEW"].includes(a)
+    ) && authorities.some((a) => a.startsWith("ARCO_")))
+
+  if (isEndUser) {
+    return <Navigate to="/portal" replace />
   }
 
   return (

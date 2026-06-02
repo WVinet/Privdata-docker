@@ -94,4 +94,12 @@ public class AuthBffController {
     ) {
         return ResponseEntity.ok(authBffService.removePermission(authorization, roleId, permissionId));
     }
+
+    @PostMapping("/me/activate")
+    public ResponseEntity<?> activateAccount(
+            @RequestHeader("Authorization") String authorization,
+            @RequestBody Map<String, Object> body
+    ) {
+        return ResponseEntity.ok(authBffService.activateAccount(authorization, body));
+    }
 }

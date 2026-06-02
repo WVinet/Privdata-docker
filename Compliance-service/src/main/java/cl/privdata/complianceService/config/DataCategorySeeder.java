@@ -4,9 +4,11 @@ import cl.privdata.complianceService.model.DataCategory;
 import cl.privdata.complianceService.repository.DataCategoryRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(1)
 public class DataCategorySeeder implements ApplicationRunner {
 
     private final DataCategoryRepository repository;

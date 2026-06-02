@@ -15,6 +15,8 @@ public class ConsentCreateRequestDTO {
     @NotNull
     private UUID dataSubjectId;
 
+    private UUID definitionId;
+
     @NotNull
     private UUID purposeId;
 
@@ -52,6 +54,14 @@ public class ConsentCreateRequestDTO {
 
     public void setDataSubjectId(UUID dataSubjectId) {
         this.dataSubjectId = dataSubjectId;
+    }
+
+    public UUID getDefinitionId() {
+        return definitionId;
+    }
+
+    public void setDefinitionId(UUID definitionId) {
+        this.definitionId = definitionId;
     }
 
     public UUID getPurposeId() {

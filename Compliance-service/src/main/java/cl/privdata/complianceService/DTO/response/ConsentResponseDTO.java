@@ -13,6 +13,7 @@ public class ConsentResponseDTO {
     private UUID id;
     private UUID organizationId;
     private UUID dataSubjectId;
+    private UUID definitionId;
     private UUID purposeId;
     private UUID policyVersionId;
     private ConsentStatus status;
@@ -52,6 +53,14 @@ public class ConsentResponseDTO {
 
     public void setDataSubjectId(UUID dataSubjectId) {
         this.dataSubjectId = dataSubjectId;
+    }
+
+    public UUID getDefinitionId() {
+        return definitionId;
+    }
+
+    public void setDefinitionId(UUID definitionId) {
+        this.definitionId = definitionId;
     }
 
     public UUID getPurposeId() {
