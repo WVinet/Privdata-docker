@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.arcoRequestAction.ArcoRequestActionCreateDTO;
+import com.example.demo.dto.arcoRequestAction.ArcoRequestActionResponseDTO;
 import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.model.ArcoRequestActions;
 import com.example.demo.repository.ArcoRequestActionsRepository;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,15 +21,17 @@ public class ArcoRequestActionsService {
     private final ArcoRequestActionsRepository actionsRepository;
     private final ArcoRequestRepository arcoRequestRepository;
 
-    public List<ArcoRequestActions> listarPorSolicitud(UUID arcoRequestId) {
+    public List<ArcoRequestActionResponseDTO> listarPorSolicitud(UUID arcoRequestId) {
         if (!arcoRequestRepository.existsById(arcoRequestId)) {
             throw new ArcoRequestNotFoundException(arcoRequestId);
         }
-        return actionsRepository.findByArcoRequest_IdOrderByExecutedAtAsc(arcoRequestId);
+        return actionsRepository.findByArcoRequest_IdOrderByExecutedAtAsc(arcoRequestId).stream()
+                .map(ArcoRequestActionResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
     @Transactional
-    public ArcoRequestActions registrarAccion(UUID arcoRequestId, ArcoRequestActionCreateDTO dto) {
+    public ArcoRequestActionResponseDTO registrarAccion(UUID arcoRequestId, ArcoRequestActionCreateDTO dto) {
         var solicitud = arcoRequestRepository.findById(arcoRequestId)
                 .orElseThrow(() -> new ArcoRequestNotFoundException(arcoRequestId));
 
@@ -37,6 +41,6 @@ public class ArcoRequestActionsService {
         accion.setActionType(dto.getActionType());
         accion.setResultSummary(dto.getResultSummary());
         accion.setArtifactUrl(dto.getArtifactUrl());
-        return actionsRepository.save(accion);
+        return ArcoRequestActionResponseDTO.fromEntity(actionsRepository.save(accion));
     }
 }

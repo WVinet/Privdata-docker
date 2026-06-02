@@ -1,7 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.arcoRequestEvidence.ArcoRequestEvidenceCreateDTO;
-import com.example.demo.model.ArcoRequestEvidences;
+import com.example.demo.dto.arcoRequestEvidence.ArcoRequestEvidenceResponseDTO;
 import com.example.demo.service.ArcoRequestEvidencesService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,12 +20,12 @@ public class ArcoRequestEvidencesController {
     private final ArcoRequestEvidencesService evidencesService;
 
     @GetMapping
-    public ResponseEntity<List<ArcoRequestEvidences>> listar(@PathVariable UUID arcoRequestId) {
+    public ResponseEntity<List<ArcoRequestEvidenceResponseDTO>> listar(@PathVariable UUID arcoRequestId) {
         return ResponseEntity.ok(evidencesService.listarPorSolicitud(arcoRequestId));
     }
 
     @PostMapping
-    public ResponseEntity<ArcoRequestEvidences> agregar(
+    public ResponseEntity<ArcoRequestEvidenceResponseDTO> agregar(
             @PathVariable UUID arcoRequestId,
             @Valid @RequestBody ArcoRequestEvidenceCreateDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED)
