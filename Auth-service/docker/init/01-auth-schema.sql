@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS role_permissions CASCADE;
 DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS refresh_tokens CASCADE;
 DROP TABLE IF EXISTS permissions CASCADE;
+DROP TABLE IF EXISTS password_reset_codes CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
 DROP TABLE IF EXISTS companies CASCADE;
@@ -151,6 +152,18 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     REFERENCES users(id)
     ON DELETE CASCADE
     );
+-- =========================================
+-- TABLE: password_reset_codes
+-- =========================================
+
+CREATE TABLE IF NOT EXISTS password_reset_codes (
+                                                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(150) NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
 
 -- =========================================
 -- INDEXES
@@ -182,6 +195,15 @@ CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id
 
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at
     ON refresh_tokens(expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_codes_email
+    ON password_reset_codes(email);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_codes_code
+    ON password_reset_codes(code);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_codes_expires_at
+    ON password_reset_codes(expires_at);
 
 -- =========================================
 -- SEED ROLES
