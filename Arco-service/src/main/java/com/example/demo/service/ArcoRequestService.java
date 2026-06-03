@@ -1,15 +1,24 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.arcoRequest.ArcoRequestCreateDTO;
-import com.example.demo.dto.arcoRequest.ArcoRequestResponseDTO;
-import com.example.demo.dto.arcoRequest.ArcoRequestStatusUpdateDTO;
-import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
-import com.example.demo.enums.arcoRequest.ArcoStatus;
+import com.example.demo.client.OrganizationClient;
+import com.example.demo.dto.request.ArcoCancellationRequestDTO;
+import com.example.demo.dto.response.ArcoRequestActionResponseDTO;
+import com.example.demo.dto.response.ArcoResponseDTO;
+import com.example.demo.dto.request.CreateArcoRequestDTO;
+import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
+import com.example.demo.dto.response.ArcoRequestResponseDTO;
+import com.example.demo.dto.request.arcoRequest.ArcoRequestStatusUpdateDTO;
+import com.example.demo.dto.response.OrgResponseDTO;
+import com.example.demo.enums.arcoRequest.*;
 import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.model.ArcoRequest;
+import com.example.demo.model.ArcoRequestStatusHistory;
 import com.example.demo.repository.ArcoRequestRepository;
 import com.example.demo.repository.ArcoRequestStatusHistoryRepository;
+import com.example.demo.util.BusinessDaysCalculator;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,6 +34,8 @@ public class ArcoRequestService {
 
     private final ArcoRequestRepository arcoRequestRepository;
     private final ArcoRequestStatusHistoryRepository statusHistoryRepository;
+    private final ModelMapper modelMapper;
+    private final OrganizationClient organizationClient;
 
     public List<ArcoRequestResponseDTO> listar() {
         return arcoRequestRepository.findAll().stream()
@@ -60,7 +71,7 @@ public class ArcoRequestService {
         req.setDescription(dto.getDescription());
         req.setResolutionSummary(null);
         req.setResolvedAt(null);
-        return toDTO(arcoRequestRepository.save(req));
+        return modelMapper.map(arcoRequestRepository.save(req), ArcoResponseDTO.class);
     }
 
     public List<ArcoRequestResponseDTO> listarPorEstado(ArcoStatus status) {
@@ -125,5 +136,91 @@ public class ArcoRequestService {
                 .orElseThrow(() -> new ArcoRequestNotFoundException(id));
         solicitud.setResolutionSummary(resolutionSummary);
         return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
+    }
+
+    ///Metodos relacionados al derecho de cancelación
+    ///
+    /// Falta crear response para solicitud
+    public ArcoRequestResponseDTO crearSolicitudCancelacion(ArcoCancellationRequestDTO requestDTO){
+
+        organizationClient.findByid(requestDTO.getOrganizationId());
+
+        ArcoRequest arcoRequest = new ArcoRequest();
+        arcoRequest.setOrganizationId(requestDTO.getOrganizationId());
+        arcoRequest.setDataSubjectId(requestDTO.getDataSubjectId());
+        arcoRequest.setAssignedToUserId(requestDTO.getAssignedToUserId());
+        arcoRequest.setRequestChannel(ArcoRequestChannel.WEB_PORTAL);
+        arcoRequest.setDescription(requestDTO.getDescription());
+        arcoRequest.setCancellationActionType(requestDTO.getCancellationActionType());
+        //los demas atributos de base
+        arcoRequest.setStatus(ArcoStatus.RECIBIDA);
+        arcoRequest.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.PENDIENTE);
+        arcoRequest.setSubmittedAt(LocalDateTime.now());
+        arcoRequest.setDueDate(LocalDateTime.now().plusDays(2));
+        arcoRequest.setResolutionSummary(null);
+        arcoRequest.setResolvedAt(null);
+        arcoRequest.setRequestType(ArcoRequestType.CANCELLATION);
+
+
+        return modelMapper.map(
+                arcoRequestRepository.save(arcoRequest), ArcoRequestResponseDTO.class);
+    }
+
+    @Transactional
+    public ArcoRequestResponseDTO ejecutarCancelacion(UUID solicitudId){
+
+        ArcoRequest solicitud = arcoRequestRepository.findById(solicitudId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Solicitud no existe"
+                ));
+
+        if(solicitud.getRequestType() != ArcoRequestType.CANCELLATION){
+            throw new RuntimeException("La solicitud no corresponde a cancelación");
+        }
+
+        if (solicitud.getCancellationActionType() == null){
+            throw new RuntimeException("La cancelación no tiene tipo definido");
+        }
+
+        switch (solicitud.getCancellationActionType()){
+            case BLOCK -> ejecutarBloqueo(solicitud);
+            case DELETE -> ejecutarEliminacion(solicitud);
+            case ANONYMIZE -> ejecutarAnonimizacion(solicitud);
+        }
+
+        solicitud.setStatus(ArcoStatus.RESPONDIDA);
+        solicitud.setResolvedAt(LocalDateTime.now());
+
+        return modelMapper.map(
+                arcoRequestRepository.save(solicitud), ArcoRequestResponseDTO.class);
+    }
+
+    ///en esta seccion los metodos ejecutan logica que se encuentra en organization
+    /// ya que estos tratamientos los hacen ahi
+
+
+    private void ejecutarBloqueo(ArcoRequest solicitud) {
+
+        solicitud.setResolutionSummary(
+                "Se ejecutó la cancelación mediante bloqueo lógico. " +
+                        "Los datos del titular quedan restringidos para nuevos tratamientos por parte de la organización."
+        );
+    }
+
+    private void ejecutarEliminacion(ArcoRequest solicitud) {
+
+        solicitud.setResolutionSummary(
+                "Se registró la cancelación mediante eliminación lógica. " +
+                        "Los datos no serán eliminados físicamente en esta etapa, pero quedan marcados como no disponibles para tratamiento."
+        );
+    }
+
+    private void ejecutarAnonimizacion(ArcoRequest solicitud) {
+
+        solicitud.setResolutionSummary(
+                "Se ejecutó la cancelación mediante anonimización lógica. " +
+                        "Los datos identificables del titular deberán ser reemplazados por valores no atribuibles directamente."
+        );
     }
 }

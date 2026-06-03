@@ -1,7 +1,7 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.arcoRequestEvidence.ArcoRequestEvidenceCreateDTO;
-import com.example.demo.dto.arcoRequestEvidence.ArcoRequestEvidenceResponseDTO;
+import com.example.demo.dto.request.arcoRequestEvidence.ArcoRequestEvidenceCreateDTO;
+import com.example.demo.dto.response.ArcoRequestEvidenceResponseDTO;
 import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.model.ArcoRequestEvidences;
 import com.example.demo.repository.ArcoRequestEvidencesRepository;

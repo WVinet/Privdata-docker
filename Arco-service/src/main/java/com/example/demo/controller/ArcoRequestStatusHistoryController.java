@@ -1,6 +1,6 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.arcoRequestStatusHistory.ArcoRequestStatusHistoryResponseDTO;
+import com.example.demo.dto.request.arcoRequestStatusHistory.ArcoRequestStatusHistoryResponseDTO;
 import com.example.demo.service.ArcoRequestStatusHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

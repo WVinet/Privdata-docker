@@ -1,4 +1,4 @@
-package com.example.demo.dto.arcoRequest;
+package com.example.demo.dto.request.arcoRequest;
 
 import com.example.demo.enums.arcoRequest.ArcoStatus;
 import jakarta.validation.constraints.NotNull;

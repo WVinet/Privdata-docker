@@ -1,4 +1,4 @@
-package com.example.demo.dto.arcoRequestAction;
+package com.example.demo.dto.response;
 
 import com.example.demo.enums.arcoRequestAction.ArcoActionType;
 import com.example.demo.model.ArcoRequestActions;

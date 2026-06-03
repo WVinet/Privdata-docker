@@ -1,8 +1,8 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.arcoRequest.ArcoRequestCreateDTO;
-import com.example.demo.dto.arcoRequest.ArcoRequestResponseDTO;
-import com.example.demo.dto.arcoRequest.ArcoRequestStatusUpdateDTO;
+import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
+import com.example.demo.dto.response.ArcoRequestResponseDTO;
+import com.example.demo.dto.request.arcoRequest.ArcoRequestStatusUpdateDTO;
 import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
 import com.example.demo.enums.arcoRequest.ArcoStatus;
 import com.example.demo.service.ArcoRequestService;
