@@ -32,8 +32,10 @@ public class ComplianceBffController {
     }
 
     @PostMapping("/consents/{consentId}/revoke")
-    public ResponseEntity<?> revokeConsent(@PathVariable String consentId) {
-        return ResponseEntity.ok(service.revokeConsent(consentId));
+    public ResponseEntity<?> revokeConsent(
+            @PathVariable String consentId,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.revokeConsent(consentId, authorization));
     }
 
     @GetMapping("/data-categories")
@@ -42,8 +44,10 @@ public class ComplianceBffController {
     }
 
     @PostMapping("/consents")
-    public ResponseEntity<?> createConsent(@RequestBody Object body) {
-        return ResponseEntity.ok(service.createConsent(body));
+    public ResponseEntity<?> createConsent(
+            @RequestBody Object body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.createConsent(body, authorization));
     }
 
     @PostMapping("/consents/{consentId}/grant")
@@ -65,15 +69,17 @@ public class ComplianceBffController {
     }
 
     @PostMapping("/consent-definitions")
-    public ResponseEntity<?> createConsentDefinition(@RequestBody Object body) {
-        return ResponseEntity.ok(service.createConsentDefinition(body));
+    public ResponseEntity<?> createConsentDefinition(
+            @RequestBody Object body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.createConsentDefinition(body, authorization));
     }
 
     @PatchMapping("/consent-definitions/{id}/active")
     public ResponseEntity<?> setConsentDefinitionActive(
             @PathVariable String id,
-            @RequestParam boolean value
-    ) {
-        return ResponseEntity.ok(service.setConsentDefinitionActive(id, value));
+            @RequestParam boolean value,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.setConsentDefinitionActive(id, value, authorization));
     }
 }

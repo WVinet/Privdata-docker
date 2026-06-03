@@ -30,14 +30,17 @@ public class ArcoBffController {
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(service.create(body));
+    public ResponseEntity<?> create(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.create(body, authorization));
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(
             @PathVariable String id,
-            @RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(service.updateStatus(id, body));
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.updateStatus(id, body, authorization));
     }
 }

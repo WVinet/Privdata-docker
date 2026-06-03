@@ -102,4 +102,14 @@ public class AuthBffController {
     ) {
         return ResponseEntity.ok(authBffService.activateAccount(authorization, body));
     }
+
+    @GetMapping("/audit")
+    public ResponseEntity<?> getAuditLogs(
+            @RequestHeader("Authorization") String authorization,
+            @RequestParam String organizationId,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        return ResponseEntity.ok(authBffService.getAuditLogs(authorization, organizationId, page, size));
+    }
 }

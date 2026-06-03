@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Search, ShieldCheck, ShieldOff, Clock, AlertCircle, Loader2,
   ChevronLeft, ChevronRight, Plus, Lock, Unlock, FileText,
+  ChevronDown, Send,
 } from "lucide-react"
 import { toast } from "sonner"
 import * as Dialog from "@radix-ui/react-dialog"
@@ -12,7 +13,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { Consent, ConsentStatus, ConsentDefinition, DataCategory, LegalBasis } from "@/types/compliance"
 import type { Person } from "@/types/person"
 
@@ -67,7 +67,6 @@ export default function ConsentsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-y-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Consentimientos</h1>
@@ -77,7 +76,6 @@ export default function ConsentsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
         {([
           { id: "registros",    label: "Registros",    icon: <ShieldCheck className="w-4 h-4" /> },
@@ -104,7 +102,7 @@ export default function ConsentsPage() {
   )
 }
 
-// ── tab: registros ────────────────────────────────────────────────────────────
+// ── tab: registros (accordion agrupado por titular) ───────────────────────────
 
 function RegistrosTab({ orgId }: { orgId: string }) {
   const queryClient = useQueryClient()
@@ -112,8 +110,9 @@ function RegistrosTab({ orgId }: { orgId: string }) {
   const [search,       setSearch]       = useState("")
   const [page,         setPage]         = useState(0)
   const [pendingRevoke, setPendingRevoke] = useState<Consent | null>(null)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  const PAGE_SIZE = 20
+  const PAGE_SIZE = 50
 
   const { data: consentsPage, isLoading } = useQuery({
     queryKey: ["admin-consents", statusFilter, page],
@@ -137,9 +136,9 @@ function RegistrosTab({ orgId }: { orgId: string }) {
     enabled: !!orgId,
   })
 
-  const personMap    = new Map<string, Person>((personsData?.data ?? []).map((p) => [p.id, p]))
-  const categoryMap  = new Map<string, DataCategory>((categoriesData?.data ?? []).map((c) => [c.id, c]))
-  const defMap       = new Map<string, ConsentDefinition>((definitionsData ?? []).map((d) => [d.id, d]))
+  const personMap   = new Map<string, Person>((personsData?.data ?? []).map((p) => [p.id, p]))
+  const categoryMap = new Map<string, DataCategory>((categoriesData?.data ?? []).map((c) => [c.id, c]))
+  const defMap      = new Map<string, ConsentDefinition>((definitionsData ?? []).map((d) => [d.id, d]))
 
   const revokeMutation = useMutation({
     mutationFn: (id: string) => complianceApi.revokeConsent(id),
@@ -160,16 +159,40 @@ function RegistrosTab({ orgId }: { orgId: string }) {
   const totalElements = consentsPage?.totalElements ?? 0
 
   const filtered = consents.filter((c) => {
-    if (!search) return true
-    const person = personMap.get(c.dataSubjectId)
-    const term   = search.toLowerCase()
-    return (
-      (person?.fullName?.toLowerCase() ?? "").includes(term) ||
-      (person?.email?.toLowerCase()    ?? "").includes(term) ||
-      c.dataSubjectId.toLowerCase().includes(term) ||
-      (c.notes ?? "").toLowerCase().includes(term)
-    )
+    if (search) {
+      const person = personMap.get(c.dataSubjectId)
+      const term   = search.toLowerCase()
+      if (
+        !(person?.fullName?.toLowerCase() ?? "").includes(term) &&
+        !(person?.email?.toLowerCase()    ?? "").includes(term) &&
+        !c.dataSubjectId.toLowerCase().includes(term) &&
+        !(c.notes ?? "").toLowerCase().includes(term)
+      ) return false
+    }
+    return true
   })
+
+  // Group by dataSubjectId, sort each group newest first
+  const grouped = new Map<string, Consent[]>()
+  filtered.forEach((c) => {
+    const arr = grouped.get(c.dataSubjectId) ?? []
+    arr.push(c)
+    grouped.set(c.dataSubjectId, arr)
+  })
+  grouped.forEach((arr, key) => {
+    grouped.set(key, [...arr].sort((a, b) =>
+      new Date(b.grantedAt ?? 0).getTime() - new Date(a.grantedAt ?? 0).getTime()
+    ))
+  })
+
+  const toggleExpanded = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const active  = consents.filter((c) => c.status === "ACTIVE").length
   const revoked = consents.filter((c) => c.status === "REVOKED").length
@@ -224,104 +247,153 @@ function RegistrosTab({ orgId }: { orgId: string }) {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
+          ) : grouped.size === 0 ? (
+            <p className="text-center text-muted-foreground py-10 text-sm">
+              No se encontraron consentimientos.
+            </p>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Titular</TableHead>
-                      <TableHead>Definición</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Canal</TableHead>
-                      <TableHead>Otorgado</TableHead>
-                      <TableHead>Categorías</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                          No se encontraron consentimientos.
-                        </TableCell>
-                      </TableRow>
-                    ) : filtered.map((c) => {
-                      const person = personMap.get(c.dataSubjectId)
-                      const def    = c.definitionId ? defMap.get(c.definitionId) : undefined
-                      const cfg    = statusCfg[c.status]
-                      const cats   = c.categoryIds.map((id) => categoryMap.get(id)).filter(Boolean) as DataCategory[]
+              <div className="space-y-2">
+                {Array.from(grouped.entries()).map(([subjectId, subjectConsents]) => {
+                  const person  = personMap.get(subjectId)
+                  const latest  = subjectConsents[0]
+                  const isOpen  = expanded.has(subjectId)
+                  const latestCfg = statusCfg[latest.status]
 
-                      return (
-                        <TableRow key={c.id}>
-                          <TableCell>
-                            {person ? (
-                              <div>
-                                <p className="text-sm font-medium">{person.fullName}</p>
-                                <p className="text-xs text-muted-foreground">{person.rut ?? person.email}</p>
-                              </div>
-                            ) : (
-                              <span className="font-mono text-xs text-muted-foreground">{shortId(c.dataSubjectId)}</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {def ? (
-                              <div className="flex items-center gap-1.5">
-                                {def.required && <Lock className="w-3 h-3 text-muted-foreground shrink-0" />}
-                                <span className="text-sm">{def.title}</span>
-                              </div>
-                            ) : (
-                              <span className="font-mono text-xs text-muted-foreground">#{shortId(c.id)}</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
-                              style={{ background: cfg.bg, color: cfg.color }}>
-                              {cfg.icon}{cfg.label}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {collectionLabels[c.collectionMethod] ?? c.collectionMethod}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                            {fmt(c.grantedAt)}
-                          </TableCell>
-                          <TableCell>
-                            {cats.length === 0 ? (
-                              <span className="text-xs text-muted-foreground">—</span>
-                            ) : (
-                              <div className="flex flex-wrap gap-1">
-                                {cats.slice(0, 2).map((cat) => (
-                                  <span key={cat.id} className="text-xs px-1.5 py-0.5 rounded-full"
-                                    style={cat.sensitive
-                                      ? { background: "hsl(var(--destructive) / 0.08)", color: "hsl(var(--destructive))" }
-                                      : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
-                                    }>
-                                    {cat.sensitive ? "⚠ " : ""}{cat.name}
-                                  </span>
-                                ))}
-                                {cats.length > 2 && <span className="text-xs text-muted-foreground">+{cats.length - 2}</span>}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {c.status === "ACTIVE" && (
-                              <Button variant="ghost" size="sm"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs h-7 px-2"
-                                onClick={() => setPendingRevoke(c)}>
-                                Revocar
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
+                  return (
+                    <div key={subjectId} className="rounded-xl border border-border overflow-hidden">
+                      {/* Accordion header */}
+                      <button
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
+                        onClick={() => toggleExpanded(subjectId)}
+                      >
+                        <ChevronDown
+                          className="w-4 h-4 shrink-0 text-muted-foreground transition-transform"
+                          style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {person?.fullName ?? shortId(subjectId)}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {person?.rut ?? person?.email ?? subjectId}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-xs text-muted-foreground hidden sm:inline">
+                            {subjectConsents.length} registro{subjectConsents.length !== 1 ? "s" : ""}
+                          </span>
+                          <span
+                            className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                            style={{ background: latestCfg.bg, color: latestCfg.color }}
+                          >
+                            {latestCfg.icon}
+                            {latestCfg.label}
+                          </span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">
+                            {fmt(latest.grantedAt)}
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* Accordion body */}
+                      {isOpen && (
+                        <div className="border-t border-border bg-muted/20">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-border">
+                                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-2 uppercase tracking-wide">Estado</th>
+                                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-2 uppercase tracking-wide">Descripción</th>
+                                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-2 uppercase tracking-wide">Canal</th>
+                                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-2 uppercase tracking-wide">Fecha</th>
+                                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-2 uppercase tracking-wide">Categorías</th>
+                                  <th className="px-4 py-2" />
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {subjectConsents.map((c) => {
+                                  const def  = c.definitionId ? defMap.get(c.definitionId) : undefined
+                                  const cfg  = statusCfg[c.status]
+                                  const cats = c.categoryIds
+                                    .map((id) => categoryMap.get(id))
+                                    .filter(Boolean) as DataCategory[]
+
+                                  return (
+                                    <tr key={c.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                                      <td className="px-4 py-2.5">
+                                        <span
+                                          className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                                          style={{ background: cfg.bg, color: cfg.color }}
+                                        >
+                                          {cfg.icon}{cfg.label}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2.5 max-w-xs">
+                                        {def ? (
+                                          <div className="flex items-center gap-1.5">
+                                            {def.required && <Lock className="w-3 h-3 text-muted-foreground shrink-0" />}
+                                            <span className="text-sm text-foreground truncate">{def.title}</span>
+                                          </div>
+                                        ) : (
+                                          <span className="font-mono text-xs text-muted-foreground">#{shortId(c.id)}</span>
+                                        )}
+                                        {def?.description && (
+                                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{def.description}</p>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
+                                        {collectionLabels[c.collectionMethod] ?? c.collectionMethod}
+                                      </td>
+                                      <td className="px-4 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
+                                        {fmt(c.grantedAt)}
+                                      </td>
+                                      <td className="px-4 py-2.5">
+                                        {cats.length === 0 ? (
+                                          <span className="text-xs text-muted-foreground">—</span>
+                                        ) : (
+                                          <div className="flex flex-wrap gap-1">
+                                            {cats.slice(0, 2).map((cat) => (
+                                              <span key={cat.id} className="text-xs px-1.5 py-0.5 rounded-full"
+                                                style={cat.sensitive
+                                                  ? { background: "hsl(var(--destructive) / 0.08)", color: "hsl(var(--destructive))" }
+                                                  : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
+                                                }>
+                                                {cat.sensitive ? "⚠ " : ""}{cat.name}
+                                              </span>
+                                            ))}
+                                            {cats.length > 2 && (
+                                              <span className="text-xs text-muted-foreground">+{cats.length - 2}</span>
+                                            )}
+                                          </div>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-2.5 text-right">
+                                        {c.status === "ACTIVE" && (
+                                          <button
+                                            onClick={() => setPendingRevoke(c)}
+                                            className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors"
+                                            style={{ color: "hsl(var(--destructive))", background: "hsl(var(--destructive) / 0.08)" }}
+                                          >
+                                            Revocar
+                                          </button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
 
               {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t border-border">
+                <div className="flex items-center justify-between pt-4 mt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground">
                     {totalElements} consentimiento{totalElements !== 1 ? "s" : ""}
                   </p>
@@ -381,6 +453,7 @@ function RegistrosTab({ orgId }: { orgId: string }) {
 function DefinicionesTab({ orgId }: { orgId: string }) {
   const queryClient   = useQueryClient()
   const [showForm, setShowForm] = useState(false)
+  const [pendingPublish, setPendingPublish] = useState<ConsentDefinition | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ["consent-definitions", orgId],
@@ -393,9 +466,10 @@ function DefinicionesTab({ orgId }: { orgId: string }) {
   const toggleMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       complianceApi.setConsentDefinitionActive(id, active),
-    onSuccess: () => {
-      toast.success("Definición actualizada.")
+    onSuccess: (_, vars) => {
+      toast.success(vars.active ? "Definición publicada. Los titulares la verán como pendiente." : "Definición desactivada.")
       queryClient.invalidateQueries({ queryKey: ["consent-definitions", orgId] })
+      setPendingPublish(null)
     },
     onError: () => toast.error("Error al actualizar."),
   })
@@ -404,7 +478,7 @@ function DefinicionesTab({ orgId }: { orgId: string }) {
     <>
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Define qué consentimientos solicita la organización. Los titulares los verán al completar su perfil.
+          Define qué consentimientos solicita la organización. Publícalos para que los titulares los vean como pendientes.
         </p>
         <Button onClick={() => setShowForm(true)} className="gap-2 shrink-0">
           <Plus className="w-4 h-4" />
@@ -432,14 +506,56 @@ function DefinicionesTab({ orgId }: { orgId: string }) {
                 <DefinicionRow
                   key={def.id}
                   definition={def}
-                  onToggle={(active) => toggleMutation.mutate({ id: def.id, active })}
-                  isToggling={toggleMutation.isPending}
+                  onPublish={() => setPendingPublish(def)}
+                  onDeactivate={() => toggleMutation.mutate({ id: def.id, active: false })}
+                  isUpdating={toggleMutation.isPending}
                 />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Dialogo: publicar definición */}
+      <Dialog.Root open={!!pendingPublish} onOpenChange={(o) => { if (!o) setPendingPublish(null) }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-border focus:outline-none">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 bg-primary/10">
+              <Send className="w-5 h-5 text-primary" />
+            </div>
+            <Dialog.Title className="text-sm font-bold mb-1">Publicar a titulares</Dialog.Title>
+            <Dialog.Description className="text-xs mb-4 leading-relaxed text-muted-foreground">
+              La definición <strong>"{pendingPublish?.title}"</strong> será visible para todos los titulares que aún no la hayan aceptado. Aparecerá como pendiente de respuesta en su portal.
+            </Dialog.Description>
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 mb-5">
+              <p className="text-xs text-amber-700">
+                Los titulares verán un badge de notificación hasta que respondan este consentimiento.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPendingPublish(null)}
+                disabled={toggleMutation.isPending}
+                className="flex-1 px-4 py-2 text-xs rounded-lg border font-medium hover:bg-muted transition-colors border-border text-muted-foreground"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => pendingPublish && toggleMutation.mutate({ id: pendingPublish.id, active: true })}
+                disabled={toggleMutation.isPending}
+                className="flex-1 px-4 py-2 text-xs rounded-lg font-semibold flex items-center justify-center gap-1.5 bg-primary text-primary-foreground"
+              >
+                {toggleMutation.isPending
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <Send className="w-3 h-3" />
+                }
+                Publicar
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       <NewDefinicionDialog
         open={showForm}
@@ -452,10 +568,15 @@ function DefinicionesTab({ orgId }: { orgId: string }) {
 }
 
 function DefinicionRow({
-  definition, onToggle, isToggling,
-}: { definition: ConsentDefinition; onToggle: (v: boolean) => void; isToggling: boolean }) {
+  definition, onPublish, onDeactivate, isUpdating,
+}: {
+  definition: ConsentDefinition
+  onPublish: () => void
+  onDeactivate: () => void
+  isUpdating: boolean
+}) {
   return (
-    <div className={`rounded-xl border p-4 flex items-start gap-4 transition-opacity ${!definition.active ? "opacity-60" : ""} border-border`}>
+    <div className={`rounded-xl border p-4 flex items-start gap-4 transition-opacity ${!definition.active ? "opacity-70" : ""} border-border`}>
       <div className="mt-0.5 shrink-0">
         {definition.required
           ? <Lock   className="w-4 h-4 text-muted-foreground" />
@@ -476,7 +597,7 @@ function DefinicionRow({
               ? "bg-green-100 text-green-700"
               : "bg-muted text-muted-foreground"
           }`}>
-            {definition.active ? "Activo" : "Inactivo"}
+            {definition.active ? "Publicada" : "Inactiva"}
           </span>
         </div>
         {definition.description && (
@@ -487,13 +608,26 @@ function DefinicionRow({
         </p>
       </div>
 
-      <button
-        onClick={() => onToggle(!definition.active)}
-        disabled={isToggling}
-        className="shrink-0 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors hover:bg-muted disabled:opacity-50 border-border text-muted-foreground"
-      >
-        {definition.active ? "Desactivar" : "Activar"}
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        {!definition.active ? (
+          <button
+            onClick={onPublish}
+            disabled={isUpdating}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            <Send className="w-3 h-3" />
+            Publicar
+          </button>
+        ) : (
+          <button
+            onClick={onDeactivate}
+            disabled={isUpdating}
+            className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors hover:bg-muted disabled:opacity-50 border-border text-muted-foreground"
+          >
+            Retirar
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -546,7 +680,7 @@ function NewDefinicionDialog({
             Nueva definición de consentimiento
           </Dialog.Title>
           <Dialog.Description className="text-xs text-muted-foreground mb-5">
-            Los titulares verán este consentimiento al completar su perfil o cuando sea publicado.
+            Los titulares verán este consentimiento cuando sea publicado. Usa "Publicar" para activarlo.
           </Dialog.Description>
 
           <form onSubmit={handleSubmit} className="space-y-4">

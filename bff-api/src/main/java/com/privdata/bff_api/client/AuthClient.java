@@ -130,6 +130,12 @@ public class AuthClient {
         return forward("POST", "/api/auth/me/activate", authorization, body);
     }
 
+    public Object getAuditLogs(String authorization, String organizationId, int page, int size) {
+        String uri = "/api/auth/audit?organizationId=" + organizationId
+                + "&page=" + page + "&size=" + size;
+        return forward("GET", uri, authorization, null);
+    }
+
     private Object forward(String method, String uri, String authorization, Object body) {
         try {
             var spec = authRestClient.method(org.springframework.http.HttpMethod.valueOf(method))

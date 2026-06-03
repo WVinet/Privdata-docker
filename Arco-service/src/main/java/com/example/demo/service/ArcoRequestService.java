@@ -45,10 +45,22 @@ public class ArcoRequestService {
                 .collect(Collectors.toList());
     }
 
-    public List<ArcoRequestResponseDTO> listarPorTitular(UUID dataSubjectId) {
-        return arcoRequestRepository.findByDataSubjectId(dataSubjectId).stream()
-                .map(ArcoRequestResponseDTO::fromEntity)
-                .collect(Collectors.toList());
+    public ArcoResponseDTO registrarSolicitud(CreateArcoRequestDTO dto) {
+        ArcoRequest req = new ArcoRequest();
+        req.setOrganizationId(dto.getOrganizationId());
+        req.setDataSubjectId(dto.getDataSubjectId());
+        req.setAssignedToUserId(dto.getAssignedToUserId());
+        req.setRequestType(dto.getRequestType());
+        req.setStatus(ArcoStatus.RECIBIDA);
+        req.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.PENDIENTE);
+        req.setRequestChannel(dto.getRequestChannel());
+        LocalDateTime now = LocalDateTime.now();
+        req.setSubmittedAt(now);
+        req.setDueDate(now.plusDays(30));
+        req.setDescription(dto.getDescription());
+        req.setResolutionSummary(null);
+        req.setResolvedAt(null);
+        return toDTO(arcoRequestRepository.save(req));
     }
 
     public List<ArcoRequestResponseDTO> listarPorEstado(ArcoStatus status) {
