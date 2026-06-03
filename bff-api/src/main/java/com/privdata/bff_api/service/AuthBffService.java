@@ -1,23 +1,30 @@
 package com.privdata.bff_api.service;
 
+import com.privdata.bff_api.client.AuditClient;
 import com.privdata.bff_api.client.AuthClient;
 import com.privdata.bff_api.dtos.request.LoginRequestDTO;
 import com.privdata.bff_api.dtos.request.RegisterRequestDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class AuthBffService {
 
-    private final AuthClient authClient;
-
-    public AuthBffService (AuthClient authClient){
-        this.authClient = authClient;
-    }
+    private final AuthClient  authClient;
+    private final AuditClient auditClient;
 
     public Map<String, Object> login(LoginRequestDTO request) {
-        return authClient.login(request);
+        Map<String, Object> result = authClient.login(request);
+        boolean ok = Boolean.TRUE.equals(result.get("success"));
+        if (ok) {
+            auditClient.log(null, "LOGIN", "Usuario",
+                    "Inicio de sesión exitoso: " + request.email(),
+                    request.email());
+        }
+        return result;
     }
 
     public Map<String, Object> register(RegisterRequestDTO request) {
@@ -62,5 +69,9 @@ public class AuthBffService {
 
     public Object activateAccount(String authorization, Map<String, Object> body) {
         return authClient.activateAccount(authorization, body);
+    }
+
+    public Object getAuditLogs(String authorization, String organizationId, int page, int size) {
+        return authClient.getAuditLogs(authorization, organizationId, page, size);
     }
 }

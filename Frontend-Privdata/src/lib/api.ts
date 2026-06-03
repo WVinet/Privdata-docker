@@ -19,6 +19,7 @@ import type {
   Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus,
   ConsentDefinition, ConsentCreateRequest,
 } from "@/types/compliance"
+import type { AuditPage } from "@/types/audit"
 
 export type { ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel, CreateArcoRequest, UpdateArcoStatus }
 export type { Organization, OrganizationCreateRequest, OrganizationUpdateRequest, Department, DepartmentCreateRequest }
@@ -172,7 +173,7 @@ export const arcoApi = {
 // ── Compliance ────────────────────────────────────────────────────────────────
 export const complianceApi = {
   getConsentsBySubject: (dataSubjectId: string) =>
-    api.get<ApiResponse<Consent[]>>(`/compliance/consents/data-subject/${dataSubjectId}`),
+    api.get<Consent[]>(`/compliance/consents/data-subject/${dataSubjectId}`),
 
   getRat: (organizationId: string) =>
     api.get<ApiResponse<TreatmentActivity[]>>(`/compliance/rat`, { params: { organizationId } }),
@@ -203,6 +204,12 @@ export const complianceApi = {
 
   getPendingConsents: (organizationId: string, personId: string) =>
     api.get<ConsentDefinition[]>(`/compliance/consents/pending`, { params: { organizationId, personId } }),
+}
+
+// ── Audit ─────────────────────────────────────────────────────────────────────
+export const auditApi = {
+  list: (organizationId: string, page = 0, size = 50) =>
+    api.get<ApiResponse<AuditPage>>("/auth/audit", { params: { organizationId, page, size } }),
 }
 
 export default api

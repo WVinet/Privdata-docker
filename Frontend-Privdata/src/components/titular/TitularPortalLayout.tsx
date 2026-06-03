@@ -8,8 +8,7 @@ interface TitularPortalLayoutProps {
   activeTab: TitularTab
   onTabChange: (tab: TitularTab) => void
   userName: string
-  rut: string
-  lastAccess: string
+  email: string
   onLogout: () => void
   pendingConsentsCount?: number
   children: ReactNode
@@ -26,16 +25,11 @@ function SidebarContent({
   activeTab,
   onTabChange,
   userName,
-  rut,
-  lastAccess,
+  email,
   onLogout,
   pendingConsentsCount = 0,
   onClose,
 }: Omit<TitularPortalLayoutProps, "children"> & { onClose?: () => void }) {
-  const formattedAccess = new Date(lastAccess).toLocaleString("es-CL", {
-    dateStyle: "short",
-    timeStyle: "short",
-  })
 
   return (
     <div className="flex flex-col h-full" style={{ background: "hsl(var(--primary))" }}>
@@ -139,14 +133,11 @@ function SidebarContent({
             <p className="text-xs font-semibold truncate" style={{ color: "hsl(var(--primary-foreground))" }}>
               {userName}
             </p>
-            <p className="text-xs font-mono" style={{ color: "hsl(var(--primary-foreground) / 0.55)" }}>
-              {rut}
+            <p className="text-xs truncate" style={{ color: "hsl(var(--primary-foreground) / 0.55)" }}>
+              {email}
             </p>
           </div>
         </div>
-        <p className="text-xs mb-3" style={{ color: "hsl(var(--primary-foreground) / 0.4)" }}>
-          Último acceso: {formattedAccess}
-        </p>
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all text-left"
@@ -172,8 +163,7 @@ export default function TitularPortalLayout({
   activeTab,
   onTabChange,
   userName,
-  rut,
-  lastAccess,
+  email,
   onLogout,
   pendingConsentsCount = 0,
   children,
@@ -188,8 +178,7 @@ export default function TitularPortalLayout({
           activeTab={activeTab}
           onTabChange={onTabChange}
           userName={userName}
-          rut={rut}
-          lastAccess={lastAccess}
+          email={email}
           onLogout={onLogout}
           pendingConsentsCount={pendingConsentsCount}
         />

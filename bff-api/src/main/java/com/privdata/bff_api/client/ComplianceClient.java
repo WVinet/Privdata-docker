@@ -28,7 +28,8 @@ public class ComplianceClient {
     }
 
     public Object revokeConsent(String consentId, Object body) {
-        return forward("POST", "/api/compliance/consents/" + consentId + "/revoke", body);
+        return forward("POST", "/api/compliance/consents/" + consentId + "/revoke",
+                body != null ? body : new HashMap<>());
     }
 
     public Object getRat(String organizationId) {
@@ -53,7 +54,8 @@ public class ComplianceClient {
     }
 
     public Object grantConsent(String consentId, Object body) {
-        return forward("POST", "/api/compliance/consents/" + consentId + "/grant", body);
+        return forward("POST", "/api/compliance/consents/" + consentId + "/grant",
+                body != null ? body : new HashMap<>());
     }
 
     public Object getPendingConsents(String organizationId, String personId) {
