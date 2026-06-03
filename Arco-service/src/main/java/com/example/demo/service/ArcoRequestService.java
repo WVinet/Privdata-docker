@@ -202,6 +202,11 @@ public class ArcoRequestService {
 
     private void ejecutarBloqueo(ArcoRequest solicitud) {
 
+        organizationClient.blockDataSubject(
+                solicitud.getOrganizationId(),
+                solicitud.getDataSubjectId()
+        );
+
         solicitud.setResolutionSummary(
                 "Se ejecutó la cancelación mediante bloqueo lógico. " +
                         "Los datos del titular quedan restringidos para nuevos tratamientos por parte de la organización."
@@ -210,6 +215,11 @@ public class ArcoRequestService {
 
     private void ejecutarEliminacion(ArcoRequest solicitud) {
 
+        organizationClient.deleteDataSubject(
+                solicitud.getOrganizationId(),
+                solicitud.getDataSubjectId()
+        );
+
         solicitud.setResolutionSummary(
                 "Se registró la cancelación mediante eliminación lógica. " +
                         "Los datos no serán eliminados físicamente en esta etapa, pero quedan marcados como no disponibles para tratamiento."
@@ -217,6 +227,11 @@ public class ArcoRequestService {
     }
 
     private void ejecutarAnonimizacion(ArcoRequest solicitud) {
+
+        organizationClient.anonymizeDataSubject(
+                solicitud.getOrganizationId(),
+                solicitud.getDataSubjectId()
+        );
 
         solicitud.setResolutionSummary(
                 "Se ejecutó la cancelación mediante anonimización lógica. " +
