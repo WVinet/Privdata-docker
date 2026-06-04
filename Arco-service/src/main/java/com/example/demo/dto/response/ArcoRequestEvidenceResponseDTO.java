@@ -1,4 +1,4 @@
-package com.example.demo.dto.arcoRequestEvidence;
+package com.example.demo.dto.response;
 
 import com.example.demo.enums.arcoRequestEvidence.ArcoEvidenceType;
 import com.example.demo.enums.arcoRequestEvidence.ArcoFileType;

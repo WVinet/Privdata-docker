@@ -147,7 +147,7 @@ function CompleteProfileForm({
     setLoading(true)
     try {
       // 1. Update person (RUT and phone)
-      await personsApi.update(orgId, personId, {
+      const updateRes = await personsApi.update(orgId, personId, {
         firstName: person.firstName,
         lastName:  person.lastName,
         email:     person.email ?? undefined,
@@ -155,6 +155,13 @@ function CompleteProfileForm({
         rut:       rut.trim(),
         phone:     phone.trim(),
       })
+
+      if ((updateRes.data as { success?: boolean })?.success === false) {
+        const msg = (updateRes.data as { message?: string })?.message
+        setError(msg ?? "No se pudo guardar el RUT. Verifica que no esté en uso.")
+        setLoading(false)
+        return
+      }
 
       // 2. Activate account — returns new token
       const activateRes = await authApi.activateAccount(newPwd)

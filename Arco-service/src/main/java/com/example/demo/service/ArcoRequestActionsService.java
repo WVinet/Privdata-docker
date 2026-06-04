@@ -1,7 +1,7 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.arcoRequestAction.ArcoRequestActionCreateDTO;
-import com.example.demo.dto.arcoRequestAction.ArcoRequestActionResponseDTO;
+import com.example.demo.dto.request.arcoRequestAction.ArcoRequestActionCreateDTO;
+import com.example.demo.dto.response.ArcoRequestActionResponseDTO;
 import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.model.ArcoRequestActions;
 import com.example.demo.repository.ArcoRequestActionsRepository;

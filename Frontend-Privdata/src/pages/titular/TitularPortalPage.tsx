@@ -1,10 +1,13 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
-import { Toaster } from "sonner"
-import { Loader2 } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { Toaster, toast } from "sonner"
+import { Loader2, Pencil, X } from "lucide-react"
 import { personsApi, complianceApi } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import TitularPortalLayout, { type TitularTab } from "@/components/titular/TitularPortalLayout"
 import TitularInicio from "@/components/titular/TitularInicio"
 import TitularConsentimientos from "@/components/titular/TitularConsentimientos"
@@ -74,6 +77,11 @@ function TitularPortalContent({
   setActiveTab: (t: TitularTab) => void
   onLogout: () => void
 }) {
+  const queryClient = useQueryClient()
+  const [editOpen,  setEditOpen]  = useState(false)
+  const [editRut,   setEditRut]   = useState("")
+  const [editPhone, setEditPhone] = useState("")
+
   const { data: personData, isLoading } = useQuery({
     queryKey: ["person-me", orgId, personId],
     queryFn: () => personsApi.getById(orgId, personId).then((r) => r.data),
@@ -86,6 +94,34 @@ function TitularPortalContent({
     enabled: !!orgId && !!personId,
     refetchOnWindowFocus: true,
   })
+
+  const updateMutation = useMutation({
+    mutationFn: () => {
+      const p = personData?.data
+      if (!p) throw new Error("Perfil no cargado")
+      return personsApi.update(orgId, personId, {
+        firstName: p.firstName,
+        lastName:  p.lastName,
+        email:     p.email     ?? undefined,
+        position:  p.position  ?? undefined,
+        rut:       editRut.trim()   || undefined,
+        phone:     editPhone.trim() || undefined,
+      })
+    },
+    onSuccess: () => {
+      toast.success("Datos actualizados correctamente.")
+      queryClient.invalidateQueries({ queryKey: ["person-me", orgId, personId] })
+      setEditOpen(false)
+    },
+    onError: () => toast.error("Error al actualizar. Intenta nuevamente."),
+  })
+
+  function openEdit() {
+    const p = personData?.data
+    setEditRut(p?.rut ?? "")
+    setEditPhone(p?.phone ?? "")
+    setEditOpen(true)
+  }
 
   const pendingConsentsCount = pendingData?.length ?? 0
   const person = personData?.data
@@ -111,27 +147,83 @@ function TitularPortalContent({
   return (
     <>
       <Toaster position="bottom-right" />
+
+      {/* Modal: editar datos personales */}
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-foreground">Editar mis datos</p>
+              <button onClick={() => setEditOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>RUT</Label>
+                <Input
+                  placeholder="12.345.678-9"
+                  value={editRut}
+                  onChange={(e) => setEditRut(e.target.value)}
+                  disabled={updateMutation.isPending}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Teléfono</Label>
+                <Input
+                  placeholder="+56 9 1234 5678"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  disabled={updateMutation.isPending}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setEditOpen(false)} disabled={updateMutation.isPending}>
+                Cancelar
+              </Button>
+              <Button className="flex-1" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+                {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <TitularPortalLayout
         activeTab={activeTab}
         onTabChange={setActiveTab}
         userName={displayName}
-        rut={displayRut}
-        lastAccess={lastAccess}
+        email={email}
         onLogout={onLogout}
         pendingConsentsCount={pendingConsentsCount}
       >
         {activeTab === "inicio" && (
-          <TitularInicio
-            data={{
-              name: displayName,
-              rut: displayRut,
-              email,
-              lastAccess,
-              solicitudes: [],
-              consents: [],
-            }}
-            onNavigate={setActiveTab}
-          />
+          <>
+            {displayRut === "—" && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3 mb-2">
+                <p className="text-sm text-amber-700">
+                  Tu perfil está incompleto. Agrega tu RUT para poder usar todas las funciones.
+                </p>
+                <button
+                  onClick={openEdit}
+                  className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                >
+                  <Pencil className="w-3 h-3" />
+                  Actualizar
+                </button>
+              </div>
+            )}
+            <TitularInicio
+              organizationId={orgId}
+              dataSubjectId={personId}
+              name={displayName}
+              rut={displayRut}
+              email={email}
+              onNavigate={setActiveTab}
+            />
+          </>
         )}
         {activeTab === "consentimientos" && (
           <TitularConsentimientos

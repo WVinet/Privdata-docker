@@ -1,4 +1,4 @@
-package com.example.demo.dto.arcoRequestStatusHistory;
+package com.example.demo.dto.request.arcoRequestStatusHistory;
 
 import com.example.demo.enums.arcoRequest.ArcoStatus;
 import com.example.demo.model.ArcoRequestStatusHistory;

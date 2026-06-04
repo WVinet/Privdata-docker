@@ -1,4 +1,4 @@
-package com.example.demo.dto.arcoRequest;
+package com.example.demo.dto.response;
 
 import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
 import com.example.demo.enums.arcoRequest.ArcoRequestChannel;

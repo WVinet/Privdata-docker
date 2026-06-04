@@ -12,7 +12,6 @@ import {
   X,
   Building2,
   ShieldCheck,
-  ScrollText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
@@ -29,7 +28,6 @@ const navItems: NavItem[] = [
   { label: "Titulares",        path: "/titulares",       icon: UserCheck },
   { label: "Consentimientos",  path: "/consentimientos", icon: FileCheck },
   { label: "Solicitudes ARCO", path: "/arco",            icon: ClipboardList },
-  { label: "RAT",              path: "/rat",             icon: ScrollText },
   { label: "Auditoría",        path: "/auditoria",       icon: DatabaseZap },
 ]
 
@@ -220,7 +218,10 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
             <div className="flex-1 overflow-hidden">
               <p className="text-xs font-semibold text-sidebar-accent-foreground truncate">{user?.email}</p>
               <p className="text-xs text-sidebar-foreground/50 truncate capitalize">
-                {user?.authorities?.find((a) => a.startsWith("ROLE_"))?.replace("ROLE_", "").toUpperCase() ?? "usuario"}
+                {(() => {
+                  const role = user?.authorities?.find((a) => a.startsWith("ROLE_"))?.replace("ROLE_", "") ?? "usuario"
+                  return role === "SUPER_ADMIN" ? "Admin" : role.replace(/_/g, " ").toLowerCase()
+                })()}
               </p>
             </div>
             <button

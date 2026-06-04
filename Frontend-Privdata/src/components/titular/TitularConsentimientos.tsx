@@ -41,7 +41,7 @@ export default function TitularConsentimientos({ dataSubjectId, organizationId }
 
   const { data: consentsData, isLoading: loadingConsents } = useQuery({
     queryKey: ["consents", dataSubjectId],
-    queryFn: () => complianceApi.getConsentsBySubject(dataSubjectId).then((r) => r.data),
+    queryFn: () => complianceApi.getConsentsBySubject(dataSubjectId).then((r) => r.data ?? []),
     enabled: !!dataSubjectId,
   })
 
@@ -105,7 +105,7 @@ export default function TitularConsentimientos({ dataSubjectId, organizationId }
     onError: () => toast.error("Error al aceptar. Intenta más tarde."),
   })
 
-  const consents    = consentsData?.data ?? []
+  const consents    = consentsData ?? []
   const pending     = pendingData ?? []
   const active      = consents.filter((c) => c.status === "ACTIVE")
   const historical  = consents.filter((c) => c.status !== "ACTIVE")

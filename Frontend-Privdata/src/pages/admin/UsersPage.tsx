@@ -29,7 +29,6 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 }
 
 const ROLES = [
-  { value: "END_USER",  label: "Titular (END_USER)" },
   { value: "ANALYST",   label: "Analista (ANALYST)" },
   { value: "AUDITOR",   label: "Auditor (AUDITOR)" },
   { value: "ORG_ADMIN", label: "Administrador (ORG_ADMIN)" },
@@ -40,7 +39,7 @@ function InviteUserModal({ orgId, onClose }: { orgId: string; onClose: () => voi
   const qc = useQueryClient()
   const [form, setForm] = useState<InvitePersonRequest>({
     firstName: "", lastName: "", email: "",
-    position: "", departmentId: "", roleName: "END_USER",
+    position: "", departmentId: "", roleName: "ANALYST",
   })
   const [error, setError]           = useState("")
   const [tempPassword, setTempPass] = useState<string | null>(null)
@@ -261,7 +260,9 @@ export default function UsersPage() {
   })
 
   const users: AuthUser[] = (usersRes?.data ?? []).filter(
-    (u) => u.email.toLowerCase().includes(search.toLowerCase())
+    (u) =>
+      !u.roles?.includes("END_USER") &&
+      u.email.toLowerCase().includes(search.toLowerCase())
   )
   const roles: Role[] = rolesRes?.data ?? []
 
@@ -275,8 +276,8 @@ export default function UsersPage() {
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-y-3">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Usuarios</h1>
-            <p className="text-muted-foreground text-sm mt-1">Gestión de usuarios internos del sistema</p>
+            <h1 className="text-2xl font-bold text-foreground">Usuarios del sistema</h1>
+            <p className="text-muted-foreground text-sm mt-1">Gestión de usuarios internos (analistas, auditores y administradores)</p>
           </div>
           <RequirePermission permission="USER_CREATE">
             <Button onClick={() => setInviting(true)}>

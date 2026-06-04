@@ -1,7 +1,9 @@
 package com.privdata.bff_api.service;
 
+import com.privdata.bff_api.client.AuditClient;
 import com.privdata.bff_api.client.AuthClient;
 import com.privdata.bff_api.client.OrganizationClient;
+import com.privdata.bff_api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +15,8 @@ import java.util.Map;
 public class OrganizationBffService {
 
     private final OrganizationClient organizationClient;
-    private final AuthClient authClient;
+    private final AuthClient         authClient;
+    private final AuditClient        auditClient;
 
     public Object listOrganizations()                                          { return organizationClient.listOrganizations(); }
     public Object getOrganization(String id)                                   { return organizationClient.getOrganization(id); }
@@ -86,6 +89,12 @@ public class OrganizationBffService {
         Map<String, Object> data = new HashMap<>();
         data.put("person", personData);
         data.put("user",   userResult);
+
+        if (authOk) {
+            auditClient.log(orgId, "INVITAR", "Titular",
+                    "Nuevo titular invitado: " + email,
+                    JwtUtil.extractEmail(authorization));
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", authOk);

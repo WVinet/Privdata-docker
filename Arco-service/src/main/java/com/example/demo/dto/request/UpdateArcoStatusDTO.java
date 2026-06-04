@@ -1,4 +1,4 @@
-package com.example.demo.dto;
+package com.example.demo.dto.request;
 
 import com.example.demo.enums.arcoRequest.ArcoStatus;
 import lombok.Data;

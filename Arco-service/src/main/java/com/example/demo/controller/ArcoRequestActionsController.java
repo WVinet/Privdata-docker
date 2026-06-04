@@ -1,7 +1,7 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.arcoRequestAction.ArcoRequestActionCreateDTO;
-import com.example.demo.dto.arcoRequestAction.ArcoRequestActionResponseDTO;
+import com.example.demo.dto.request.arcoRequestAction.ArcoRequestActionCreateDTO;
+import com.example.demo.dto.response.ArcoRequestActionResponseDTO;
 import com.example.demo.service.ArcoRequestActionsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
