@@ -1,5 +1,7 @@
 package com.privdata.bff_api.client;
 
+import com.privdata.bff_api.dtos.request.arco.ArcoCancellationRequestDTO;
+import com.privdata.bff_api.dtos.response.arco.ArcoRequestResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -11,6 +13,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -63,5 +66,24 @@ public class ArcoClient {
             err.put("data", null);
             return err;
         }
+    }
+
+    ///metodos de conexion derecho ARCO (Cancelacion)
+
+    public ArcoRequestResponseDTO crearSolicitudCancelacion(
+            ArcoCancellationRequestDTO request
+    ) {
+        return arcoRestClient.post()
+                .uri("/api/arco/requests/cancellation")
+                .body(request)
+                .retrieve()
+                .body(ArcoRequestResponseDTO.class);
+    }
+
+    public ArcoRequestResponseDTO ejecutarCancelacion(UUID solicitudId) {
+        return arcoRestClient.post()
+                .uri("/api/arco/requests/cancellation/" + solicitudId + "/execute")
+                .retrieve()
+                .body(ArcoRequestResponseDTO.class);
     }
 }

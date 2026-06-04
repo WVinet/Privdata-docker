@@ -143,7 +143,7 @@ public class ArcoRequestService {
     /// Falta crear response para solicitud
     public ArcoRequestResponseDTO crearSolicitudCancelacion(ArcoCancellationRequestDTO requestDTO){
 
-        organizationClient.findByid(requestDTO.getOrganizationId());
+        organizationClient.findById(requestDTO.getOrganizationId());
 
         ArcoRequest arcoRequest = new ArcoRequest();
         arcoRequest.setOrganizationId(requestDTO.getOrganizationId());

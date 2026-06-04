@@ -17,51 +17,41 @@ public class OrganizationClient {
     @Value("${services.organization.url}")
     private String organizationServiceUrl;
 
-    public OrgResponseDTO findByid(UUID id){
+    public OrgResponseDTO findById(UUID id) {
         return orgClient
                 .get()
-                .uri(organizationServiceUrl+"/api/organizations/{organizationId}" + id)
+                .uri(organizationServiceUrl + "/api/organizations/" + id)
                 .retrieve()
                 .body(OrgResponseDTO.class);
     }
 
     public void blockDataSubject(UUID organizationId, UUID dataSubjectId) {
-
         orgClient.post()
-                .uri(organizationServiceUrl +
-                        "/api/organizations/" +
-                        organizationId +
-                        "/data-subjects/" +
-                        dataSubjectId +
-                        "/block")
+                .uri(organizationServiceUrl
+                        + "/api/organizations/" + organizationId
+                        + "/persons/" + dataSubjectId
+                        + "/block")
                 .retrieve()
                 .toBodilessEntity();
     }
 
     public void deleteDataSubject(UUID organizationId, UUID dataSubjectId) {
-
         orgClient.post()
-                .uri(organizationServiceUrl +
-                        "/api/organizations/" +
-                        organizationId +
-                        "/data-subjects/" +
-                        dataSubjectId +
-                        "/delete")
+                .uri(organizationServiceUrl
+                        + "/api/organizations/" + organizationId
+                        + "/persons/" + dataSubjectId
+                        + "/delete")
                 .retrieve()
                 .toBodilessEntity();
     }
 
     public void anonymizeDataSubject(UUID organizationId, UUID dataSubjectId) {
-
         orgClient.post()
-                .uri(organizationServiceUrl +
-                        "/api/organizations/" +
-                        organizationId +
-                        "/data-subjects/" +
-                        dataSubjectId +
-                        "/anonymize")
+                .uri(organizationServiceUrl
+                        + "/api/organizations/" + organizationId
+                        + "/persons/" + dataSubjectId
+                        + "/anonymize")
                 .retrieve()
                 .toBodilessEntity();
     }
-
 }

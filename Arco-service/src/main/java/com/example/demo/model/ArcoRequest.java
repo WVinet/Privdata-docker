@@ -52,7 +52,7 @@ public class ArcoRequest {
     private ArcoRequestChannel requestChannel;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "request_channel", nullable = false)
+    @Column(name = "cancellation_action_type")
     private ArcoCancellationType cancellationActionType;
 
     @Column(name = "submitted_at", nullable = false)
