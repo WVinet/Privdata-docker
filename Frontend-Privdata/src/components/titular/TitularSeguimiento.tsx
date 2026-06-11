@@ -46,7 +46,8 @@ function formatDate(iso: string) {
 function SolicitudCard({ req }: { req: ArcoRequest }) {
   const isTerminal = ["RESPONDIDA", "RECHAZADA", "CERRADA"].includes(req.status)
   const isRejected = req.status === "RECHAZADA"
-  const days = daysLeft(req.dueDate)
+  const effectiveDueDate = req.extendedDueDate ?? req.dueDate
+  const days = daysLeft(effectiveDueDate)
 
   const currentIdx = STATUS_STEPS.indexOf(req.status as ArcoStatus)
 
@@ -75,7 +76,8 @@ function SolicitudCard({ req }: { req: ArcoRequest }) {
               {TYPE_LABELS[req.requestType] ?? req.requestType}
             </p>
             <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
-              Enviada el {formatDate(req.submittedAt)} · Vence: {formatDate(req.dueDate)}
+              Enviada el {formatDate(req.submittedAt)} · Vence: {formatDate(effectiveDueDate)}
+              {req.extensionGranted && " (con prórroga)"}
             </p>
           </div>
         </div>
@@ -153,7 +155,7 @@ function SolicitudCard({ req }: { req: ArcoRequest }) {
         {/* Resolución */}
         {req.resolutionSummary && (
           <div
-            className="rounded-xl px-4 py-3 text-xs border-l-4 leading-relaxed"
+            className="rounded-xl px-4 py-3 text-xs border-l-4 leading-relaxed whitespace-pre-line"
             style={{
               borderColor: isRejected ? "hsl(var(--destructive))" : "hsl(var(--success))",
               background: isRejected ? "hsl(var(--destructive) / 0.07)" : "hsl(var(--success) / 0.07)",
@@ -162,6 +164,12 @@ function SolicitudCard({ req }: { req: ArcoRequest }) {
           >
             <span className="font-semibold">Resolución: </span>
             {req.resolutionSummary}
+            {isRejected && req.denialLegalBasis && (
+              <p className="mt-1">
+                <span className="font-semibold">Norma invocada: </span>
+                {req.denialLegalBasis}
+              </p>
+            )}
           </div>
         )}
       </div>

@@ -43,4 +43,11 @@ public class ArcoBffController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         return ResponseEntity.ok(service.updateStatus(id, body, authorization));
     }
+
+    @PatchMapping("/{id}/prorroga")
+    public ResponseEntity<?> extendDeadline(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.extendDeadline(id, authorization));
+    }
 }

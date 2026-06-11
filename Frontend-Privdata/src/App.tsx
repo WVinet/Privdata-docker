@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/AppLayout"
 
 // Públicas
 import LoginPage from "@/pages/LoginPage"
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage"
 import NotFound from "@/pages/NotFound"
 
 // Titular
@@ -33,7 +34,8 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
 
           {/* Rutas públicas */}
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login"                  element={<LoginPage />} />
+          <Route path="/recuperar-contrasena"   element={<ForgotPasswordPage />} />
 
           {/* Rutas del titular */}
           <Route path="/portal"            element={<TitularPortalPage />} />

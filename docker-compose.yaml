@@ -136,6 +136,13 @@ services:
     depends_on:
       - bff-api
 
+  mailhog:
+    image: mailhog/mailhog
+    container_name: privdata-mailhog
+    ports:
+      - "1025:1025"   # SMTP — Auth-service envía aquí
+      - "8025:8025"   # Web UI — ver los emails en http://localhost:8025
+
 volumes:
   postgres_auth_data:
   postgres_organization_data:

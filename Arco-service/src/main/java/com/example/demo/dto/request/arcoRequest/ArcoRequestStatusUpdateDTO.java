@@ -19,4 +19,6 @@ public class ArcoRequestStatusUpdateDTO {
     private UUID changedByUserId;
 
     private String comment;
+
+    private String denialLegalBasis;
 }

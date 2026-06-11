@@ -136,6 +136,57 @@ public class AuthClient {
         return forward("GET", uri, authorization, null);
     }
 
+    public void sendArcoResolutionEmail(Map<String, Object> body) {
+        authRestClient.post()
+                .uri("/api/auth/notifications/arco-resolution")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    public Map<String, Object> forgotPassword(Map<String, Object> body) {
+        try {
+            return authRestClient.post()
+                    .uri("/api/auth/password/forgot")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(Map.class);
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            return errorFromBody(ex.getResponseBodyAsString(), ex.getStatusText());
+        } catch (ResourceAccessException ex) {
+            return Map.of("success", false, "message", "Auth-service no disponible", "data", null);
+        }
+    }
+
+    public Map<String, Object> resetPassword(Map<String, Object> body) {
+        try {
+            return authRestClient.post()
+                    .uri("/api/auth/password/reset")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(Map.class);
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            return errorFromBody(ex.getResponseBodyAsString(), ex.getStatusText());
+        } catch (ResourceAccessException ex) {
+            return Map.of("success", false, "message", "Auth-service no disponible", "data", null);
+        }
+    }
+
+    private Map<String, Object> errorFromBody(String responseBody, String fallback) {
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\"message\"\\s*:\\s*\"([^\"]+)\"")
+                .matcher(responseBody);
+        String message = m.find() ? m.group(1) : fallback;
+        Map<String, Object> err = new HashMap<>();
+        err.put("success", false);
+        err.put("message", message);
+        err.put("data", null);
+        return err;
+    }
+
     private Object forward(String method, String uri, String authorization, Object body) {
         try {
             var spec = authRestClient.method(org.springframework.http.HttpMethod.valueOf(method))

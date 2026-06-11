@@ -5,15 +5,12 @@ import com.example.demo.model.ArcoRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface ArcoRequestRepository extends JpaRepository<ArcoRequest, UUID> {
     List<ArcoRequest> findByOrganizationId(UUID organizationId);
     List<ArcoRequest> findByDataSubjectId(UUID dataSubjectId);
-
-    Optional<ArcoRequest> findByStatus(ArcoStatus status);
+    List<ArcoRequest> findByStatus(ArcoStatus status);
 }

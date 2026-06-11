@@ -1,15 +1,10 @@
 package com.example.demo.service;
 
-import com.example.demo.client.OrganizationClient;
-import com.example.demo.dto.request.ArcoCancellationRequestDTO;
-import com.example.demo.dto.response.ArcoRequestActionResponseDTO;
-import com.example.demo.dto.response.ArcoResponseDTO;
-import com.example.demo.dto.request.CreateArcoRequestDTO;
-import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
-import com.example.demo.dto.response.ArcoRequestResponseDTO;
-import com.example.demo.dto.request.arcoRequest.ArcoRequestStatusUpdateDTO;
-import com.example.demo.dto.response.OrgResponseDTO;
-import com.example.demo.enums.arcoRequest.*;
+import com.example.demo.dto.arcoRequest.ArcoRequestCreateDTO;
+import com.example.demo.dto.arcoRequest.ArcoRequestResponseDTO;
+import com.example.demo.dto.arcoRequest.ArcoRequestStatusUpdateDTO;
+import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
+import com.example.demo.enums.arcoRequest.ArcoStatus;
 import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.model.ArcoRequest;
 import com.example.demo.model.ArcoRequestStatusHistory;
@@ -18,10 +13,7 @@ import com.example.demo.repository.ArcoRequestStatusHistoryRepository;
 import com.example.demo.util.BusinessDaysCalculator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,8 +26,6 @@ public class ArcoRequestService {
 
     private final ArcoRequestRepository arcoRequestRepository;
     private final ArcoRequestStatusHistoryRepository statusHistoryRepository;
-    private final ModelMapper modelMapper;
-    private final OrganizationClient organizationClient;
 
     public List<ArcoRequestResponseDTO> listar() {
         return arcoRequestRepository.findAll().stream()
@@ -56,22 +46,10 @@ public class ArcoRequestService {
                 .collect(Collectors.toList());
     }
 
-    public ArcoResponseDTO registrarSolicitud(CreateArcoRequestDTO dto) {
-        ArcoRequest req = new ArcoRequest();
-        req.setOrganizationId(dto.getOrganizationId());
-        req.setDataSubjectId(dto.getDataSubjectId());
-        req.setAssignedToUserId(dto.getAssignedToUserId());
-        req.setRequestType(dto.getRequestType());
-        req.setStatus(ArcoStatus.RECIBIDA);
-        req.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.PENDIENTE);
-        req.setRequestChannel(dto.getRequestChannel());
-        LocalDateTime now = LocalDateTime.now();
-        req.setSubmittedAt(now);
-        req.setDueDate(now.plusDays(30));
-        req.setDescription(dto.getDescription());
-        req.setResolutionSummary(null);
-        req.setResolvedAt(null);
-        return modelMapper.map(arcoRequestRepository.save(req), ArcoResponseDTO.class);
+    public List<ArcoRequestResponseDTO> listarPorTitular(UUID dataSubjectId) {
+        return arcoRequestRepository.findByDataSubjectId(dataSubjectId).stream()
+                .map(ArcoRequestResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
     public List<ArcoRequestResponseDTO> listarPorEstado(ArcoStatus status) {
@@ -103,7 +81,25 @@ public class ArcoRequestService {
                 .orElseThrow(() -> new ArcoRequestNotFoundException(id));
         ArcoStatus estadoAnterior = solicitud.getStatus();
 
+        if (dto.getNewStatus() == ArcoStatus.RESPONDIDA && (dto.getComment() == null || dto.getComment().isBlank())) {
+            throw new IllegalArgumentException("Debe registrar el contenido de la respuesta entregada al titular (Art. 11 Ley 21.719).");
+        }
+
+        if (dto.getNewStatus() == ArcoStatus.RECHAZADA) {
+            if (dto.getComment() == null || dto.getComment().isBlank()) {
+                throw new IllegalArgumentException("Debe indicar el motivo de la denegación.");
+            }
+            if (dto.getDenialLegalBasis() == null || dto.getDenialLegalBasis().isBlank()) {
+                throw new IllegalArgumentException("Debe citar la norma legal que fundamenta la denegación (Art. 5° Ley 21.719).");
+            }
+            solicitud.setDenialLegalBasis(dto.getDenialLegalBasis());
+        }
+
         solicitud.setStatus(dto.getNewStatus());
+
+        if (dto.getComment() != null && !dto.getComment().isBlank()) {
+            solicitud.setResolutionSummary(dto.getComment());
+        }
 
         if (dto.getNewStatus() == ArcoStatus.RESPONDIDA || dto.getNewStatus() == ArcoStatus.RECHAZADA) {
             solicitud.setResolvedAt(LocalDateTime.now());
@@ -123,6 +119,27 @@ public class ArcoRequestService {
     }
 
     @Transactional
+    public ArcoRequestResponseDTO prorrogarPlazo(UUID id) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
+
+        if (solicitud.isExtensionGranted()) {
+            throw new IllegalArgumentException("Esta solicitud ya cuenta con una prórroga otorgada (Art. 11 Ley 21.719 permite una sola).");
+        }
+
+        if (solicitud.getStatus() == ArcoStatus.RESPONDIDA
+                || solicitud.getStatus() == ArcoStatus.RECHAZADA
+                || solicitud.getStatus() == ArcoStatus.CERRADA) {
+            throw new IllegalArgumentException("No se puede prorrogar una solicitud en estado " + solicitud.getStatus() + ".");
+        }
+
+        solicitud.setExtensionGranted(true);
+        solicitud.setExtendedDueDate(solicitud.getDueDate().plusDays(30));
+
+        return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
+    }
+
+    @Transactional
     public ArcoRequestResponseDTO actualizarVerificacionIdentidad(UUID id, ArcoIdentityVerificationStatus nuevoEstado) {
         ArcoRequest solicitud = arcoRequestRepository.findById(id)
                 .orElseThrow(() -> new ArcoRequestNotFoundException(id));
@@ -136,106 +153,5 @@ public class ArcoRequestService {
                 .orElseThrow(() -> new ArcoRequestNotFoundException(id));
         solicitud.setResolutionSummary(resolutionSummary);
         return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
-    }
-
-    ///Metodos relacionados al derecho de cancelación
-    ///
-    /// Falta crear response para solicitud
-    public ArcoRequestResponseDTO crearSolicitudCancelacion(ArcoCancellationRequestDTO requestDTO){
-
-        organizationClient.findById(requestDTO.getOrganizationId());
-
-        ArcoRequest arcoRequest = new ArcoRequest();
-        arcoRequest.setOrganizationId(requestDTO.getOrganizationId());
-        arcoRequest.setDataSubjectId(requestDTO.getDataSubjectId());
-        arcoRequest.setAssignedToUserId(requestDTO.getAssignedToUserId());
-        arcoRequest.setRequestChannel(ArcoRequestChannel.WEB_PORTAL);
-        arcoRequest.setDescription(requestDTO.getDescription());
-        arcoRequest.setCancellationActionType(requestDTO.getCancellationActionType());
-        //los demas atributos de base
-        arcoRequest.setStatus(ArcoStatus.RECIBIDA);
-        arcoRequest.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.PENDIENTE);
-        arcoRequest.setSubmittedAt(LocalDateTime.now());
-        arcoRequest.setDueDate(LocalDateTime.now().plusDays(2));
-        arcoRequest.setResolutionSummary(null);
-        arcoRequest.setResolvedAt(null);
-        arcoRequest.setRequestType(ArcoRequestType.CANCELLATION);
-
-
-        return modelMapper.map(
-                arcoRequestRepository.save(arcoRequest), ArcoRequestResponseDTO.class);
-    }
-
-    @Transactional
-    public ArcoRequestResponseDTO ejecutarCancelacion(UUID solicitudId){
-
-        ArcoRequest solicitud = arcoRequestRepository.findById(solicitudId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Solicitud no existe"
-                ));
-
-        if(solicitud.getRequestType() != ArcoRequestType.CANCELLATION){
-            throw new RuntimeException("La solicitud no corresponde a cancelación");
-        }
-
-        if (solicitud.getCancellationActionType() == null){
-            throw new RuntimeException("La cancelación no tiene tipo definido");
-        }
-
-        switch (solicitud.getCancellationActionType()){
-            case BLOCK -> ejecutarBloqueo(solicitud);
-            case DELETE -> ejecutarEliminacion(solicitud);
-            case ANONYMIZE -> ejecutarAnonimizacion(solicitud);
-        }
-
-        solicitud.setStatus(ArcoStatus.RESPONDIDA);
-        solicitud.setResolvedAt(LocalDateTime.now());
-
-        return modelMapper.map(
-                arcoRequestRepository.save(solicitud), ArcoRequestResponseDTO.class);
-    }
-
-    ///en esta seccion los metodos ejecutan logica que se encuentra en organization
-    /// ya que estos tratamientos los hacen ahi
-
-
-    private void ejecutarBloqueo(ArcoRequest solicitud) {
-
-        organizationClient.blockDataSubject(
-                solicitud.getOrganizationId(),
-                solicitud.getDataSubjectId()
-        );
-
-        solicitud.setResolutionSummary(
-                "Se ejecutó la cancelación mediante bloqueo lógico. " +
-                        "Los datos del titular quedan restringidos para nuevos tratamientos por parte de la organización."
-        );
-    }
-
-    private void ejecutarEliminacion(ArcoRequest solicitud) {
-
-        organizationClient.deleteDataSubject(
-                solicitud.getOrganizationId(),
-                solicitud.getDataSubjectId()
-        );
-
-        solicitud.setResolutionSummary(
-                "Se registró la cancelación mediante eliminación lógica. " +
-                        "Los datos no serán eliminados físicamente en esta etapa, pero quedan marcados como no disponibles para tratamiento."
-        );
-    }
-
-    private void ejecutarAnonimizacion(ArcoRequest solicitud) {
-
-        organizationClient.anonymizeDataSubject(
-                solicitud.getOrganizationId(),
-                solicitud.getDataSubjectId()
-        );
-
-        solicitud.setResolutionSummary(
-                "Se ejecutó la cancelación mediante anonimización lógica. " +
-                        "Los datos identificables del titular deberán ser reemplazados por valores no atribuibles directamente."
-        );
     }
 }

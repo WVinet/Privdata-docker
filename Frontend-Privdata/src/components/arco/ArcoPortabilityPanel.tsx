@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { Loader2, ShieldCheck, FileText, AlertTriangle, UserRound } from "lucide-react"
+import { Loader2, Download, FileJson, ShieldCheck, AlertTriangle, UserRound } from "lucide-react"
 import { complianceApi, personsApi } from "@/lib/api"
 import type { Consent, TreatmentActivity } from "@/types/compliance"
 
@@ -10,13 +10,6 @@ const LEGAL_BASIS_LABEL: Record<string, string> = {
   INTERES_LEGITIMO: "Interés legítimo (Art. 13 d)",
   INTERES_VITAL:    "Interés vital (Art. 13 e)",
   FUNCION_PUBLICA:  "Función pública (Art. 20)",
-}
-
-const CONSENT_STATUS_LABEL: Record<string, string> = {
-  ACTIVE:    "Vigente",
-  REVOKED:   "Revocado",
-  EXPIRED:   "Expirado",
-  SUSPENDED: "Suspendido",
 }
 
 function formatDate(iso: string | null) {
@@ -30,7 +23,7 @@ interface Props {
   onGenerateResolution: (text: string) => void
 }
 
-export default function ArcoAccessReport({ dataSubjectId, organizationId, onGenerateResolution }: Props) {
+export default function ArcoPortabilityPanel({ dataSubjectId, organizationId, onGenerateResolution }: Props) {
   const { data: personData, isLoading: loadingPerson } = useQuery({
     queryKey: ["person", organizationId, dataSubjectId],
     queryFn: () => personsApi.getById(organizationId, dataSubjectId).then(r => r.data),
@@ -52,48 +45,66 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
 
   const isLoading = loadingPerson || loadingConsents || loadingRat
 
-  function buildResolution() {
-    const activeConsents = consents.filter(c => c.status === "ACTIVE")
-    const lines: string[] = []
+  const portableActivities = activities.filter(a => a.status === "ACTIVE" && a.legalBasis === "CONSENTIMIENTO")
+  const excludedActivities = activities.filter(a => a.status === "ACTIVE" && a.legalBasis !== "CONSENTIMIENTO")
 
-    lines.push(`Informe de Acceso — Art. 11 Ley 21.719`)
+  function buildExportData() {
+    return {
+      tipo: "PORTABILIDAD_DATOS",
+      fechaExportacion: new Date().toISOString(),
+      titular: person ? {
+        nombreCompleto: person.fullName,
+        rut: person.rut,
+        email: person.email,
+        telefono: person.phone,
+        cargo: person.position,
+        departamento: person.departmentName,
+      } : null,
+      consentimientos: consents.map(c => ({
+        id: c.id,
+        estado: c.status,
+        otorgadoEl: c.grantedAt,
+        revocadoEl: c.revokedAt,
+        expiraEl: c.expiresAt,
+        metodoRecoleccion: c.collectionMethod,
+        notas: c.notes,
+      })),
+      actividadesTratamiento: portableActivities.map(a => ({
+        nombre: a.name,
+        finalidad: a.purpose,
+        baseLegal: a.legalBasis,
+        categoriasDatos: a.dataCategories.map(dc => dc.name),
+        retencionDias: a.retentionPeriodDays,
+        destinatarios: a.thirdPartyRecipients,
+      })),
+    }
+  }
+
+  function handleDownload() {
+    const blob = new Blob([JSON.stringify(buildExportData(), null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `portabilidad-${dataSubjectId}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function buildResolution() {
+    const lines: string[] = []
+    lines.push(`Informe de Portabilidad — Art. 9 Ley 21.719`)
     lines.push(`Fecha de emisión: ${formatDate(new Date().toISOString())}`)
     lines.push("")
+    lines.push("A continuación se entregan tus datos personales en un formato estructurado, genérico y de uso común (JSON), conforme al Art. 9 de la Ley 21.719. Solo se incluyen los datos cuyo tratamiento se basa en tu consentimiento.")
+    lines.push("")
+    lines.push(JSON.stringify(buildExportData(), null, 2))
 
-    if (person) {
-      lines.push("Datos identificativos registrados:")
-      lines.push(`  Nombre completo: ${person.fullName}`)
-      if (person.rut) lines.push(`  RUT: ${person.rut}`)
-      if (person.email) lines.push(`  Correo electrónico: ${person.email}`)
-      if (person.phone) lines.push(`  Teléfono: ${person.phone}`)
-      if (person.position) lines.push(`  Cargo: ${person.position}`)
-      if (person.departmentName) lines.push(`  Departamento: ${person.departmentName}`)
-      lines.push(`  Estado: ${person.isActive ? "Activo" : "Inactivo"}`)
-      lines.push(`  Fecha de registro: ${formatDate(person.createdAt)}`)
+    if (excludedActivities.length > 0) {
       lines.push("")
-    }
-
-    if (activeConsents.length > 0) {
-      lines.push(`Consentimientos vigentes (${activeConsents.length}):`)
-      activeConsents.forEach((c, i) => {
-        lines.push(`  ${i + 1}. Otorgado el ${formatDate(c.grantedAt)} vía ${c.collectionMethod.replace("_", " ").toLowerCase()}${c.expiresAt ? ` · Vence: ${formatDate(c.expiresAt)}` : ""}`)
+      lines.push(`Nota: ${excludedActivities.length} actividad(es) de tratamiento no se incluyeron en esta exportación por no estar basadas en tu consentimiento (Art. 9 Ley 21.719):`)
+      excludedActivities.forEach((a) => {
+        lines.push(`  - ${a.name} — Base legal: ${LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis}`)
       })
-      lines.push("")
-    } else {
-      lines.push("Sin consentimientos vigentes registrados.")
-      lines.push("")
-    }
-
-    const activeRat = activities.filter(a => a.status === "ACTIVE")
-    if (activeRat.length > 0) {
-      lines.push(`Actividades de tratamiento activas que pueden incluir sus datos (${activeRat.length}):`)
-      activeRat.forEach((a, i) => {
-        lines.push(`  ${i + 1}. ${a.name} — Finalidad: ${a.purpose} — Base legal: ${LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis}`)
-        if (a.thirdPartyRecipients) lines.push(`     Destinatarios: ${a.thirdPartyRecipients}`)
-        if (a.retentionPeriodDays) lines.push(`     Retención: ${a.retentionPeriodDays} días`)
-      })
-    } else {
-      lines.push("No hay actividades de tratamiento activas registradas.")
     }
 
     onGenerateResolution(lines.join("\n"))
@@ -108,40 +119,46 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
     )
   }
 
-  const activeConsents = consents.filter(c => c.status === "ACTIVE")
-  const activeRat      = activities.filter(a => a.status === "ACTIVE")
-  const hasSensitive   = activeRat.some(a => a.containsSensitiveData)
-
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4 text-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 font-semibold text-foreground">
-          <FileText className="w-4 h-4 text-primary" />
-          Informe de datos del titular
+          <FileJson className="w-4 h-4 text-primary" />
+          Exportación de datos (Portabilidad)
         </div>
-        <button
-          type="button"
-          onClick={buildResolution}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-          style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
-        >
-          Usar como resolución →
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted inline-flex items-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Descargar JSON
+          </button>
+          <button
+            type="button"
+            onClick={buildResolution}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+            style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
+          >
+            Usar como resolución →
+          </button>
+        </div>
       </div>
 
-      {hasSensitive && (
-        <div className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs bg-destructive/10 text-destructive">
-          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-          Algunos tratamientos incluyen datos sensibles (Art. 2g Ley 21.719). Verificar nivel de acceso antes de entregar.
-        </div>
-      )}
+      <p className="text-xs text-muted-foreground">
+        Conforme al Art. 9 de la Ley 21.719, la portabilidad solo procede sobre datos tratados de forma automatizada y cuyo
+        tratamiento se base en el <span className="font-medium text-foreground">consentimiento</span> del titular. Los datos
+        identificativos y consentimientos se incluyen siempre; las actividades de tratamiento solo se incluyen si su base
+        legal es consentimiento.
+      </p>
 
       {/* Datos identificativos */}
       {person && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
             <UserRound className="w-3.5 h-3.5" />
-            Datos identificativos registrados
+            Datos identificativos a exportar
           </p>
           <div className="rounded-lg bg-background border border-border px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
             <div><span className="text-muted-foreground">Nombre completo:</span> <span className="font-medium text-foreground">{person.fullName}</span></div>
@@ -150,8 +167,6 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
             <div><span className="text-muted-foreground">Teléfono:</span> <span className="font-medium text-foreground">{person.phone ?? "—"}</span></div>
             <div><span className="text-muted-foreground">Cargo:</span> <span className="font-medium text-foreground">{person.position ?? "—"}</span></div>
             <div><span className="text-muted-foreground">Departamento:</span> <span className="font-medium text-foreground">{person.departmentName ?? "—"}</span></div>
-            <div><span className="text-muted-foreground">Estado:</span> <span className="font-medium text-foreground">{person.isActive ? "Activo" : "Inactivo"}</span></div>
-            <div><span className="text-muted-foreground">Fecha de registro:</span> <span className="font-medium text-foreground">{formatDate(person.createdAt)}</span></div>
           </div>
         </div>
       )}
@@ -160,7 +175,7 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
           <ShieldCheck className="w-3.5 h-3.5" />
-          Consentimientos ({consents.length} total · {activeConsents.length} vigentes)
+          Consentimientos a exportar ({consents.length})
         </p>
         {consents.length === 0 ? (
           <p className="text-xs text-muted-foreground">Sin consentimientos registrados.</p>
@@ -180,7 +195,7 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
                     color: c.status === "ACTIVE" ? "hsl(var(--success))" : "hsl(var(--muted-foreground))",
                   }}
                 >
-                  {CONSENT_STATUS_LABEL[c.status] ?? c.status}
+                  {c.status}
                 </span>
               </div>
             ))}
@@ -188,30 +203,20 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
         )}
       </div>
 
-      {/* RAT activo */}
+      {/* Actividades de tratamiento portables */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
-          <FileText className="w-3.5 h-3.5" />
-          Actividades de tratamiento activas ({activeRat.length})
+          <FileJson className="w-3.5 h-3.5" />
+          Actividades de tratamiento a exportar ({portableActivities.length})
         </p>
-        {activeRat.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Sin actividades de tratamiento activas.</p>
+        {portableActivities.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No hay actividades de tratamiento basadas en consentimiento.</p>
         ) : (
           <div className="space-y-1.5">
-            {activeRat.map(a => (
+            {portableActivities.map(a => (
               <div key={a.id} className="rounded-lg bg-background border border-border px-3 py-2 space-y-0.5">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-medium text-foreground">{a.name}</p>
-                  {a.containsSensitiveData && (
-                    <span className="shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded bg-destructive/10 text-destructive">sensible</span>
-                  )}
-                </div>
+                <p className="text-xs font-medium text-foreground">{a.name}</p>
                 <p className="text-xs text-muted-foreground">{a.purpose}</p>
-                <p className="text-xs text-muted-foreground">
-                  Base legal: <span className="font-medium text-foreground">{LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis}</span>
-                  {a.thirdPartyRecipients && <> · Destinatarios: <span className="font-medium text-foreground">{a.thirdPartyRecipients}</span></>}
-                  {a.retentionPeriodDays && <> · Retención: <span className="font-medium text-foreground">{a.retentionPeriodDays}d</span></>}
-                </p>
                 {a.dataCategories.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
                     {a.dataCategories.map(dc => (
@@ -233,6 +238,23 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
           </div>
         )}
       </div>
+
+      {/* Actividades excluidas */}
+      {excludedActivities.length > 0 && (
+        <div className="rounded-lg bg-background border border-border px-3 py-2 space-y-1.5">
+          <p className="flex items-start gap-1.5 text-xs font-medium text-muted-foreground">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            No incluidas en la exportación — base legal distinta a consentimiento ({excludedActivities.length}):
+          </p>
+          <ul className="space-y-0.5 pl-5 list-disc text-xs text-muted-foreground">
+            {excludedActivities.map(a => (
+              <li key={a.id}>
+                {a.name} — <span className="font-medium text-foreground">{LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
