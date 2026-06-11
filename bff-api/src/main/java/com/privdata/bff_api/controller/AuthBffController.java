@@ -112,4 +112,14 @@ public class AuthBffController {
     ) {
         return ResponseEntity.ok(authBffService.getAuditLogs(authorization, organizationId, page, size));
     }
+
+    @PostMapping("/password/forgot")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(authBffService.forgotPassword(body));
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(authBffService.resetPassword(body));
+    }
 }

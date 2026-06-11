@@ -28,8 +28,11 @@ public class ArcoRequestResponseDTO {
     private String description;
     private String resolutionSummary;
     private LocalDateTime submittedAt;
-    private LocalDateTime dueAt;
+    private LocalDateTime dueDate;
     private LocalDateTime resolvedAt;
+    private String denialLegalBasis;
+    private boolean extensionGranted;
+    private LocalDateTime extendedDueDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -48,6 +51,9 @@ public class ArcoRequestResponseDTO {
                 e.getSubmittedAt(),
                 e.getDueDate(),
                 e.getResolvedAt(),
+                e.getDenialLegalBasis(),
+                e.isExtensionGranted(),
+                e.getExtendedDueDate(),
                 e.getCreatedAt(),
                 e.getUpdatedAt()
         );

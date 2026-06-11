@@ -11,7 +11,8 @@ import type { AuditLog } from "@/types/audit"
 
 const ARCO_STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
   RECIBIDA:   { label: "Recibida",   color: "hsl(var(--primary))",         bg: "hsl(var(--primary) / 0.1)" },
-  EN_PROCESO: { label: "En proceso", color: "hsl(36 70% 40%)",             bg: "hsl(36 70% 40% / 0.1)" },
+  EN_REVISION: { label: "En revisión", color: "hsl(36 70% 40%)",            bg: "hsl(36 70% 40% / 0.1)" },
+  EN_GESTION:  { label: "En gestión",  color: "hsl(36 70% 40%)",            bg: "hsl(36 70% 40% / 0.1)" },
   RESPONDIDA: { label: "Resuelto",   color: "hsl(142 71% 35%)",            bg: "hsl(142 71% 35% / 0.1)" },
   RECHAZADA:  { label: "Rechazado",  color: "hsl(var(--destructive))",     bg: "hsl(var(--destructive) / 0.08)" },
   CERRADA:    { label: "Cerrada",    color: "hsl(var(--muted-foreground))", bg: "hsl(var(--muted))" },

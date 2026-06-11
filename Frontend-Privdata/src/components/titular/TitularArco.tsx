@@ -1,11 +1,17 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
+import { useQuery } from "@tanstack/react-query"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
-import { arcoApi } from "@/lib/api"
+import { arcoApi, personsApi, complianceApi } from "@/lib/api"
 import type { ArcoRequestType } from "@/types/arco"
+import type { TreatmentActivity } from "@/types/compliance"
+import { RECTIFIABLE_FIELDS, encodeRectification, getPersonFieldValue, type RectifiableField } from "@/lib/rectification"
+import { encodeSuppression } from "@/lib/suppression"
+import { encodeOpposition } from "@/lib/opposition"
+import { BLOCKING_RELATED_TYPES, encodeBlocking, type BlockingRelatedType } from "@/lib/blocking"
 
 type ArcoRight = {
   id: string
@@ -22,7 +28,7 @@ const rights: ArcoRight[] = [
     id: "access",
     icon: "🔍",
     label: "Acceso",
-    deadline: "15 días hábiles",
+    deadline: "30 días corridos",
     description:
       "Solicita conocer qué datos personales tuyos tenemos registrados, con qué finalidad y a quién los hemos comunicado.",
     variant: "primary",
@@ -31,7 +37,7 @@ const rights: ArcoRight[] = [
     id: "rectification",
     icon: "✏️",
     label: "Rectificación",
-    deadline: "15 días hábiles",
+    deadline: "30 días corridos",
     description:
       "Solicita corregir datos inexactos, incompletos o desactualizados que tengamos sobre ti.",
     variant: "primary",
@@ -40,7 +46,7 @@ const rights: ArcoRight[] = [
     id: "suppression",
     icon: "🗑️",
     label: "Supresión",
-    deadline: "15 días hábiles",
+    deadline: "30 días corridos",
     description:
       "Solicita la eliminación de tus datos personales cuando ya no sean necesarios para el fin con que fueron recopilados.",
     variant: "danger",
@@ -49,7 +55,7 @@ const rights: ArcoRight[] = [
     id: "opposition",
     icon: "🚫",
     label: "Oposición",
-    deadline: "15 días hábiles",
+    deadline: "30 días corridos",
     description:
       "Solicita que dejemos de tratar tus datos para ciertos fines, como marketing directo o elaboración de perfiles.",
     variant: "primary",
@@ -58,7 +64,7 @@ const rights: ArcoRight[] = [
     id: "portability",
     icon: "📦",
     label: "Portabilidad",
-    deadline: "15 días hábiles",
+    deadline: "30 días corridos",
     description:
       "Recibe tus datos en un formato estructurado para transferirlos a otro responsable.",
     variant: "primary",
@@ -111,14 +117,62 @@ const dataOptions = [
   "Datos financieros",
 ]
 
-const formSchema = z.object({
-  email: z.string().email("Email inválido"),
-  dataScope: z.string().min(1, "Selecciona una opción"),
-  description: z.string().optional(),
-  declaration: z
-    .boolean()
-    .refine((v) => v === true, "Debes aceptar la declaración"),
-})
+const formSchema = z
+  .object({
+    email: z.string().email("Email inválido"),
+    mode: z.enum(["other", "rectification", "suppression", "opposition", "blocking"]),
+    dataScope: z.string().optional(),
+    description: z.string().optional(),
+    rectField: z.string().optional(),
+    rectNewValue: z.string().optional(),
+    rectReason: z.string().optional(),
+    suppressReason: z.string().optional(),
+    suppressConfirm: z.boolean().optional(),
+    oppositionActivities: z.array(z.string()).optional(),
+    oppositionReason: z.string().optional(),
+    blockRelatedType: z.string().optional(),
+    blockRelatedId: z.string().optional(),
+    blockReason: z.string().optional(),
+    declaration: z
+      .boolean()
+      .refine((v) => v === true, "Debes aceptar la declaración"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.mode === "rectification") {
+      if (!data.rectField) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["rectField"], message: "Selecciona el dato a corregir" })
+      }
+      if (!data.rectNewValue?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["rectNewValue"], message: "Indica el valor correcto" })
+      }
+      if (!data.rectReason?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["rectReason"], message: "Indica el motivo de la corrección" })
+      }
+    } else if (data.mode === "suppression") {
+      if (!data.suppressReason?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["suppressReason"], message: "Indica el motivo de la solicitud de supresión" })
+      }
+      if (data.suppressConfirm !== true) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["suppressConfirm"], message: "Debes confirmar que entiendes los efectos de la supresión" })
+      }
+    } else if (data.mode === "opposition") {
+      if (!data.oppositionActivities || data.oppositionActivities.length === 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["oppositionActivities"], message: "Selecciona al menos una finalidad a la que te opones" })
+      }
+      if (!data.oppositionReason?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["oppositionReason"], message: "Indica el motivo de la oposición" })
+      }
+    } else if (data.mode === "blocking") {
+      if (!data.blockRelatedType?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["blockRelatedType"], message: "Selecciona a qué solicitud se refiere el bloqueo" })
+      }
+      if (!data.blockReason?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["blockReason"], message: "Indica el motivo del bloqueo" })
+      }
+    } else if (!data.dataScope?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["dataScope"], message: "Selecciona una opción" })
+    }
+  })
 
 type FormData = z.infer<typeof formSchema>
 
@@ -145,15 +199,44 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   const [successOpen, setSuccessOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  const { data: personData } = useQuery({
+    queryKey: ["person", organizationId, dataSubjectId],
+    queryFn: () => personsApi.getById(organizationId, dataSubjectId).then((r) => r.data),
+    enabled: !!organizationId && !!dataSubjectId,
+  })
+  const person = personData?.data
+
+  const { data: ratData } = useQuery({
+    queryKey: ["rat", organizationId],
+    queryFn: () => complianceApi.getRat(organizationId).then((r) => r.data),
+    enabled: !!organizationId,
+  })
+  const treatmentActivities: TreatmentActivity[] = (ratData ?? []).filter((a) => a.status === "ACTIVE")
+
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
     reset,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email, dataScope: "", description: "", declaration: false },
+    defaultValues: { email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressReason: "", suppressConfirm: false, oppositionActivities: [], oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", declaration: false },
   })
+
+  const rectField = watch("rectField") as RectifiableField | "" | undefined
+  const rectCurrentValue = person && rectField ? getPersonFieldValue(person, rectField) : ""
+
+  useEffect(() => {
+    const mode =
+      selectedRight?.id === "rectification" ? "rectification" :
+      selectedRight?.id === "suppression"   ? "suppression" :
+      selectedRight?.id === "opposition"    ? "opposition" :
+      selectedRight?.id === "blocking"      ? "blocking" :
+      "other"
+    setValue("mode", mode)
+  }, [selectedRight, setValue])
 
   async function onSubmit(data: FormData) {
     if (!selectedRight) {
@@ -164,6 +247,40 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
       toast.error("Tu cuenta no tiene organización o persona configurada. Contacta al administrador.")
       return
     }
+
+    let description: string
+    if (selectedRight.id === "rectification") {
+      const fieldDef = RECTIFIABLE_FIELDS.find((f) => f.key === data.rectField)
+      description = encodeRectification({
+        field: data.rectField as RectifiableField,
+        fieldLabel: fieldDef?.label ?? data.rectField ?? "",
+        currentValue: rectCurrentValue,
+        proposedValue: data.rectNewValue!.trim(),
+        reason: data.rectReason!.trim(),
+      })
+    } else if (selectedRight.id === "suppression") {
+      description = encodeSuppression(data.suppressReason!.trim())
+    } else if (selectedRight.id === "opposition") {
+      const selectedIds = data.oppositionActivities ?? []
+      const selectedActivities = treatmentActivities
+        .filter((a) => selectedIds.includes(a.id))
+        .map((a) => ({ id: a.id, name: a.name }))
+      description = encodeOpposition({
+        activities: selectedActivities,
+        reason: data.oppositionReason!.trim(),
+      })
+    } else if (selectedRight.id === "blocking") {
+      description = encodeBlocking({
+        relatedType: data.blockRelatedType as BlockingRelatedType,
+        relatedRequestId: data.blockRelatedId?.trim() || undefined,
+        reason: data.blockReason!.trim(),
+      })
+    } else {
+      description = data.description
+        ? `${data.dataScope} — ${data.description}`
+        : data.dataScope!
+    }
+
     setSubmitting(true)
     try {
       const res = await arcoApi.create({
@@ -171,9 +288,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
         dataSubjectId,
         requestType: RIGHT_TO_TYPE[selectedRight.id],
         requestChannel: "WEB_PORTAL",
-        description: data.description
-          ? `${data.dataScope} — ${data.description}`
-          : data.dataScope,
+        description,
       })
       if (!res.data?.success || !res.data?.data) {
         toast.error(res.data?.message ?? "No se pudo enviar la solicitud. Intenta nuevamente.")
@@ -192,7 +307,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   function handleSuccessClose() {
     setSuccessOpen(false)
     setSelectedRight(null)
-    reset({ email, dataScope: "", description: "", declaration: false })
+    reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressReason: "", suppressConfirm: false, oppositionActivities: [], oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", declaration: false })
     onSolicitudCreated()
   }
 
@@ -334,50 +449,384 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
             )}
           </div>
 
-          {/* Data scope */}
-          <div>
-            <label
-              className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-              style={{ color: "hsl(var(--muted-foreground))" }}
-            >
-              Alcance de la solicitud
-            </label>
-            <select
-              {...register("dataScope")}
-              className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
-              style={{ borderColor: "hsl(var(--border))" }}
-            >
-              <option value="">Selecciona una opción...</option>
-              {dataOptions.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-            {errors.dataScope && (
-              <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
-                {errors.dataScope.message}
-              </p>
-            )}
-          </div>
+          {selectedRight?.id === "rectification" ? (
+            <>
+              {/* Campo a corregir */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Dato que deseas corregir
+                </label>
+                <select
+                  {...register("rectField")}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
+                  style={{ borderColor: "hsl(var(--border))" }}
+                >
+                  <option value="">Selecciona una opción...</option>
+                  {RECTIFIABLE_FIELDS.map((f) => (
+                    <option key={f.key} value={f.key}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.rectField && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.rectField.message}
+                  </p>
+                )}
+              </div>
 
-          {/* Description */}
-          <div>
-            <label
-              className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-              style={{ color: "hsl(var(--muted-foreground))" }}
-            >
-              Descripción{" "}
-              <span className="normal-case font-normal tracking-normal">(opcional)</span>
-            </label>
-            <textarea
-              {...register("description")}
-              rows={3}
-              className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
-              style={{ borderColor: "hsl(var(--border))", background: "white" }}
-              placeholder="Describe con más detalle tu solicitud si lo necesitas..."
-            />
-          </div>
+              {/* Valor actual (solo lectura) */}
+              {rectField && (
+                <div>
+                  <label
+                    className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                  >
+                    Valor actual registrado
+                  </label>
+                  <input
+                    value={rectCurrentValue || "—"}
+                    readOnly
+                    className="w-full rounded-xl border px-3 py-2.5 text-sm cursor-not-allowed"
+                    style={{
+                      borderColor: "hsl(var(--border))",
+                      background: "hsl(var(--muted))",
+                      color: "hsl(var(--muted-foreground))",
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Valor correcto */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Valor correcto
+                </label>
+                <input
+                  {...register("rectNewValue")}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2"
+                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
+                  placeholder="Escribe el dato correcto..."
+                />
+                {errors.rectNewValue && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.rectNewValue.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Motivo */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Motivo de la corrección
+                </label>
+                <textarea
+                  {...register("rectReason")}
+                  rows={3}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
+                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
+                  placeholder="Explica por qué este dato es incorrecto, incompleto o está desactualizado..."
+                />
+                {errors.rectReason && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.rectReason.message}
+                  </p>
+                )}
+              </div>
+            </>
+          ) : selectedRight?.id === "suppression" ? (
+            <>
+              {/* Aviso de efectos de la supresión */}
+              <div
+                className="rounded-xl px-4 py-3 border-l-4 text-xs leading-relaxed space-y-1"
+                style={{
+                  borderColor: "hsl(var(--destructive) / 0.4)",
+                  background: "hsl(var(--destructive) / 0.06)",
+                  color: "hsl(var(--destructive))",
+                }}
+              >
+                <p className="font-bold">Si tu solicitud es aprobada:</p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Tus datos identificativos (nombre, RUT, correo, teléfono, cargo) serán anonimizados.</li>
+                  <li>Tu cuenta será desactivada y no podrás volver a iniciar sesión.</li>
+                  <li>Tus consentimientos activos serán revocados.</li>
+                </ul>
+                <p>Esta acción puede ser irreversible y solo procede cuando no exista una obligación legal de conservar tus datos.</p>
+              </div>
+
+              {/* Motivo */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Motivo de la solicitud de supresión
+                </label>
+                <textarea
+                  {...register("suppressReason")}
+                  rows={3}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
+                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
+                  placeholder="Explica por qué solicitas la eliminación de tus datos personales..."
+                />
+                {errors.suppressReason && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.suppressReason.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Confirmación adicional */}
+              <div
+                className="flex items-start gap-3 rounded-xl p-3"
+                style={{ background: "hsl(var(--destructive) / 0.06)" }}
+              >
+                <input
+                  type="checkbox"
+                  id="suppressConfirm"
+                  {...register("suppressConfirm")}
+                  className="mt-0.5 h-4 w-4 rounded"
+                  style={{ accentColor: "hsl(var(--destructive))" }}
+                />
+                <label
+                  htmlFor="suppressConfirm"
+                  className="text-xs leading-relaxed"
+                  style={{ color: "hsl(var(--destructive))" }}
+                >
+                  Entiendo que, de aprobarse, mis datos serán anonimizados, mi cuenta será
+                  desactivada y mis consentimientos activos serán revocados.
+                </label>
+              </div>
+              {errors.suppressConfirm && (
+                <p className="text-xs" style={{ color: "hsl(var(--destructive))" }}>
+                  {errors.suppressConfirm.message}
+                </p>
+              )}
+            </>
+          ) : selectedRight?.id === "opposition" ? (
+            <>
+              {/* Info */}
+              <div
+                className="rounded-xl px-4 py-3 border-l-4 text-xs leading-relaxed"
+                style={{
+                  borderColor: "hsl(var(--primary) / 0.4)",
+                  background: "hsl(var(--secondary))",
+                  color: "hsl(var(--primary))",
+                }}
+              >
+                <p className="font-bold">¿En qué consiste?</p>
+                <p>
+                  Puedes oponerte a que sigamos tratando tus datos para una o más finalidades específicas (Art. 8 Ley 21.719).
+                  Selecciona las finalidades que te afectan; evaluaremos si la base legal del tratamiento permite acoger tu oposición.
+                </p>
+              </div>
+
+              {/* Finalidades / actividades de tratamiento */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Finalidades a las que te opones
+                </label>
+                {treatmentActivities.length === 0 ? (
+                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    No hay actividades de tratamiento registradas actualmente.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {treatmentActivities.map((activity) => (
+                      <label
+                        key={activity.id}
+                        className="flex items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors hover:bg-muted/50"
+                        style={{ borderColor: "hsl(var(--border))" }}
+                      >
+                        <input
+                          type="checkbox"
+                          value={activity.id}
+                          {...register("oppositionActivities")}
+                          className="mt-0.5 h-4 w-4 rounded"
+                          style={{ accentColor: "hsl(var(--primary))" }}
+                        />
+                        <div className="text-xs">
+                          <p className="font-semibold" style={{ color: "hsl(var(--foreground))" }}>{activity.name}</p>
+                          <p style={{ color: "hsl(var(--muted-foreground))" }}>{activity.purpose}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {errors.oppositionActivities && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.oppositionActivities.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Motivo */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Motivo de la oposición
+                </label>
+                <textarea
+                  {...register("oppositionReason")}
+                  rows={3}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
+                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
+                  placeholder="Explica por qué te opones al tratamiento de tus datos para estas finalidades..."
+                />
+                {errors.oppositionReason && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.oppositionReason.message}
+                  </p>
+                )}
+              </div>
+            </>
+          ) : selectedRight?.id === "blocking" ? (
+            <>
+              {/* Info */}
+              <div
+                className="rounded-xl px-4 py-3 border-l-4 text-xs leading-relaxed"
+                style={{
+                  borderColor: "hsl(var(--warning) / 0.4)",
+                  background: "hsl(var(--warning) / 0.06)",
+                  color: "hsl(36 70% 32%)",
+                }}
+              >
+                <p className="font-bold">¿En qué consiste?</p>
+                <p>
+                  El bloqueo (Art. 8 ter Ley 21.719) suspende temporalmente el tratamiento de tus datos mientras se resuelve
+                  otra solicitud (Rectificación, Supresión u Oposición), o como alternativa a la Supresión (Art. 7°). Tus
+                  datos no se eliminan, solo dejan de utilizarse activamente mientras dure el bloqueo.
+                </p>
+              </div>
+
+              {/* Tipo de solicitud relacionada */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  ¿A qué se refiere tu solicitud de bloqueo?
+                </label>
+                <select
+                  {...register("blockRelatedType")}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
+                  style={{ borderColor: "hsl(var(--border))" }}
+                >
+                  <option value="">Selecciona una opción...</option>
+                  {BLOCKING_RELATED_TYPES.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.blockRelatedType && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.blockRelatedType.message}
+                  </p>
+                )}
+              </div>
+
+              {/* ID de la solicitud relacionada (opcional) */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  ID de la solicitud relacionada{" "}
+                  <span className="normal-case font-normal tracking-normal">(opcional)</span>
+                </label>
+                <input
+                  {...register("blockRelatedId")}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm font-mono transition-colors focus:outline-none focus:ring-2"
+                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
+                  placeholder="Ej: 38770771-5ea1-4f49-b338-262689558351"
+                />
+              </div>
+
+              {/* Motivo */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Motivo del bloqueo
+                </label>
+                <textarea
+                  {...register("blockReason")}
+                  rows={3}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
+                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
+                  placeholder="Explica por qué solicitas la suspensión temporal del tratamiento de tus datos..."
+                />
+                {errors.blockReason && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.blockReason.message}
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Data scope */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Alcance de la solicitud
+                </label>
+                <select
+                  {...register("dataScope")}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
+                  style={{ borderColor: "hsl(var(--border))" }}
+                >
+                  <option value="">Selecciona una opción...</option>
+                  {dataOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+                {errors.dataScope && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.dataScope.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Description */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Descripción{" "}
+                  <span className="normal-case font-normal tracking-normal">(opcional)</span>
+                </label>
+                <textarea
+                  {...register("description")}
+                  rows={3}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
+                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
+                  placeholder="Describe con más detalle tu solicitud si lo necesitas..."
+                />
+              </div>
+            </>
+          )}
 
           {/* Declaration */}
           <div
@@ -429,7 +878,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
               type="button"
               onClick={() => {
                 setSelectedRight(null)
-                reset({ email, dataScope: "", description: "", declaration: false })
+                reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressReason: "", suppressConfirm: false, oppositionActivities: [], oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", declaration: false })
               }}
               className="px-5 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-muted"
               style={{

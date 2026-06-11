@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.ApiResponseDTO;
+import com.example.demo.dto.UpdateArcoStatusDTO;
 import com.example.demo.dto.arcoRequest.ArcoRequestCreateDTO;
 import com.example.demo.dto.arcoRequest.ArcoRequestResponseDTO;
 import com.example.demo.dto.arcoRequest.ArcoRequestStatusUpdateDTO;
@@ -23,53 +25,67 @@ public class ArcoRequestController {
     private final ArcoRequestService arcoRequestService;
 
     @GetMapping
-    public ResponseEntity<List<ArcoRequestResponseDTO>> listar(
+    public ResponseEntity<ApiResponseDTO<List<ArcoRequestResponseDTO>>> listar(
             @RequestParam(required = false) UUID organizationId,
             @RequestParam(required = false) UUID dataSubjectId,
             @RequestParam(required = false) ArcoStatus status) {
 
+        List<ArcoRequestResponseDTO> resultado;
         if (organizationId != null) {
-            return ResponseEntity.ok(arcoRequestService.listarPorOrganizacion(organizationId));
+            resultado = arcoRequestService.listarPorOrganizacion(organizationId);
+        } else if (dataSubjectId != null) {
+            resultado = arcoRequestService.listarPorTitular(dataSubjectId);
+        } else if (status != null) {
+            resultado = arcoRequestService.listarPorEstado(status);
+        } else {
+            resultado = arcoRequestService.listar();
         }
-        if (dataSubjectId != null) {
-            return ResponseEntity.ok(arcoRequestService.listarPorTitular(dataSubjectId));
-        }
-        if (status != null) {
-            return ResponseEntity.ok(arcoRequestService.listarPorEstado(status));
-        }
-        return ResponseEntity.ok(arcoRequestService.listar());
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Solicitudes obtenidas", resultado));
+    }
+
+    @GetMapping("/by-subject/{dataSubjectId}")
+    public ResponseEntity<ApiResponseDTO<List<ArcoRequestResponseDTO>>> buscarPorTitular(@PathVariable UUID dataSubjectId) {
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Solicitudes obtenidas",
+                arcoRequestService.listarPorTitular(dataSubjectId)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ArcoRequestResponseDTO> buscarPorId(@PathVariable UUID id) {
-        return ResponseEntity.ok(arcoRequestService.buscarPorId(id));
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> buscarPorId(@PathVariable UUID id) {
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Solicitud obtenida", arcoRequestService.buscarPorId(id)));
     }
 
     @PostMapping
-    public ResponseEntity<ArcoRequestResponseDTO> crearSolicitud(@Valid @RequestBody ArcoRequestCreateDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(arcoRequestService.crearSolicitud(dto));
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> crearSolicitud(@Valid @RequestBody ArcoRequestCreateDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponseDTO<>(true, "Solicitud creada correctamente", arcoRequestService.crearSolicitud(dto)));
     }
 
     @PatchMapping("/{id}/estado")
-    public ResponseEntity<ArcoRequestResponseDTO> cambiarEstado(
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> cambiarEstado(
             @PathVariable UUID id,
             @Valid @RequestBody ArcoRequestStatusUpdateDTO dto) {
-        return ResponseEntity.ok(arcoRequestService.cambiarEstado(id, dto));
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Estado actualizado", arcoRequestService.cambiarEstado(id, dto)));
+    }
+
+    @PatchMapping("/{id}/prorroga")
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> prorrogarPlazo(@PathVariable UUID id) {
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Prórroga otorgada",
+                arcoRequestService.prorrogarPlazo(id)));
     }
 
     @PatchMapping("/{id}/verificacion-identidad")
-    public ResponseEntity<ArcoRequestResponseDTO> actualizarVerificacionIdentidad(
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> actualizarVerificacionIdentidad(
             @PathVariable UUID id,
             @RequestParam ArcoIdentityVerificationStatus nuevoEstado) {
-        return ResponseEntity.ok(arcoRequestService.actualizarVerificacionIdentidad(id, nuevoEstado));
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Identidad actualizada",
+                arcoRequestService.actualizarVerificacionIdentidad(id, nuevoEstado)));
     }
 
     @PatchMapping("/{id}/resolucion")
-    public ResponseEntity<ArcoRequestResponseDTO> actualizarResolucion(
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> actualizarResolucion(
             @PathVariable UUID id,
             @RequestBody UpdateArcoStatusDTO dto) {
-        return ResponseEntity.ok(new ApiResponseDTO<>(
-                true, "Estado actualizado correctamente",
-                arcoRequestService.updateStatus(id, dto)));
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Resolución registrada",
+                arcoRequestService.actualizarResolucion(id, dto.getResolutionSummary())));
     }
 }

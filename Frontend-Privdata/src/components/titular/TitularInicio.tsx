@@ -14,11 +14,12 @@ interface Props {
 }
 
 const ARCO_STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  RECIBIDA:   { label: "Recibida",   color: "hsl(var(--primary))" },
-  EN_PROCESO: { label: "En proceso", color: "hsl(36 70% 40%)" },
-  RESPONDIDA: { label: "Resuelta",   color: "hsl(142 71% 35%)" },
-  RECHAZADA:  { label: "Rechazada",  color: "hsl(var(--destructive))" },
-  CERRADA:    { label: "Cerrada",    color: "hsl(var(--muted-foreground))" },
+  RECIBIDA:    { label: "Recibida",   color: "hsl(var(--primary))" },
+  EN_REVISION: { label: "En revisión", color: "hsl(36 70% 40%)" },
+  EN_GESTION:  { label: "En gestión",  color: "hsl(36 70% 40%)" },
+  RESPONDIDA:  { label: "Resuelta",   color: "hsl(142 71% 35%)" },
+  RECHAZADA:   { label: "Rechazada",  color: "hsl(var(--destructive))" },
+  CERRADA:     { label: "Cerrada",    color: "hsl(var(--muted-foreground))" },
 }
 
 export default function TitularInicio({ organizationId, dataSubjectId, name, rut, email, onNavigate }: Props) {
@@ -48,7 +49,7 @@ export default function TitularInicio({ organizationId, dataSubjectId, name, rut
   const defMap = new Map<string, ConsentDefinition>(definitions.map((d) => [d.id, d]))
 
   const activeConsents  = consents.filter((c) => c.status === "ACTIVE")
-  const enTramite       = arcoList.filter((r) => r.status === "RECIBIDA" || r.status === "EN_PROCESO")
+  const enTramite       = arcoList.filter((r) => r.status === "RECIBIDA" || r.status === "EN_REVISION" || r.status === "EN_GESTION")
   const resueltas       = arcoList.filter((r) => r.status === "RESPONDIDA")
   const latestTramite   = enTramite[0] ?? null
 

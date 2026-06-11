@@ -196,8 +196,7 @@ export default function TitularPortalLayout({
               activeTab={activeTab}
               onTabChange={onTabChange}
               userName={userName}
-              rut={rut}
-              lastAccess={lastAccess}
+              email={email}
               onLogout={onLogout}
               pendingConsentsCount={pendingConsentsCount}
               onClose={() => setDrawerOpen(false)}

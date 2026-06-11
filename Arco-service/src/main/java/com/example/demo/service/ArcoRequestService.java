@@ -7,12 +7,13 @@ import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
 import com.example.demo.enums.arcoRequest.ArcoStatus;
 import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.model.ArcoRequest;
+import com.example.demo.model.ArcoRequestStatusHistory;
 import com.example.demo.repository.ArcoRequestRepository;
 import com.example.demo.repository.ArcoRequestStatusHistoryRepository;
+import com.example.demo.util.BusinessDaysCalculator;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,22 +46,10 @@ public class ArcoRequestService {
                 .collect(Collectors.toList());
     }
 
-    public ArcoResponseDTO registrarSolicitud(CreateArcoRequestDTO dto) {
-        ArcoRequest req = new ArcoRequest();
-        req.setOrganizationId(dto.getOrganizationId());
-        req.setDataSubjectId(dto.getDataSubjectId());
-        req.setAssignedToUserId(dto.getAssignedToUserId());
-        req.setRequestType(dto.getRequestType());
-        req.setStatus(ArcoStatus.RECIBIDA);
-        req.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.PENDIENTE);
-        req.setRequestChannel(dto.getRequestChannel());
-        LocalDateTime now = LocalDateTime.now();
-        req.setSubmittedAt(now);
-        req.setDueDate(now.plusDays(30));
-        req.setDescription(dto.getDescription());
-        req.setResolutionSummary(null);
-        req.setResolvedAt(null);
-        return toDTO(arcoRequestRepository.save(req));
+    public List<ArcoRequestResponseDTO> listarPorTitular(UUID dataSubjectId) {
+        return arcoRequestRepository.findByDataSubjectId(dataSubjectId).stream()
+                .map(ArcoRequestResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
     public List<ArcoRequestResponseDTO> listarPorEstado(ArcoStatus status) {
@@ -92,7 +81,25 @@ public class ArcoRequestService {
                 .orElseThrow(() -> new ArcoRequestNotFoundException(id));
         ArcoStatus estadoAnterior = solicitud.getStatus();
 
+        if (dto.getNewStatus() == ArcoStatus.RESPONDIDA && (dto.getComment() == null || dto.getComment().isBlank())) {
+            throw new IllegalArgumentException("Debe registrar el contenido de la respuesta entregada al titular (Art. 11 Ley 21.719).");
+        }
+
+        if (dto.getNewStatus() == ArcoStatus.RECHAZADA) {
+            if (dto.getComment() == null || dto.getComment().isBlank()) {
+                throw new IllegalArgumentException("Debe indicar el motivo de la denegación.");
+            }
+            if (dto.getDenialLegalBasis() == null || dto.getDenialLegalBasis().isBlank()) {
+                throw new IllegalArgumentException("Debe citar la norma legal que fundamenta la denegación (Art. 5° Ley 21.719).");
+            }
+            solicitud.setDenialLegalBasis(dto.getDenialLegalBasis());
+        }
+
         solicitud.setStatus(dto.getNewStatus());
+
+        if (dto.getComment() != null && !dto.getComment().isBlank()) {
+            solicitud.setResolutionSummary(dto.getComment());
+        }
 
         if (dto.getNewStatus() == ArcoStatus.RESPONDIDA || dto.getNewStatus() == ArcoStatus.RECHAZADA) {
             solicitud.setResolvedAt(LocalDateTime.now());
@@ -109,6 +116,27 @@ public class ArcoRequestService {
         statusHistoryRepository.save(historial);
 
         return ArcoRequestResponseDTO.fromEntity(solicitud);
+    }
+
+    @Transactional
+    public ArcoRequestResponseDTO prorrogarPlazo(UUID id) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
+
+        if (solicitud.isExtensionGranted()) {
+            throw new IllegalArgumentException("Esta solicitud ya cuenta con una prórroga otorgada (Art. 11 Ley 21.719 permite una sola).");
+        }
+
+        if (solicitud.getStatus() == ArcoStatus.RESPONDIDA
+                || solicitud.getStatus() == ArcoStatus.RECHAZADA
+                || solicitud.getStatus() == ArcoStatus.CERRADA) {
+            throw new IllegalArgumentException("No se puede prorrogar una solicitud en estado " + solicitud.getStatus() + ".");
+        }
+
+        solicitud.setExtensionGranted(true);
+        solicitud.setExtendedDueDate(solicitud.getDueDate().plusDays(30));
+
+        return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
     }
 
     @Transactional

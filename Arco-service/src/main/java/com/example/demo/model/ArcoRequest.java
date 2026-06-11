@@ -70,6 +70,15 @@ public class ArcoRequest {
     @Column(name = "resolved_at", nullable = true)
     private LocalDateTime resolvedAt;
 
+    @Column(name = "denial_legal_basis", nullable = true, columnDefinition = "TEXT")
+    private String denialLegalBasis;
+
+    @Column(name = "extension_granted", nullable = false, columnDefinition = "boolean default false")
+    private boolean extensionGranted;
+
+    @Column(name = "extended_due_date", nullable = true)
+    private LocalDateTime extendedDueDate;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

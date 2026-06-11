@@ -146,6 +146,47 @@ ArcoRequest (arco-service)
 
 ---
 
+## BFF Error Handling — Critical Gotcha
+
+The BFF `forward()` helper catches all microservice errors and **re-wraps them as HTTP 200 OK** with body `{success: false, message: "..."}`. This means:
+
+- Axios never throws for business-logic failures (4xx from microservices).
+- Frontend must check `response.data.success` for mutation calls, not just await without checking.
+- The only real HTTP errors from BFF are network failures or unhandled BFF exceptions.
+
+Example correct pattern for a mutation:
+```ts
+const res = await api.post<ApiResponse<T>>("/some/endpoint", body)
+if (!res.data.success) throw new Error(res.data.message)
+```
+
+---
+
+## Frontend API Response Inconsistency
+
+Some compliance endpoints bypass the `ApiResponse<T>` wrapper and return the array/object directly. Check `api.ts` before accessing `.data.data`:
+
+- `complianceApi.getConsentsBySubject()` → returns `Consent[]` directly (no wrapper)
+- `complianceApi.getConsentDefinitions()` → returns `ConsentDefinition[]` directly
+- `complianceApi.listConsents()` → returns `ConsentPage` directly
+- Everything else → returns `ApiResponse<T>` where actual payload is at `.data.data`
+
+---
+
+## Audit Logging
+
+Auth-service exposes audit events at `GET /auth/audit?organizationId=&page=&size=`. The `AuditLog` entity (in Auth-service) records `action`, `detail`, `performedByEmail`, and `createdAt`. Frontend accesses it via `auditApi.list(orgId, page, size)` → returns `ApiResponse<AuditPage>` where `AuditPage` is a Spring `Page<AuditLog>` projection (field: `content`).
+
+To write audit events from a microservice, call the Auth-service `/auth/audit` POST endpoint from the service or BFF.
+
+---
+
+## DB Schema Changes — Check Constraints
+
+`spring.jpa.hibernate.ddl-auto=update` does **not** drop and recreate check constraints. If you add or rename an enum value that is referenced by a DB check constraint (e.g., `arco_request_status_check`), you must reset the Docker volume for that service's database — otherwise inserts will fail with a constraint violation at runtime even though the code compiles.
+
+---
+
 ## Resetting a Database
 
 ```bash
