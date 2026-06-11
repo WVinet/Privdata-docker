@@ -74,6 +74,11 @@
 			<version>42.7.10</version>
 			<scope>compile</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.modelmapper</groupId>
+			<artifactId>modelmapper</artifactId>
+			<version>3.2.4</version>
+		</dependency>
 	</dependencies>
 
 	<build>

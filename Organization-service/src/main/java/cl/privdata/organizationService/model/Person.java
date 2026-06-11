@@ -1,6 +1,11 @@
 package cl.privdata.organizationService.model;
 
+import cl.privdata.organizationService.enums.DataStatus;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -9,6 +14,10 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "persons")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class Person {
 
     @Id
@@ -56,43 +65,16 @@ public class Person {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // Constructors
-    public Person() {}
+    //atributos para derecho cancelacion
+    @Column(name = "blocked", nullable = false)
+    private Boolean blocked;
+    @Column(name = "anonymized", nullable = false)
+    private Boolean anonymized;
+    @Column(name = "deletion_request", nullable = false)
+    private Boolean deletionRequest;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "data_status", nullable = false)
+    private DataStatus dataStatus;
 
-    // Getters and Setters
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
 
-    public Organization getOrganization() { return organization; }
-    public void setOrganization(Organization organization) { this.organization = organization; }
-
-    public Department getDepartment() { return department; }
-    public void setDepartment(Department department) { this.department = department; }
-
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
-
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
-
-    public String getRut() { return rut; }
-    public void setRut(String rut) { this.rut = rut; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-
-    public String getPosition() { return position; }
-    public void setPosition(String position) { this.position = position; }
-
-    public Boolean getIsActive() { return isActive; }
-    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

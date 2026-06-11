@@ -3,9 +3,9 @@ package com.example.demo.enums.arcoRequest;
 public enum ArcoRequestType {
     ACCESO,
     RECTIFICACION,
-    SUPRESION,
+    CANCELLATION,
     OPOSICION,
-    PORTABILIDAD,
-    BLOQUEO_TEMPORAL
+    PORTABILIDAD
+
 
 }

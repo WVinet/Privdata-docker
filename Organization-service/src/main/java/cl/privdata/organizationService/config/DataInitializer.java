@@ -41,30 +41,91 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void seedPersons() {
-        // Persona del admin (necesaria para que /auth/me devuelva personId válido)
+
+        // Persona del admin
         jdbcTemplate.update("""
-            INSERT INTO persons
-                (id, organization_id, first_name, last_name, full_name, rut, email, is_active, created_at, updated_at)
-            VALUES
-                (CAST(? AS uuid), CAST(? AS uuid), ?, ?, ?, ?, ?, true, NOW(), NOW())
-            ON CONFLICT (id) DO NOTHING
-            """,
-            ADMIN_PERSON_ID, props.getId(),
-            "Admin", "PrivData", "Admin PrivData",
-            "11.111.111-1", "admin@privdata.cl"
+        INSERT INTO persons
+        (
+         id,
+         organization_id,
+         first_name,
+         last_name,
+         full_name,
+         rut,
+         email,
+         is_active,
+         blocked,
+         anonymized,
+         deletion_request,
+         data_status,
+         created_at,
+         updated_at
+        )
+        VALUES
+        (
+         CAST(? AS uuid),
+         CAST(? AS uuid),
+         ?, ?, ?, ?, ?,
+         true,
+         false,
+         false,
+         false,
+         'ACTIVE',
+         NOW(),
+         NOW()
+        )
+        ON CONFLICT (id) DO NOTHING
+        """,
+                ADMIN_PERSON_ID,
+                props.getId(),
+                "Admin",
+                "PrivData",
+                "Admin PrivData",
+                "11.111.111-1",
+                "admin@privdata.cl"
         );
 
-        // Persona de prueba para el titular END_USER
+        // Persona titular
         jdbcTemplate.update("""
-            INSERT INTO persons
-                (id, organization_id, first_name, last_name, full_name, rut, email, is_active, created_at, updated_at)
-            VALUES
-                (CAST(? AS uuid), CAST(? AS uuid), ?, ?, ?, ?, ?, true, NOW(), NOW())
-            ON CONFLICT (id) DO NOTHING
-            """,
-            TITULAR_PERSON_ID, props.getId(),
-            "Juan", "Pérez", "Juan Pérez",
-            "12.345.678-9", "titular@privdata.cl"
+        INSERT INTO persons
+        (
+         id,
+         organization_id,
+         first_name,
+         last_name,
+         full_name,
+         rut,
+         email,
+         is_active,
+         blocked,
+         anonymized,
+         deletion_request,
+         data_status,
+         created_at,
+         updated_at
+        )
+        VALUES
+        (
+         CAST(? AS uuid),
+         CAST(? AS uuid),
+         ?, ?, ?, ?, ?,
+         true,
+         false,
+         false,
+         false,
+         'ACTIVE',
+         NOW(),
+         NOW()
+        )
+        ON CONFLICT (id) DO NOTHING
+        """,
+                TITULAR_PERSON_ID,
+                props.getId(),
+                "Juan",
+                "Pérez",
+                "Juan Pérez",
+                "12.345.678-9",
+                "titular@privdata.cl"
         );
     }
 }

@@ -106,4 +106,31 @@ public class PersonController {
                 response
         ));
     }
+
+    ///endpoints para derecho Cancelación
+    /// cambiar respuesta de los endpoint
+    @PostMapping("/{personId}/block")
+    public ResponseEntity<ApiResponseDTO<?>> blockDataSubject(@PathVariable UUID organizationId, @PathVariable UUID personId){
+
+        personService.blockDataSubject(organizationId,personId);
+
+        return ResponseEntity.ok(new ApiResponseDTO<>(
+                true, "Blockeo listo", null));
+    }
+
+    @PostMapping("/{personId}/delete")
+    public ResponseEntity<ApiResponseDTO<?>> deleteDataSubject(@PathVariable UUID organizationId, @PathVariable UUID personId){
+        personService.deleteDataSubject(organizationId,personId);
+
+        return ResponseEntity.ok(new ApiResponseDTO<>(
+                true, "Delete listo", null));
+    }
+
+    @PostMapping("/{personId}/anonymize")
+    public ResponseEntity<ApiResponseDTO<?>> anonymizeDataSubject(@PathVariable UUID organizationId, @PathVariable UUID personId){
+        personService.anonymizeDataSubject(organizationId,personId);
+
+        return ResponseEntity.ok(new ApiResponseDTO<>(
+                true, "Anonimización listo", null));
+    }
 }

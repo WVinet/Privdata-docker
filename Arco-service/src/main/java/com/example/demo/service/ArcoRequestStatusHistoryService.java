@@ -1,6 +1,6 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.arcoRequestStatusHistory.ArcoRequestStatusHistoryResponseDTO;
+import com.example.demo.dto.request.arcoRequestStatusHistory.ArcoRequestStatusHistoryResponseDTO;
 import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.repository.ArcoRequestRepository;
 import com.example.demo.repository.ArcoRequestStatusHistoryRepository;

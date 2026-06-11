@@ -4,15 +4,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
-import com.example.demo.enums.arcoRequest.ArcoRequestChannel;
+import com.example.demo.enums.arcoRequest.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
-import com.example.demo.enums.arcoRequest.ArcoRequestType;
-import com.example.demo.enums.arcoRequest.ArcoStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -54,6 +50,10 @@ public class ArcoRequest {
     @Enumerated(EnumType.STRING)
     @Column(name = "request_channel", nullable = false)
     private ArcoRequestChannel requestChannel;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancellation_action_type")
+    private ArcoCancellationType cancellationActionType;
 
     @Column(name = "submitted_at", nullable = false)
     private LocalDateTime submittedAt;

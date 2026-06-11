@@ -3,6 +3,7 @@ package cl.privdata.organizationService.service;
 import java.util.List;
 import java.util.UUID;
 
+import cl.privdata.organizationService.enums.DataStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +60,10 @@ public class PersonService {
         person.setPhone(request.getPhone());
         person.setPosition(request.getPosition());
         person.setIsActive(true);
+        person.setBlocked(false);
+        person.setAnonymized(false);
+        person.setDeletionRequest(false);
+        person.setDataStatus(DataStatus.ACTIVE);
 
         Person saved = personRepository.save(person);
 
@@ -213,7 +218,77 @@ public class PersonService {
                 person.getPosition(),
                 person.getIsActive(),
                 person.getCreatedAt(),
-                person.getUpdatedAt()
+                person.getUpdatedAt(),
+                person.getBlocked(),
+                person.getAnonymized(),
+                person.getDeletionRequest(),
+                person.getDataStatus()
         );
     }
+
+    ///Metodos para derecho ARCO (Cancelación)
+    public void blockDataSubject(UUID organizationId, UUID personId){
+
+        Person person = getPersonOrThrow(organizationId,personId);
+
+        if (person.getDataStatus() == DataStatus.ANONYMIZED){
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede bloquear una persona anonimizada"
+            );
+        }
+
+        person.setBlocked(true);
+        person.setDataStatus(DataStatus.BLOCKED);
+        personRepository.save(person);
+    }
+
+    public void deleteDataSubject(UUID organizationId, UUID personId){
+
+        Person person = getPersonOrThrow(organizationId,personId);
+
+        if (person.getDataStatus() == DataStatus.ANONYMIZED){
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede solicitar la eliminación de una persona anonimizada"
+            );
+        }
+
+        person.setDeletionRequest(true);
+        person.setDataStatus(DataStatus.DELETION_REQUESTED);
+        personRepository.save(person);
+
+    }
+
+    public void anonymizeDataSubject(UUID organizationId, UUID personId){
+
+        Person person = getPersonOrThrow(organizationId,personId);
+
+        if (person.getDataStatus() == DataStatus.ANONYMIZED){
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La persona ya se encuentra anonimizada"
+            );
+        }
+        UUID personUuid = person.getId();
+
+        person.setFirstName("ANONYMIZED");
+        person.setLastName("ANONYMIZED");
+        person.setFullName("ANONYMIZED USER");
+        person.setRut(null);
+        person.setEmail("anon-" + personUuid + "@privdata.local");
+        person.setPhone(null);
+        person.setPosition(null);
+        person.setDepartment(null);
+
+        person.setBlocked(true);
+        person.setAnonymized(true);
+        person.setDeletionRequest(false);
+        person.setIsActive(false);
+        person.setDataStatus(DataStatus.ANONYMIZED);
+
+        personRepository.save(person);
+    }
+
+
 }
