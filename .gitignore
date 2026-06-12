@@ -14,8 +14,6 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Env
-.env
 
 # Claude Code (configuracion local)
 .claude/settings.local.json
