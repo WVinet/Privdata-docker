@@ -68,6 +68,12 @@ export const authApi = {
 
   activateAccount: (newPassword: string) =>
     api.post<ApiResponse<{ token: string }>>("/auth/me/activate", { newPassword }),
+
+  forgotPassword: (email: string) =>
+    api.post<ApiResponse<null>>("/auth/password/forgot", { email }),
+
+  resetPassword: (email: string, code: string, newPassword: string) =>
+    api.post<ApiResponse<null>>("/auth/password/reset", { email, code, newPassword }),
 }
 
 // ── Roles & Permissions ───────────────────────────────────────────────────────
@@ -168,6 +174,9 @@ export const arcoApi = {
 
   updateStatus: (id: string, body: UpdateArcoStatus) =>
     api.patch<ApiResponse<ArcoRequest>>(`/arco/${id}/status`, body),
+
+  extendDeadline: (id: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/${id}/prorroga`),
 }
 
 // ── Compliance ────────────────────────────────────────────────────────────────
@@ -176,7 +185,7 @@ export const complianceApi = {
     api.get<Consent[]>(`/compliance/consents/data-subject/${dataSubjectId}`),
 
   getRat: (organizationId: string) =>
-    api.get<ApiResponse<TreatmentActivity[]>>(`/compliance/rat`, { params: { organizationId } }),
+    api.get<TreatmentActivity[]>(`/compliance/rat`, { params: { organizationId } }),
 
   revokeConsent: (consentId: string) =>
     api.post<ApiResponse<Consent>>(`/compliance/consents/${consentId}/revoke`),

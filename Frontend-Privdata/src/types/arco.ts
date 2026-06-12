@@ -23,6 +23,9 @@ export interface ArcoRequest {
   description: string
   resolutionSummary: string | null
   resolvedAt: string | null
+  denialLegalBasis: string | null
+  extensionGranted: boolean
+  extendedDueDate: string | null
   createdAt: string
   updatedAt: string
 }
@@ -39,4 +42,5 @@ export interface CreateArcoRequest {
 export interface UpdateArcoStatus {
   status: ArcoStatus
   resolutionSummary?: string
+  denialLegalBasis?: string
 }

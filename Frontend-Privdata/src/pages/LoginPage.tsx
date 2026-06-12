@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { Shield, Eye, EyeOff, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -104,6 +104,15 @@ export default function LoginPage() {
                   : "Ingresar"
                 }
               </Button>
+
+              <div className="text-center">
+                <Link
+                  to="/recuperar-contrasena"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
             </form>
           </CardContent>
         </Card>

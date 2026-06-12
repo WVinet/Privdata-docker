@@ -74,4 +74,12 @@ public class AuthBffService {
     public Object getAuditLogs(String authorization, String organizationId, int page, int size) {
         return authClient.getAuditLogs(authorization, organizationId, page, size);
     }
+
+    public Map<String, Object> forgotPassword(Map<String, Object> body) {
+        return authClient.forgotPassword(body);
+    }
+
+    public Map<String, Object> resetPassword(Map<String, Object> body) {
+        return authClient.resetPassword(body);
+    }
 }

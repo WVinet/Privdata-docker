@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
-import { Loader2, ShieldCheck, FileText, AlertTriangle } from "lucide-react"
-import { complianceApi } from "@/lib/api"
+import { Loader2, ShieldCheck, FileText, AlertTriangle, UserRound } from "lucide-react"
+import { complianceApi, personsApi } from "@/lib/api"
 import type { Consent, TreatmentActivity } from "@/types/compliance"
 
 const LEGAL_BASIS_LABEL: Record<string, string> = {
@@ -31,6 +31,11 @@ interface Props {
 }
 
 export default function ArcoAccessReport({ dataSubjectId, organizationId, onGenerateResolution }: Props) {
+  const { data: personData, isLoading: loadingPerson } = useQuery({
+    queryKey: ["person", organizationId, dataSubjectId],
+    queryFn: () => personsApi.getById(organizationId, dataSubjectId).then(r => r.data),
+  })
+
   const { data: consentsData, isLoading: loadingConsents } = useQuery({
     queryKey: ["consents-subject", dataSubjectId],
     queryFn: () => complianceApi.getConsentsBySubject(dataSubjectId).then(r => r.data),
@@ -41,10 +46,11 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
     queryFn: () => complianceApi.getRat(organizationId).then(r => r.data),
   })
 
-  const consents: Consent[]            = consentsData?.data ?? []
-  const activities: TreatmentActivity[] = ratData?.data ?? []
+  const person     = personData?.data
+  const consents: Consent[]            = consentsData ?? []
+  const activities: TreatmentActivity[] = ratData ?? []
 
-  const isLoading = loadingConsents || loadingRat
+  const isLoading = loadingPerson || loadingConsents || loadingRat
 
   function buildResolution() {
     const activeConsents = consents.filter(c => c.status === "ACTIVE")
@@ -53,6 +59,19 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
     lines.push(`Informe de Acceso — Art. 11 Ley 21.719`)
     lines.push(`Fecha de emisión: ${formatDate(new Date().toISOString())}`)
     lines.push("")
+
+    if (person) {
+      lines.push("Datos identificativos registrados:")
+      lines.push(`  Nombre completo: ${person.fullName}`)
+      if (person.rut) lines.push(`  RUT: ${person.rut}`)
+      if (person.email) lines.push(`  Correo electrónico: ${person.email}`)
+      if (person.phone) lines.push(`  Teléfono: ${person.phone}`)
+      if (person.position) lines.push(`  Cargo: ${person.position}`)
+      if (person.departmentName) lines.push(`  Departamento: ${person.departmentName}`)
+      lines.push(`  Estado: ${person.isActive ? "Activo" : "Inactivo"}`)
+      lines.push(`  Fecha de registro: ${formatDate(person.createdAt)}`)
+      lines.push("")
+    }
 
     if (activeConsents.length > 0) {
       lines.push(`Consentimientos vigentes (${activeConsents.length}):`)
@@ -114,6 +133,26 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
         <div className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs bg-destructive/10 text-destructive">
           <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           Algunos tratamientos incluyen datos sensibles (Art. 2g Ley 21.719). Verificar nivel de acceso antes de entregar.
+        </div>
+      )}
+
+      {/* Datos identificativos */}
+      {person && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
+            <UserRound className="w-3.5 h-3.5" />
+            Datos identificativos registrados
+          </p>
+          <div className="rounded-lg bg-background border border-border px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <div><span className="text-muted-foreground">Nombre completo:</span> <span className="font-medium text-foreground">{person.fullName}</span></div>
+            <div><span className="text-muted-foreground">RUT:</span> <span className="font-medium text-foreground">{person.rut ?? "—"}</span></div>
+            <div><span className="text-muted-foreground">Correo:</span> <span className="font-medium text-foreground">{person.email ?? "—"}</span></div>
+            <div><span className="text-muted-foreground">Teléfono:</span> <span className="font-medium text-foreground">{person.phone ?? "—"}</span></div>
+            <div><span className="text-muted-foreground">Cargo:</span> <span className="font-medium text-foreground">{person.position ?? "—"}</span></div>
+            <div><span className="text-muted-foreground">Departamento:</span> <span className="font-medium text-foreground">{person.departmentName ?? "—"}</span></div>
+            <div><span className="text-muted-foreground">Estado:</span> <span className="font-medium text-foreground">{person.isActive ? "Activo" : "Inactivo"}</span></div>
+            <div><span className="text-muted-foreground">Fecha de registro:</span> <span className="font-medium text-foreground">{formatDate(person.createdAt)}</span></div>
+          </div>
         </div>
       )}
 

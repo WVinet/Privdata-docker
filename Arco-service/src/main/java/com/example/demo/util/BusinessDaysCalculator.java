@@ -9,9 +9,23 @@ public class BusinessDaysCalculator {
 
     private BusinessDaysCalculator() {}
 
-    public static LocalDateTime calcularFechaLimite(LocalDateTime inicio, ArcoRequestType tipo) {
-        int diasHabiles = (tipo == ArcoRequestType.CANCELLATION) ? 2 : 15;
-        return agregarDiasHabiles(inicio, diasHabiles);
+    public static LocalDateTime calcularFechaLimite(
+            LocalDateTime inicio,
+            ArcoRequestType tipo
+    ) {
+
+        switch (tipo) {
+
+            case CANCELLATION:
+                return agregarDiasHabiles(inicio, 2);
+
+            case ACCESO:
+            case RECTIFICACION:
+            case OPOSICION:
+            case PORTABILIDAD:
+            default:
+                return inicio.plusDays(30);
+        }
     }
 
     private static LocalDateTime agregarDiasHabiles(LocalDateTime fecha, int dias) {

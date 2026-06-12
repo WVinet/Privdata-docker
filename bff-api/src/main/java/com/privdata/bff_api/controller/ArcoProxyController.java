@@ -33,4 +33,9 @@ public class ArcoProxyController {
                 arcoClient.ejecutarCancelacion(solicitudId)
         );
     }
+
+    @PatchMapping("/{id}/verificacion-identidad")
+    public ResponseEntity<ArcoRequestResponseDTO>actualizarVerificacionIdentidad(@PathVariable UUID id, @RequestParam String nuevoEstado){
+        return ResponseEntity.ok(arcoClient.actualizarVerificacionIdentidad(id,nuevoEstado));
+        }
 }

@@ -76,4 +76,61 @@ public class EmailService {
             throw new RuntimeException("Error al enviar correo de recuperación", e);
         }
     }
+
+    public void sendArcoResolutionEmail(String to, String requestTypeLabel, String statusLabel,
+                                         String resolutionSummary, String denialLegalBasis) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("Respuesta a tu solicitud de " + requestTypeLabel + " - PrivData");
+
+            String resolutionHtml = resolutionSummary != null
+                    ? resolutionSummary.replace("\n", "<br/>")
+                    : "";
+
+            String legalBasisBlock = denialLegalBasis != null && !denialLegalBasis.isBlank()
+                    ? """
+                        <p style="font-size: 14px; color: #374151;">
+                            <strong>Norma legal invocada:</strong> %s
+                        </p>
+                        """.formatted(denialLegalBasis)
+                    : "";
+
+            String html = """
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px;">
+                    <h2 style="color: #111827;">PrivData</h2>
+
+                    <p style="font-size: 16px; color: #374151;">
+                        Tu solicitud de <strong>%s</strong> ha sido <strong>%s</strong>.
+                    </p>
+
+                    <div style="background: #f3f4f6; color: #111827; padding: 16px 20px; border-radius: 8px; margin: 24px 0; font-size: 14px; line-height: 1.6;">
+                        %s
+                    </div>
+
+                    %s
+
+                    <p style="font-size: 14px; color: #6b7280;">
+                        Puedes revisar el detalle completo de esta y otras solicitudes en el portal de seguimiento.
+                    </p>
+
+                    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;" />
+
+                    <p style="font-size: 12px; color: #9ca3af;">
+                        Equipo PrivData — Ley 21.719
+                    </p>
+                </div>
+                """.formatted(requestTypeLabel, statusLabel, resolutionHtml, legalBasisBlock);
+
+            helper.setText(html, true);
+
+            mailSender.send(message);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al enviar correo de notificación ARCO", e);
+        }
+    }
 }
