@@ -9,12 +9,23 @@ public class BusinessDaysCalculator {
 
     private BusinessDaysCalculator() {}
 
-    public static LocalDateTime calcularFechaLimite(LocalDateTime inicio, ArcoRequestType tipo) {
-        if (tipo == ArcoRequestType.BLOQUEO_TEMPORAL) {
-            return agregarDiasHabiles(inicio, 2);
+    public static LocalDateTime calcularFechaLimite(
+            LocalDateTime inicio,
+            ArcoRequestType tipo
+    ) {
+
+        switch (tipo) {
+
+            case CANCELLATION:
+                return agregarDiasHabiles(inicio, 2);
+
+            case ACCESO:
+            case RECTIFICACION:
+            case OPOSICION:
+            case PORTABILIDAD:
+            default:
+                return inicio.plusDays(30);
         }
-        // Art. 11 Ley 21.719: 30 días corridos desde la presentación de la solicitud
-        return inicio.plusDays(30);
     }
 
     private static LocalDateTime agregarDiasHabiles(LocalDateTime fecha, int dias) {

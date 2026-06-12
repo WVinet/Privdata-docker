@@ -1,6 +1,6 @@
 package com.privdata.bff_api.dtos.request.arco;
 
-import com.example.demo.enums.arcoRequest.ArcoCancellationType;
+import com.privdata.bff_api.enums.ArcoCancellationType;
 import lombok.Data;
 
 import java.util.UUID;
