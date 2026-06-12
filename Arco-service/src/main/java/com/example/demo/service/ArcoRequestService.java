@@ -3,6 +3,8 @@ package com.example.demo.service;
 
 import com.example.demo.client.OrganizationClient;
 import com.example.demo.dto.request.ArcoCancellationRequestDTO;
+import com.example.demo.dto.request.ArcoRectificationRequestDTO;
+import com.example.demo.dto.request.PersonRectificationRequestDTO;
 import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
 import com.example.demo.dto.request.arcoRequest.ArcoRequestStatusUpdateDTO;
 import com.example.demo.dto.response.ArcoRequestResponseDTO;
@@ -14,8 +16,10 @@ import com.example.demo.enums.arcoRequest.ArcoStatus;
 import com.example.demo.exception.ArcoRequestNotFoundException;
 import com.example.demo.model.ArcoRequest;
 import com.example.demo.model.ArcoRequestStatusHistory;
+import com.example.demo.model.RectificationRequest;
 import com.example.demo.repository.ArcoRequestRepository;
 import com.example.demo.repository.ArcoRequestStatusHistoryRepository;
+import com.example.demo.repository.RectificationRequestRepository;
 import com.example.demo.util.BusinessDaysCalculator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +43,7 @@ public class ArcoRequestService {
     private final ModelMapper modelMapper;
     private final OrganizationClient organizationClient;
     private final EmailService emailService;
+    private final RectificationRequestRepository rectificationRequestRepository;
 
     public List<ArcoRequestResponseDTO> listar() {
         return arcoRequestRepository.findAll().stream()
@@ -400,5 +405,138 @@ public class ArcoRequestService {
         } catch (Exception ex) {
             System.out.println("No se pudo enviar correo de resolución: " + ex.getMessage());
         }
+    }
+
+    ///Metodo relacionados al derecho de Rectificaion
+    public ArcoRequestResponseDTO crearSolicitudRectificacion(ArcoRectificationRequestDTO requestDTO){
+        organizationClient.findById(requestDTO.getOrganizationId());
+
+        ArcoRequest arcoRequest = new ArcoRequest();
+        arcoRequest.setOrganizationId(requestDTO.getOrganizationId());
+        arcoRequest.setDataSubjectId(requestDTO.getDataSubjectId());
+        arcoRequest.setAssignedToUserId(requestDTO.getAssignedToUserId());
+        arcoRequest.setRequestChannel(ArcoRequestChannel.WEB_PORTAL);
+        arcoRequest.setDescription(requestDTO.getDescription());
+        arcoRequest.setCancellationActionType(null);
+        //los demas atributos de base
+        arcoRequest.setStatus(ArcoStatus.RECIBIDA);
+        arcoRequest.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.PENDIENTE);
+        arcoRequest.setSubmittedAt(LocalDateTime.now());
+        arcoRequest.setDueDate(
+                BusinessDaysCalculator.calcularFechaLimite(
+                        LocalDateTime.now(),
+                        ArcoRequestType.RECTIFICACION
+                )
+        );
+        arcoRequest.setResolutionSummary(null);
+        arcoRequest.setResolvedAt(null);
+        arcoRequest.setRequestType(ArcoRequestType.RECTIFICACION);
+
+        ArcoRequest saved = arcoRequestRepository.save(arcoRequest);
+
+        RectificationRequest rectificationRequest =
+                new RectificationRequest();
+
+        rectificationRequest.setId(UUID.randomUUID());
+        rectificationRequest.setArcoRequest(saved);
+
+        rectificationRequest.setFirstName(requestDTO.getFirstName());
+        rectificationRequest.setLastName(requestDTO.getLastName());
+        rectificationRequest.setEmail(requestDTO.getEmail());
+        rectificationRequest.setPhone(requestDTO.getPhone());
+        rectificationRequest.setPosition(requestDTO.getPosition());
+        rectificationRequest.setRut(requestDTO.getRut());
+
+        rectificationRequestRepository.save(rectificationRequest);
+        notificarCreacion(saved);
+        return modelMapper.map(saved, ArcoRequestResponseDTO.class);
+    }
+
+    public ArcoRequestResponseDTO ejecutarRectificacion(UUID solicitudId){
+        ArcoRequest solicitud = arcoRequestRepository.findById(solicitudId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Solicitud no existe"
+                ));
+
+
+        if (solicitud.getRequestType() != ArcoRequestType.RECTIFICACION) {
+            throw new RuntimeException("La solicitud no corresponde a cancelación");
+        }
+
+
+        if (solicitud.getIdentityVerificationStatus() != ArcoIdentityVerificationStatus.VERIFICADA) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La identidad del titular aún no ha sido verificada"
+            );
+        }
+
+        if (solicitud.getStatus() != ArcoStatus.EN_GESTION) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La solicitud debe estar en estado EN_GESTION para poder ejecutarse"
+            );
+        }
+
+        RectificationRequest rectificationRequest =
+                rectificationRequestRepository
+                        .findByArcoRequest_Id(solicitudId)
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "No existe información de rectificación asociada"
+                        ));
+
+        try {
+            PersonRectificationRequestDTO requestDTO =
+                    new PersonRectificationRequestDTO();
+
+            requestDTO.setFirstName(rectificationRequest.getFirstName());
+            requestDTO.setLastName(rectificationRequest.getLastName());
+            requestDTO.setEmail(rectificationRequest.getEmail());
+            requestDTO.setPhone(rectificationRequest.getPhone());
+            requestDTO.setPosition(rectificationRequest.getPosition());
+            requestDTO.setRut(rectificationRequest.getRut());
+
+            organizationClient.rectificationDataSubject(
+                    solicitud.getOrganizationId(),
+                    solicitud.getDataSubjectId(),
+                    requestDTO
+            );
+
+            solicitud.setStatus(ArcoStatus.RESPONDIDA);
+            solicitud.setResolvedAt(LocalDateTime.now());
+
+            solicitud.setResolutionSummary(
+                    "La rectificación de los datos personales fue ejecutada correctamente."
+            );
+
+            ArcoRequest saved = arcoRequestRepository.save(solicitud);
+
+            notificarResolucion(saved);
+
+            return modelMapper.map(
+                    saved,
+                    ArcoRequestResponseDTO.class
+            );
+
+        } catch (RestClientResponseException ex) {
+
+            solicitud.setStatus(ArcoStatus.RECHAZADA);
+            solicitud.setResolvedAt(LocalDateTime.now());
+
+            System.out.println("Error Organization Service: " + ex.getResponseBodyAsString());
+
+            solicitud.setResolutionSummary(
+                    "Solicitud rechazada por la organización. " +
+                            "No fue posible ejecutar la rectificación solicitada debido a una validación de los datos enviados."
+            );
+
+            ArcoRequest saved = arcoRequestRepository.save(solicitud);
+            notificarResolucion(saved);
+
+            return modelMapper.map(saved, ArcoRequestResponseDTO.class);
+        }
+
     }
 }

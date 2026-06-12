@@ -1,5 +1,6 @@
 package com.example.demo.client;
 
+import com.example.demo.dto.request.PersonRectificationRequestDTO;
 import com.example.demo.dto.response.OrgResponseDTO;
 import com.example.demo.dto.response.PersonResponseDTO;
 import lombok.RequiredArgsConstructor;
@@ -63,5 +64,19 @@ public class OrganizationClient {
                         + "/anonymize")
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    ///rectificaion
+    public void  rectificationDataSubject(UUID organizationId,
+                                          UUID personId,
+                                          PersonRectificationRequestDTO requestDTO){
+         orgClient.post()
+                .uri(organizationServiceUrl
+                        + "/api/organizations/" + organizationId
+                        + "/persons/" + personId + "/rectify")
+                .body(requestDTO)
+                .retrieve()
+                .toBodilessEntity();
+
     }
 }

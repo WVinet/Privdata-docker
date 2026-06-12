@@ -93,6 +93,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-arco:5432/arco_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
     ports:
       - "8082:8082"
 
