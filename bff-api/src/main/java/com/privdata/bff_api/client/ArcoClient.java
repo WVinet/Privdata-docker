@@ -1,5 +1,7 @@
 package com.privdata.bff_api.client;
 
+import com.privdata.bff_api.dtos.request.arco.ArcoCancellationRequestDTO;
+import com.privdata.bff_api.dtos.response.arco.ArcoRequestResponseDTO;
 import com.privdata.bff_api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpMethod;
@@ -12,6 +14,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -79,5 +82,31 @@ public class ArcoClient {
     private String extractMessage(String responseBody, String fallback) {
         var m = java.util.regex.Pattern.compile("\"mensaje\"\\s*:\\s*\"([^\"]+)\"").matcher(responseBody);
         return m.find() ? m.group(1) : fallback;
+    }
+
+    ///metodos de conexion derecho ARCO (Cancelacion)
+
+    public ArcoRequestResponseDTO crearSolicitudCancelacion(
+            ArcoCancellationRequestDTO request
+    ) {
+        return arcoRestClient.post()
+                .uri("/api/arco-requests/cancellation")
+                .body(request)
+                .retrieve()
+                .body(ArcoRequestResponseDTO.class);
+    }
+
+    public ArcoRequestResponseDTO ejecutarCancelacion(UUID solicitudId) {
+        return arcoRestClient.post()
+                .uri("/api/arco-requests/cancellation/" + solicitudId + "/execute")
+                .retrieve()
+                .body(ArcoRequestResponseDTO.class);
+    }
+
+    public ArcoRequestResponseDTO actualizarVerificacionIdentidad(UUID id, String nuevoEstado) {
+        return arcoRestClient.patch()
+                .uri("/api/arco-requests/cancellation/" + id + "/verificacion-identidad?" + nuevoEstado)
+                .retrieve()
+                .body(ArcoRequestResponseDTO.class);
     }
 }

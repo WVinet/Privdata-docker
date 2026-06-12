@@ -231,10 +231,17 @@ public class PersonService {
 
         Person person = getPersonOrThrow(organizationId,personId);
 
+        if (person.getDataStatus() == DataStatus.BLOCKED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede bloquear la persona porque actualmente se encuentra en estado BLOCKED"
+            );
+        }
+
         if (person.getDataStatus() == DataStatus.ANONYMIZED){
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "No se puede bloquear una persona anonimizada"
+                    "No se puede bloquear la persona porque actualmente se encuentra en estado ANONYMIZED"
             );
         }
 
@@ -255,6 +262,7 @@ public class PersonService {
         }
 
         person.setDeletionRequest(true);
+        person.setIsActive(false);
         person.setDataStatus(DataStatus.DELETION_REQUESTED);
         personRepository.save(person);
 
