@@ -1,13 +1,14 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.ApiResponseDTO;
-import com.example.demo.dto.UpdateArcoStatusDTO;
-import com.example.demo.dto.arcoRequest.ArcoRequestCreateDTO;
-import com.example.demo.dto.arcoRequest.ArcoRequestResponseDTO;
-import com.example.demo.dto.arcoRequest.ArcoRequestStatusUpdateDTO;
+import com.example.demo.dto.request.ArcoCancellationRequestDTO;
+import com.example.demo.dto.request.UpdateArcoStatusDTO;
+import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
+import com.example.demo.dto.request.arcoRequest.ArcoRequestStatusUpdateDTO;
+import com.example.demo.dto.response.ArcoRequestResponseDTO;
 import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
 import com.example.demo.enums.arcoRequest.ArcoStatus;
 import com.example.demo.service.ArcoRequestService;
+import com.example.demo.shared.ApiResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -60,6 +61,7 @@ public class ArcoRequestController {
                 .body(new ApiResponseDTO<>(true, "Solicitud creada correctamente", arcoRequestService.crearSolicitud(dto)));
     }
 
+    ///Despues de verificar la identidad del titutar usamos cambiar estado a EN_GESTION
     @PatchMapping("/{id}/estado")
     public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> cambiarEstado(
             @PathVariable UUID id,
@@ -73,6 +75,7 @@ public class ArcoRequestController {
                 arcoRequestService.prorrogarPlazo(id)));
     }
 
+    ///Admin verifica identidad con respecto a cualquier tipo de solicitud
     @PatchMapping("/{id}/verificacion-identidad")
     public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> actualizarVerificacionIdentidad(
             @PathVariable UUID id,
@@ -87,5 +90,26 @@ public class ArcoRequestController {
             @RequestBody UpdateArcoStatusDTO dto) {
         return ResponseEntity.ok(new ApiResponseDTO<>(true, "Resolución registrada",
                 arcoRequestService.actualizarResolucion(id, dto.getResolutionSummary())));
+    }
+
+    ///endpoints derecho cancelación
+    /// Creacion de solicitud cancelacion
+    @PostMapping("/cancellation")
+    public ResponseEntity<ArcoRequestResponseDTO> crearSolicitudCancelacion(
+            @RequestBody ArcoCancellationRequestDTO requestDTO
+    ) {
+        return ResponseEntity.ok(
+                arcoRequestService.crearSolicitudCancelacion(requestDTO)
+        );
+    }
+
+    ///se ejectua el derecho dependiendo del la opcion
+    @PostMapping("/cancellation/{solicitudId}/execute")
+    public ResponseEntity<ArcoRequestResponseDTO> ejecutarCancelacion(
+            @PathVariable UUID solicitudId
+    ) {
+        return ResponseEntity.ok(
+                arcoRequestService.ejecutarCancelacion(solicitudId)
+        );
     }
 }
