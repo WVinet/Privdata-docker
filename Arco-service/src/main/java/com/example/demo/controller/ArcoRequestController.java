@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.request.ArcoCancellationRequestDTO;
+import com.example.demo.dto.request.ArcoRectificationRequestDTO;
 import com.example.demo.dto.request.UpdateArcoStatusDTO;
 import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
 import com.example.demo.dto.request.arcoRequest.ArcoRequestStatusUpdateDTO;
@@ -110,6 +111,26 @@ public class ArcoRequestController {
     ) {
         return ResponseEntity.ok(
                 arcoRequestService.ejecutarCancelacion(solicitudId)
+        );
+    }
+
+    ///endpoints relacionados a solicitud rectificacion
+    @PostMapping("/rectification")
+    public ResponseEntity<ArcoRequestResponseDTO> crearSolicitudRectificacion(
+            @RequestBody ArcoRectificationRequestDTO requestDTO
+    ) {
+        return ResponseEntity.ok(
+                arcoRequestService.crearSolicitudRectificacion(requestDTO)
+        );
+    }
+
+    @PostMapping("/rectification/{solicitudId}/execute")
+    public ResponseEntity<?> ejecutarRectificacion(
+            @PathVariable UUID solicitudId
+    ) {
+
+        return ResponseEntity.ok(
+                arcoRequestService.ejecutarRectificacion(solicitudId)
         );
     }
 }

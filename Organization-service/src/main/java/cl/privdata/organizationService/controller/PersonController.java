@@ -3,6 +3,7 @@ package cl.privdata.organizationService.controller;
 import java.util.List;
 import java.util.UUID;
 
+import cl.privdata.organizationService.dto.request.PersonRectificationRequestDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -132,5 +133,17 @@ public class PersonController {
 
         return ResponseEntity.ok(new ApiResponseDTO<>(
                 true, "Anonimización listo", null));
+    }
+
+    ///endpoints para rectificacion
+    @PostMapping("/{personId}/rectify")
+    public ResponseEntity<ApiResponseDTO<?>> rectificationDataSubject(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID personId,
+            @RequestBody PersonRectificationRequestDTO requestDTO){
+        personService.rectifyDataSubject(organizationId,personId,requestDTO);
+
+        return ResponseEntity.ok(new ApiResponseDTO<>(
+                true, "Rectificación lista", null));
     }
 }

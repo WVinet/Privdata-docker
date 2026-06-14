@@ -3,6 +3,7 @@ package cl.privdata.organizationService.service;
 import java.util.List;
 import java.util.UUID;
 
+import cl.privdata.organizationService.dto.request.PersonRectificationRequestDTO;
 import cl.privdata.organizationService.enums.DataStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class PersonService {
     private final PersonRepository personRepository;
     private final OrganizationRepository organizationRepository;
     private final DepartmentRepository departmentRepository;
+
 
     public PersonService(
             PersonRepository personRepository,
@@ -231,10 +233,17 @@ public class PersonService {
 
         Person person = getPersonOrThrow(organizationId,personId);
 
+        if (person.getDataStatus() == DataStatus.BLOCKED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede bloquear la persona porque actualmente se encuentra en estado BLOCKED"
+            );
+        }
+
         if (person.getDataStatus() == DataStatus.ANONYMIZED){
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "No se puede bloquear una persona anonimizada"
+                    "No se puede bloquear la persona porque actualmente se encuentra en estado ANONYMIZED"
             );
         }
 
@@ -255,6 +264,7 @@ public class PersonService {
         }
 
         person.setDeletionRequest(true);
+        person.setIsActive(false);
         person.setDataStatus(DataStatus.DELETION_REQUESTED);
         personRepository.save(person);
 
@@ -286,6 +296,42 @@ public class PersonService {
         person.setDeletionRequest(false);
         person.setIsActive(false);
         person.setDataStatus(DataStatus.ANONYMIZED);
+
+        personRepository.save(person);
+    }
+
+    ///metodos relacionados con rectificacion
+    public void rectifyDataSubject(UUID organizationId,
+                                   UUID personId,
+                                   PersonRectificationRequestDTO requestDTO){
+        Person person = getPersonOrThrow(organizationId,personId);
+
+        if (person.getDataStatus() == DataStatus.ANONYMIZED){
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La persona ya se encuentra anonimizada"
+            );
+        }
+
+        validateUniqueFieldsForUpdate(
+                organizationId,
+                personId,
+                requestDTO.getRut(),
+                requestDTO.getEmail()
+        );
+
+        person.setFirstName(requestDTO.getFirstName());
+        person.setLastName(requestDTO.getLastName());
+
+        person.setFullName(buildFullName(
+                requestDTO.getFirstName(),
+                requestDTO.getLastName()
+        ));
+
+        person.setEmail(requestDTO.getEmail());
+        person.setPhone(requestDTO.getPhone());
+        person.setPosition(requestDTO.getPosition());
+        person.setRut(requestDTO.getRut());
 
         personRepository.save(person);
     }
