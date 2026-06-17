@@ -30,7 +30,7 @@ public class ArcoDataInitializer implements CommandLineRunner {
         request.setOrganizationId(organizationId);
         request.setDataSubjectId(dataSubjectId);
         request.setAssignedToUserId(null);
-        request.setRequestType(ArcoRequestType.CANCELLATION);
+        request.setRequestType(ArcoRequestType.SUPRESION);
         request.setCancellationActionType(ArcoCancellationType.BLOCK);
         request.setRequestChannel(ArcoRequestChannel.WEB_PORTAL);
         request.setStatus(ArcoStatus.RECIBIDA);

@@ -8,15 +8,17 @@ import type { ArcoRequest, ArcoStatus } from "@/types/arco"
 const TYPE_LABELS: Record<string, string> = {
   ACCESO:           "Derecho de Acceso",
   RECTIFICACION:    "Derecho de Rectificación",
-  CANCELLATION:     "Derecho de Cancelación",
+  SUPRESION:        "Derecho de Supresión",
   OPOSICION:        "Derecho de Oposición",
   PORTABILIDAD:     "Derecho de Portabilidad",
   BLOQUEO_TEMPORAL: "Bloqueo Temporal de Datos",
+  ANONIMIZACION:    "Derecho de Anonimización",
 }
 
 const TYPE_ICONS: Record<string, string> = {
-  ACCESO: "🔍", RECTIFICACION: "✏️", CANCELLATION: "🗑️",
+  ACCESO: "🔍", RECTIFICACION: "✏️", SUPRESION: "🗑️",
   OPOSICION: "🚫", PORTABILIDAD: "📦", BLOQUEO_TEMPORAL: "🔒",
+  ANONIMIZACION: "🫥",
 }
 
 const STATUS_STEPS: ArcoStatus[] = [
@@ -337,7 +339,9 @@ export default function TitularSeguimiento({ organizationId, dataSubjectId }: Pr
     enabled: !!dataSubjectId,
   })
 
-  const solicitudes = data?.data ?? []
+  const solicitudes = [...(data?.data ?? [])].sort(
+    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+  )
 
   if (isLoading) {
     return (

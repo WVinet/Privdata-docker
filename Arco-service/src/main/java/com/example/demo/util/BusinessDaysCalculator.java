@@ -16,7 +16,7 @@ public class BusinessDaysCalculator {
 
         switch (tipo) {
 
-            case CANCELLATION:
+            case SUPRESION:
             case BLOQUEO_TEMPORAL:
                 return agregarDiasHabiles(inicio, 2);
 
@@ -24,6 +24,7 @@ public class BusinessDaysCalculator {
             case RECTIFICACION:
             case OPOSICION:
             case PORTABILIDAD:
+            case ANONIMIZACION:
             default:
                 return inicio.plusDays(30);
         }

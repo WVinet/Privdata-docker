@@ -66,6 +66,26 @@ public class ArcoClient {
         return forward("PATCH", "/api/arco-request/" + id + "/verificacion-identidad?nuevoEstado=" + nuevoEstado, null);
     }
 
+    public Object verifyAccessIdentity(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/access/" + id + "/verify-identity", body);
+    }
+
+    public Object respondAccess(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/access/" + id + "/respond", body);
+    }
+
+    public Object createRectification(Map<String, Object> body) {
+        return forward("POST", "/api/arso/rectification", body);
+    }
+
+    public Object verifyRectificationIdentity(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/rectification/" + id + "/verify-identity", body);
+    }
+
+    public Object respondRectification(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/rectification/" + id + "/respond", body);
+    }
+
     private Object forward(String method, String uri, Object body) {
         try {
             var spec = arcoRestClient.method(HttpMethod.valueOf(method)).uri(uri);

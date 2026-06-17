@@ -84,6 +84,51 @@ public class ArcoBffService {
         return arcoClient.updateVerificacionIdentidad(id, nuevoEstado);
     }
 
+    public Object verifyAccessIdentity(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.verifyAccessIdentity(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+                "Verificación de identidad registrada para solicitud de acceso " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object respondAccess(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.respondAccess(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+                "Solicitud de acceso respondida " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object createRectification(Map<String, Object> body, String authorization) {
+        Object result = arcoClient.createRectification(body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "CREATE", "Solicitud ARCO",
+                "Nueva solicitud de rectificación registrada",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object verifyRectificationIdentity(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.verifyRectificationIdentity(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+                "Verificación de identidad registrada para solicitud de rectificación " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object respondRectification(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.respondRectification(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+                "Solicitud de rectificación respondida " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
     public Object reclamarAnteAgencia(String id, String authorization) {
         Object result = arcoClient.reclamarAnteAgencia(id);
         String orgId  = extractDataField(result, "organizationId");

@@ -72,4 +72,43 @@ public class ArcoBffController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         return ResponseEntity.ok(service.reclamarAnteAgencia(id, authorization));
     }
+
+    @PatchMapping("/access/{id}/verify-identity")
+    public ResponseEntity<?> verifyAccessIdentity(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.verifyAccessIdentity(id, body, authorization));
+    }
+
+    @PatchMapping("/access/{id}/respond")
+    public ResponseEntity<?> respondAccess(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.respondAccess(id, body, authorization));
+    }
+
+    @PostMapping("/rectification")
+    public ResponseEntity<?> createRectification(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.createRectification(body, authorization));
+    }
+
+    @PatchMapping("/rectification/{id}/verify-identity")
+    public ResponseEntity<?> verifyRectificationIdentity(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.verifyRectificationIdentity(id, body, authorization));
+    }
+
+    @PatchMapping("/rectification/{id}/respond")
+    public ResponseEntity<?> respondRectification(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.respondRectification(id, body, authorization));
+    }
 }

@@ -34,6 +34,7 @@ public class OrganizationBffService {
     public Object listPersons(String orgId, String departmentId)               { return organizationClient.listPersons(orgId, departmentId); }
     public Object updatePerson(String orgId, String personId, Map<String, Object> b)      { return organizationClient.updatePerson(orgId, personId, b); }
     public Object updatePersonStatus(String orgId, String personId, Map<String, Object> b){ return organizationClient.updatePersonStatus(orgId, personId, b); }
+    public Object anonymizePerson(String orgId, String personId)                          { return organizationClient.anonymizePerson(orgId, personId); }
 
     /**
      * Orquesta: crea Person en Organization-service → invita User[PENDING] en Auth-service.

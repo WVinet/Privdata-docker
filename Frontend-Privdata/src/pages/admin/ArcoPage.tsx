@@ -10,6 +10,7 @@ import ArcoSuppressionPanel from "@/components/arco/ArcoSuppressionPanel"
 import ArcoPortabilityPanel from "@/components/arco/ArcoPortabilityPanel"
 import ArcoOppositionPanel from "@/components/arco/ArcoOppositionPanel"
 import ArcoBlockingPanel from "@/components/arco/ArcoBlockingPanel"
+import ArcoAnonymizationPanel from "@/components/arco/ArcoAnonymizationPanel"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -21,10 +22,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 const TYPE_LABELS: Record<string, string> = {
   ACCESO:          "Acceso",
   RECTIFICACION:   "Rectificación",
-  CANCELLATION:    "Supresión",
+  SUPRESION:       "Supresión",
   OPOSICION:       "Oposición",
   PORTABILIDAD:    "Portabilidad",
   BLOQUEO_TEMPORAL:"Bloqueo temporal",
+  ANONIMIZACION:   "Anonimización",
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -123,6 +125,11 @@ function UpdateStatusModal({
   const canExtend = !request.extensionGranted && NOT_RESOLVED.includes(effectiveStatus)
   const availableActions: ActionKey[] = canExtend ? [...transitions, "PRORROGA"] : transitions
 
+  // Acceso y Rectificación tienen su propio flujo de verificación de identidad
+  // (AccesoService/RectificacionService) en vez del auto-paso a EN_GESTION genérico.
+  const requiresExplicitIdentity = request.requestType === "ACCESO" || request.requestType === "RECTIFICACION"
+  const [identityComment, setIdentityComment] = useState("")
+
   const autoGestionMutation = useMutation({
     mutationFn: async () => {
       const res = await arcoApi.updateStatus(request.id, { status: "EN_GESTION" })
@@ -135,7 +142,21 @@ function UpdateStatusModal({
     },
   })
 
+  const verifyIdentityMutation = useMutation({
+    mutationFn: async (verified: boolean) => {
+      const call = request.requestType === "ACCESO" ? arcoApi.verifyAccessIdentity : arcoApi.verifyRectificationIdentity
+      const res = await call(request.id, verified, identityComment.trim() || undefined)
+      if (!res.data.success) throw new Error(res.data.message)
+      return verified
+    },
+    onSuccess: (verified) => {
+      setEffectiveStatus(verified ? "EN_GESTION" : "RECHAZADA")
+      qc.invalidateQueries({ queryKey: ["arco"] })
+    },
+  })
+
   useEffect(() => {
+    if (requiresExplicitIdentity) return
     if (request.status === "RECIBIDA" || request.status === "EN_REVISION") {
       autoGestionMutation.mutate()
     }
@@ -146,6 +167,16 @@ function UpdateStatusModal({
     mutationFn: async () => {
       if (pendingAction === "PRORROGA") {
         const res = await arcoApi.extendDeadline(request.id)
+        if (!res.data.success) throw new Error(res.data.message)
+        return res
+      }
+      if (pendingAction === "RESPONDIDA" && request.requestType === "ACCESO") {
+        const res = await arcoApi.respondAccess(request.id, comment.trim())
+        if (!res.data.success) throw new Error(res.data.message)
+        return res
+      }
+      if (pendingAction === "RESPONDIDA" && request.requestType === "RECTIFICACION") {
+        const res = await arcoApi.respondRectification(request.id, comment.trim())
         if (!res.data.success) throw new Error(res.data.message)
         return res
       }
@@ -232,10 +263,16 @@ function UpdateStatusModal({
 
         {request.requestType === "RECTIFICACION" && pendingAction === null && (
           <ArcoRectificationPanel
+            arcoRequestId={request.id}
             dataSubjectId={request.dataSubjectId}
             organizationId={request.organizationId}
             description={request.description}
-            onApplied={(text) => setComment(text)}
+            onApplied={(text) => {
+              // El panel ya llamó a respondRectification y dejó la solicitud RESPONDIDA en el backend.
+              setComment(text)
+              qc.invalidateQueries({ queryKey: ["arco"] })
+              onClose()
+            }}
           />
         )}
 
@@ -280,8 +317,43 @@ function UpdateStatusModal({
           />
         )}
 
+        {request.requestType === "ANONIMIZACION" && pendingAction === null && (
+          <ArcoAnonymizationPanel
+            dataSubjectId={request.dataSubjectId}
+            organizationId={request.organizationId}
+            description={request.description}
+            onApplied={(text) => setComment(text)}
+          />
+        )}
+
         {pendingAction === null && (
-          autoGestionMutation.isPending ? (
+          requiresExplicitIdentity && effectiveStatus === "RECIBIDA" ? (
+            <div className="space-y-3 border-t border-border pt-3">
+              <Label>Verificación de identidad del titular</Label>
+              <p className="text-xs text-muted-foreground">
+                Antes de gestionar esta solicitud, confirma que la identidad del titular fue verificada (Art. 5° Ley 21.719).
+              </p>
+              <textarea
+                rows={2}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Comentario opcional…"
+                value={identityComment}
+                onChange={(e) => setIdentityComment(e.target.value)}
+              />
+              {verifyIdentityMutation.isError && (
+                <p className="text-sm text-destructive">{(verifyIdentityMutation.error as Error).message}</p>
+              )}
+              <div className="flex gap-2">
+                <Button onClick={() => verifyIdentityMutation.mutate(true)} disabled={verifyIdentityMutation.isPending}>
+                  {verifyIdentityMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Identidad verificada
+                </Button>
+                <Button variant="destructive" onClick={() => verifyIdentityMutation.mutate(false)} disabled={verifyIdentityMutation.isPending}>
+                  No se pudo verificar
+                </Button>
+              </div>
+            </div>
+          ) : autoGestionMutation.isPending ? (
             <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
               Marcando solicitud como "En gestión"…
