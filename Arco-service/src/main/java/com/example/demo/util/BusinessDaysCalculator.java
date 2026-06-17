@@ -17,6 +17,7 @@ public class BusinessDaysCalculator {
         switch (tipo) {
 
             case CANCELLATION:
+            case BLOQUEO_TEMPORAL:
                 return agregarDiasHabiles(inicio, 2);
 
             case ACCESO:

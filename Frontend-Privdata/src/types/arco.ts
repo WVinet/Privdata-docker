@@ -28,6 +28,10 @@ export interface ArcoRequest {
   extendedDueDate: string | null
   createdAt: string
   updatedAt: string
+  agencyClaimDeadline?: string
+  titularDisconforme?: boolean
+  closedAt?: string
+  thirdPartiesNotified?: boolean
 }
 
 export interface CreateArcoRequest {

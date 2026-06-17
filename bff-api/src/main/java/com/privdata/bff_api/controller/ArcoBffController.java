@@ -50,4 +50,19 @@ public class ArcoBffController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         return ResponseEntity.ok(service.extendDeadline(id, authorization));
     }
+
+    @PostMapping("/{id}/disconformidad")
+    public ResponseEntity<?> registrarDisconformidad(
+            @PathVariable String id,
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.registrarDisconformidad(id, body, authorization));
+    }
+
+    @PatchMapping("/{id}/verificacion-identidad")
+    public ResponseEntity<?> updateVerificacionIdentidad(
+            @PathVariable String id,
+            @RequestParam String nuevoEstado) {
+        return ResponseEntity.ok(service.updateVerificacionIdentidad(id, nuevoEstado));
+    }
 }

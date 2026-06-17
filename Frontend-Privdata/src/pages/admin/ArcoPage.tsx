@@ -1,7 +1,7 @@
 import { useState, useEffect, type ElementType } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Search, Loader2, X, Clock, CheckCircle2, AlertCircle, AlertTriangle, Send, XCircle, Lock, Hourglass } from "lucide-react"
-import { arcoApi } from "@/lib/api"
+import { arcoApi, personsApi } from "@/lib/api"
 import type { ArcoRequest, ArcoStatus, UpdateArcoStatus } from "@/types/arco"
 import { useAuth } from "@/hooks/use-auth"
 import ArcoAccessReport from "@/components/arco/ArcoAccessReport"
@@ -467,8 +467,10 @@ export default function ArcoPage() {
   const user = getUser()
   const orgId = user?.organizationId ?? ""
 
-  const [search, setSearch]           = useState("")
-  const [filterStatus, setFilterStatus] = useState<ArcoStatus | "">("")
+  const [filterId, setFilterId]               = useState("")
+  const [filterTitular, setFilterTitular]     = useState("")
+  const [filterDate, setFilterDate]           = useState("")
+  const [filterStatus, setFilterStatus]       = useState<ArcoStatus | "">("")
   const [selected, setSelected]       = useState<ArcoRequest | null>(null)
 
   const { data, isLoading } = useQuery({
@@ -477,15 +479,37 @@ export default function ArcoPage() {
     enabled: !!orgId,
   })
 
+  const { data: personsData } = useQuery({
+    queryKey: ["persons", orgId],
+    queryFn: () => personsApi.list(orgId).then((r) => r.data),
+    enabled: !!orgId,
+  })
+
   const requests = data?.data ?? []
+  const persons = personsData?.data ?? []
+  const personsById = Object.fromEntries(persons.map((p) => [p.id, p]))
+
+  const hasActiveFilters = !!(filterId || filterTitular || filterDate || filterStatus)
+
+  const clearFilters = () => {
+    setFilterId("")
+    setFilterTitular("")
+    setFilterDate("")
+    setFilterStatus("")
+  }
 
   const filtered = requests.filter((r) => {
-    const matchSearch =
-      r.id.toLowerCase().includes(search.toLowerCase()) ||
-      r.dataSubjectId.toLowerCase().includes(search.toLowerCase()) ||
-      r.description.toLowerCase().includes(search.toLowerCase())
+    const titular = personsById[r.dataSubjectId]
+    const matchId = !filterId || r.id.toLowerCase().includes(filterId.toLowerCase())
+    const matchTitular =
+      !filterTitular ||
+      r.dataSubjectId.toLowerCase().includes(filterTitular.toLowerCase()) ||
+      titular?.fullName.toLowerCase().includes(filterTitular.toLowerCase()) ||
+      titular?.email?.toLowerCase().includes(filterTitular.toLowerCase()) ||
+      titular?.rut?.toLowerCase().includes(filterTitular.toLowerCase())
+    const matchDate = !filterDate || r.submittedAt.slice(0, 10) === filterDate
     const matchStatus = !filterStatus || r.status === filterStatus
-    return matchSearch && matchStatus
+    return matchId && matchTitular && matchDate && matchStatus
   })
 
   // KPIs
@@ -541,26 +565,48 @@ export default function ArcoPage() {
         {/* ── Tabla ── */}
         <Card>
           <CardHeader className="pb-4">
-            <div className="flex flex-wrap gap-3">
-              <div className="relative flex-1 min-w-48">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por ID, titular o descripción…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por ID…"
+                  value={filterId}
+                  onChange={(e) => setFilterId(e.target.value)}
                   className="pl-9"
                 />
               </div>
-              <select
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as ArcoStatus | "")}
-              >
-                <option value="">Todos los estados</option>
-                {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por titular (nombre, RUT, email)…"
+                  value={filterTitular}
+                  onChange={(e) => setFilterTitular(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="text-muted-foreground"
+              />
+              <div className="flex gap-2">
+                <select
+                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as ArcoStatus | "")}
+                >
+                  <option value="">Todos los estados</option>
+                  {Object.entries(STATUS_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
+                </select>
+                {hasActiveFilters && (
+                  <Button variant="outline" size="icon" onClick={clearFilters} title="Limpiar filtros">
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
 
@@ -575,9 +621,9 @@ export default function ArcoPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
+                      <TableHead>Titular</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Estado</TableHead>
-                      <TableHead>Canal</TableHead>
                       <TableHead>Recibida</TableHead>
                       <TableHead>Vencimiento</TableHead>
                       <TableHead className="text-right">Acción</TableHead>
@@ -597,10 +643,21 @@ export default function ArcoPage() {
                         const effectiveDueDate = r.extendedDueDate ?? r.dueDate
                         const days = daysRemaining(effectiveDueDate)
                         const isOverdue = days < 0 && !["RESPONDIDA", "CERRADA"].includes(r.status)
+                        const titular = personsById[r.dataSubjectId]
                         return (
                           <TableRow key={r.id}>
-                            <TableCell className="font-mono text-xs text-muted-foreground">
-                              {r.id.substring(0, 8)}…
+                            <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                              {r.id}
+                            </TableCell>
+                            <TableCell>
+                              {titular ? (
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-sm text-foreground">{titular.fullName}</span>
+                                  <span className="text-xs text-muted-foreground font-mono">{titular.email ?? titular.rut ?? titular.id}</span>
+                                </div>
+                              ) : (
+                                <span className="font-mono text-xs text-muted-foreground">{r.dataSubjectId}</span>
+                              )}
                             </TableCell>
                             <TableCell className="font-medium">
                               {TYPE_LABELS[r.requestType] ?? r.requestType}
@@ -609,9 +666,6 @@ export default function ArcoPage() {
                               <Badge variant={statusVariant(r.status)}>
                                 {STATUS_LABELS[r.status] ?? r.status}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {r.requestChannel.replace("_", " ").toLowerCase()}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
                               {formatDate(r.submittedAt)}

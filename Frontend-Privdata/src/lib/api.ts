@@ -177,6 +177,16 @@ export const arcoApi = {
 
   extendDeadline: (id: string) =>
     api.patch<ApiResponse<ArcoRequest>>(`/arco/${id}/prorroga`),
+
+  registrarDisconformidad: (id: string, motivo?: string) =>
+    api.post<ApiResponse<ArcoRequest>>(`/arco/${id}/disconformidad`, { motivo }),
+
+  updateVerificacionIdentidad: (id: string, nuevoEstado: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(
+      `/arco/${id}/verificacion-identidad`,
+      null,
+      { params: { nuevoEstado } }
+    ),
 }
 
 // ── Compliance ────────────────────────────────────────────────────────────────

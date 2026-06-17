@@ -39,7 +39,7 @@ export default function ArcoSuppressionPanel({ dataSubjectId, organizationId, de
 
       const body: UpdatePersonRequest = {
         firstName: "Titular",
-        lastName: "(datos suprimidos)",
+        lastName: "(anonimizado)",
         rut: undefined,
         email: undefined,
         phone: undefined,

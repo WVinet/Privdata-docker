@@ -31,8 +31,8 @@ public class ArcoRequest {
 
     @Column(name = "data_subject_id", nullable = false)
     private UUID dataSubjectId;
-  
-    @Column(name ="assigned_to_user_id", nullable = true)
+
+    @Column(name = "assigned_to_user_id", nullable = true)
     private UUID assignedToUserId;
 
     @Enumerated(EnumType.STRING)
@@ -41,8 +41,8 @@ public class ArcoRequest {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private ArcoStatus status; //pasar a enum, Listo
-    
+    private ArcoStatus status;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "identity_verification_status", nullable = false)
     private ArcoIdentityVerificationStatus identityVerificationStatus;
@@ -78,6 +78,23 @@ public class ArcoRequest {
 
     @Column(name = "extended_due_date", nullable = true)
     private LocalDateTime extendedDueDate;
+
+    // RF-ARCO-CIE-01: plazo para reclamar ante la Agencia (Art. 11 paso 7)
+    // resolvedAt + 30 días hábiles — calculado al pasar a RESPONDIDA o RECHAZADA
+    @Column(name = "agency_claim_deadline", nullable = true)
+    private LocalDateTime agencyClaimDeadline;
+
+    // RF-ARCO-CIE-03: el titular registró disconformidad desde el portal
+    @Column(name = "titular_disconforme", nullable = false, columnDefinition = "boolean default false")
+    private boolean titularDisconforme = false;
+
+    // RF-ARCO-CIE-02: timestamp de cierre automático por scheduler
+    @Column(name = "closed_at", nullable = true)
+    private LocalDateTime closedAt;
+
+    // RF-ARCO-10: se notificó a terceros que recibieron los datos
+    @Column(name = "third_parties_notified", nullable = false, columnDefinition = "boolean default false")
+    private boolean thirdPartiesNotified = false;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

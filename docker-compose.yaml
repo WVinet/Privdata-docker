@@ -52,6 +52,7 @@ services:
     build: ./auth-service
     container_name: privdata-auth-service
     restart: on-failure
+    profiles: ["app"]
     depends_on:
       - postgres-auth
     environment:
@@ -72,6 +73,7 @@ services:
     build: ./organization-service
     container_name: privdata-organization-service
     restart: on-failure
+    profiles: ["app"]
     depends_on:
       - postgres-organization
     environment:
@@ -86,6 +88,7 @@ services:
     build: ./arco-service
     container_name: privdata-arco-service
     restart: on-failure
+    profiles: ["app"]
     depends_on:
       - postgres-arco
     environment:
@@ -102,6 +105,7 @@ services:
     build: ./compliance-service
     container_name: privdata-compliance-service
     restart: on-failure
+    profiles: ["app"]
     depends_on:
       - postgres-compliance
     environment:
@@ -115,6 +119,7 @@ services:
   bff-api:
     build: ./bff-api
     container_name: privdata-bff-api
+    profiles: ["app"]
     depends_on:
       - auth-service
       - organization-service
@@ -133,6 +138,7 @@ services:
   frontend:
     build: ./frontend-privdata
     container_name: privdata-frontend
+    profiles: ["app"]
     ports:
       - "5173:80"
     depends_on:
