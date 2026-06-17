@@ -118,6 +118,7 @@ Convenciones:
 | PATCH | `/api/arco-request/{id}/prorroga` | `id: UUID` | `ApiResponseDTO<ArcoRequestResponseDTO>` | Otorgar prórroga de 30 días (Art. 11) |
 | PATCH | `/api/arco-request/{id}/verificacion-identidad` | `nuevoEstado: ArcoIdentityVerificationStatus` | `ApiResponseDTO<ArcoRequestResponseDTO>` | Actualizar estado de verificación de identidad |
 | PATCH | `/api/arco-request/{id}/resolucion` | `UpdateArcoStatusDTO` | `ApiResponseDTO<ArcoRequestResponseDTO>` | Registrar resolución de la solicitud |
+| POST | `/api/arco-request/{id}/disconformidad` | `{ motivo?: string }` | `ApiResponseDTO<ArcoRequestResponseDTO>` | RF-ARCO-CIE-03: el titular registra disconformidad con la resolución (solo si `status ∈ {RESPONDIDA, RECHAZADA}`; setea `titularDisconforme=true`, guarda el motivo en el historial) |
 | POST | `/api/arco-request/cancellation` | `ArcoCancellationRequestDTO` | `ArcoRequestResponseDTO` | Crear solicitud de cancelación (tipo BLOCK/DELETE/ANONYMIZE) |
 | POST | `/api/arco-request/cancellation/{solicitudId}/execute` | `solicitudId: UUID` | `ArcoRequestResponseDTO` | Ejecutar derecho de cancelación |
 
@@ -148,7 +149,7 @@ Convenciones:
 |---|---|---|---|
 | GET | `/api/health` | `String` | Health check del servicio |
 
-> Nota: existe el paquete `com.example.demo.arco.opposition` para el flujo de Oposición; sus endpoints REST específicos están pendientes/en desarrollo (ver `OPPOSITION_PROMPT.md`).
+> Nota: `ArcoRequestService` (movido a `arco.common.service`) crea las solicitudes vía un router Factory Method (`Map<ArcoRequestType, ArcoRequestFactory>`), con `ArcoRequestType` incluyendo ahora `BLOQUEO_TEMPORAL`. Existe además el paquete `com.example.demo.arco.oposicion` (renombrado desde `arco.opposition`) con un subsistema de Oposición más detallado (`OppositionService`, `opposition_request` + reclamo ante agencia + bloqueo temporal + notificación a terceros) que está **movido pero sin controller conectado** — el flujo activo de OPOSICIÓN hoy pasa por el modelo genérico `arco_request` (`OposicionFactory`/`OposicionService`, livianos). Ver `docs/documentacion-tecnica/04-modelo-bd.md` sección 3 para el detalle de ambos modelos.
 
 ---
 
@@ -253,6 +254,8 @@ Convenciones:
 | POST | `/api/arco` | `POST arco-service /api/arco-request` | Crear solicitud |
 | PATCH | `/api/arco/{id}/status` | `PATCH arco-service /api/arco-request/{id}/estado` | Cambiar estado |
 | PATCH | `/api/arco/{id}/prorroga` | `PATCH arco-service /api/arco-request/{id}/prorroga` | Otorgar prórroga |
+| POST | `/api/arco/{id}/disconformidad` | `POST arco-service /api/arco-request/{id}/disconformidad` | Registrar disconformidad del titular (+ audita el evento) |
+| PATCH | `/api/arco/{id}/verificacion-identidad` | `PATCH arco-service /api/arco-request/{id}/verificacion-identidad` | Actualizar estado de verificación de identidad |
 
 ### ComplianceBffController — base `/api/compliance`
 
@@ -276,6 +279,8 @@ Convenciones:
 |---|---|---|---|
 | POST | `/api/arco/cancellation` | `POST arco-service /api/arco-request/cancellation` | Crear solicitud de cancelación |
 | POST | `/api/arco/cancellation/{solicitudId}/execute` | `POST arco-service /api/arco-request/cancellation/{solicitudId}/execute` | Ejecutar cancelación (orquesta bloqueo/eliminación/anonimización en Organization-service) |
+
+> Nota histórica: este controller tuvo en algún momento un método `PATCH /{id}/verificacion-identidad` duplicado que colisionaba (`Ambiguous mapping`) con el mismo path en `ArcoBffController` — se eliminó junto con su método cliente no usado en `ArcoClient`. Hoy `ArcoProxyController` solo expone los 2 endpoints de cancelación de arriba.
 
 ---
 

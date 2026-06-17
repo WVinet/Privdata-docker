@@ -84,6 +84,15 @@ public class ArcoBffService {
         return arcoClient.updateVerificacionIdentidad(id, nuevoEstado);
     }
 
+    public Object reclamarAnteAgencia(String id, String authorization) {
+        Object result = arcoClient.reclamarAnteAgencia(id);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+                "Reclamo registrado ante la Agencia para la solicitud " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
     private String extractDataField(Object result, String key) {
         if (!(result instanceof Map<?, ?> resultMap) || !(resultMap.get("data") instanceof Map<?, ?> data)) return null;
         Object value = data.get(key);

@@ -42,6 +42,11 @@ public class ArcoRequestResponseDTO {
     private LocalDateTime closedAt;
     private boolean thirdPartiesNotified;
 
+    // Reclamo ante la Agencia (Agencia-service)
+    private UUID agencyClaimId;
+    private String agencyResolution;
+    private LocalDateTime agencyRespondedAt;
+
     public static ArcoRequestResponseDTO fromEntity(ArcoRequest e) {
         ArcoRequestResponseDTO dto = new ArcoRequestResponseDTO();
         dto.setId(e.getId());
@@ -67,6 +72,9 @@ public class ArcoRequestResponseDTO {
         dto.setTitularDisconforme(e.isTitularDisconforme());
         dto.setClosedAt(e.getClosedAt());
         dto.setThirdPartiesNotified(e.isThirdPartiesNotified());
+        dto.setAgencyClaimId(e.getAgencyClaimId());
+        dto.setAgencyResolution(e.getAgencyResolution());
+        dto.setAgencyRespondedAt(e.getAgencyRespondedAt());
         return dto;
     }
 }

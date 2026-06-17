@@ -57,6 +57,10 @@ public class ArcoClient {
         return forward("POST", "/api/arco-request/" + id + "/disconformidad", body);
     }
 
+    public Object reclamarAnteAgencia(String id) {
+        return forward("POST", "/api/arco-request/" + id + "/reclamo-agencia", null);
+    }
+
     public Object updateVerificacionIdentidad(String id, String nuevoEstado) {
         return forward("PATCH", "/api/arco-request/" + id + "/verificacion-identidad?nuevoEstado=" + nuevoEstado, null);
     }

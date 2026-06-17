@@ -48,6 +48,18 @@ services:
     volumes:
       - postgres_compliance_data:/var/lib/postgresql/data
 
+  postgres-agencia:
+    image: postgres:16
+    container_name: privdata-postgres-agencia
+    environment:
+      POSTGRES_DB: agencia_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_agencia_data:/var/lib/postgresql/data
+
   auth-service:
     build: ./auth-service
     container_name: privdata-auth-service
@@ -116,6 +128,25 @@ services:
     ports:
       - "8083:8083"
 
+  agencia-service:
+    build: ./agenciaService
+    container_name: privdata-agencia-service
+    restart: on-failure
+    profiles: ["app"]
+    depends_on:
+      - postgres-agencia
+    environment:
+      SERVER_PORT: 8084
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-agencia:5432/agencia_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+      JWT_SECRET: ${JWT_SECRET}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      SERVICES_ARCO_URL: http://arco-service:8082
+    ports:
+      - "8084:8084"
+
   bff-api:
     build: ./bff-api
     container_name: privdata-bff-api
@@ -125,12 +156,14 @@ services:
       - organization-service
       - arco-service
       - compliance-service
+      - agencia-service
     environment:
       SERVER_PORT: 8085
       SERVICES_AUTH_URL: http://auth-service:8080
       SERVICES_ORGANIZATION_URL: http://organization-service:8081
       SERVICES_ARCO_URL: http://arco-service:8082
       SERVICES_COMPLIANCE_URL: http://compliance-service:8083
+      SERVICES_AGENCIA_URL: http://agencia-service:8084
       FRONTEND_URL: http://localhost:5173
     ports:
       - "8085:8085"
@@ -156,3 +189,4 @@ volumes:
   postgres_organization_data:
   postgres_arco_data:
   postgres_compliance_data:
+  postgres_agencia_data:

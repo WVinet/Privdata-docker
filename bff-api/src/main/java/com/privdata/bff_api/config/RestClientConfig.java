@@ -44,4 +44,13 @@ public class RestClientConfig {
                 .baseUrl(baseUrl)
                 .build();
     }
+
+    @Bean
+    public RestClient agenciaRestClient(
+            @Value("${services.agencia.url}") String baseUrl
+    ) {
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .build();
+    }
 }

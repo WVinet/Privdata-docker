@@ -2,10 +2,12 @@ package com.example.demo.arco.common.service;
 
 
 import com.example.demo.arco.common.factory.ArcoRequestFactory;
+import com.example.demo.client.AgenciaClient;
 import com.example.demo.client.OrganizationClient;
 import com.example.demo.dto.request.ArcoCancellationRequestDTO;
 import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
 import com.example.demo.dto.request.arcoRequest.ArcoRequestStatusUpdateDTO;
+import com.example.demo.dto.response.AgencyClaimResponseDTO;
 import com.example.demo.dto.response.ArcoRequestResponseDTO;
 import com.example.demo.dto.response.PersonResponseDTO;
 import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
@@ -41,6 +43,7 @@ public class ArcoRequestService {
     private final ArcoRequestStatusHistoryRepository statusHistoryRepository;
     private final ModelMapper modelMapper;
     private final OrganizationClient organizationClient;
+    private final AgenciaClient agenciaClient;
     private final EmailService emailService;
     private final DeadlineCalculatorService deadlineCalculatorService;
     private final Map<ArcoRequestType, ArcoRequestFactory> factories;
@@ -49,6 +52,7 @@ public class ArcoRequestService {
                                ArcoRequestStatusHistoryRepository statusHistoryRepository,
                                ModelMapper modelMapper,
                                OrganizationClient organizationClient,
+                               AgenciaClient agenciaClient,
                                EmailService emailService,
                                DeadlineCalculatorService deadlineCalculatorService,
                                List<ArcoRequestFactory> factoryList) {
@@ -56,6 +60,7 @@ public class ArcoRequestService {
         this.statusHistoryRepository = statusHistoryRepository;
         this.modelMapper = modelMapper;
         this.organizationClient = organizationClient;
+        this.agenciaClient = agenciaClient;
         this.emailService = emailService;
         this.deadlineCalculatorService = deadlineCalculatorService;
         this.factories = factoryList.stream()
@@ -179,6 +184,80 @@ public class ArcoRequestService {
         historial.setNewStatus(solicitud.getStatus());
         historial.setComment("[TITULAR DISCONFORME] " +
                 (motivo != null && !motivo.isBlank() ? motivo : "El titular indicó que no está conforme con la resolución."));
+        statusHistoryRepository.save(historial);
+
+        return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
+    }
+
+    // El titular escala su disconformidad como reclamo formal ante la Agencia (Agencia-service)
+    @Transactional
+    public ArcoRequestResponseDTO reclamarAnteAgencia(UUID id) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
+
+        if (!List.of(ArcoStatus.RESPONDIDA, ArcoStatus.RECHAZADA).contains(solicitud.getStatus())) {
+            throw new IllegalArgumentException("Solo puedes reclamar ante la Agencia sobre solicitudes ya resueltas.");
+        }
+        if (!solicitud.isTitularDisconforme()) {
+            throw new IllegalArgumentException("Primero debes registrar tu disconformidad con la resolución.");
+        }
+        if (solicitud.getAgencyClaimId() != null) {
+            throw new IllegalArgumentException("Ya existe un reclamo registrado ante la Agencia para esta solicitud.");
+        }
+        if (solicitud.getAgencyClaimDeadline() != null && LocalDateTime.now().isAfter(solicitud.getAgencyClaimDeadline())) {
+            throw new IllegalArgumentException("El plazo para reclamar ante la Agencia ya venció.");
+        }
+
+        String motivo = statusHistoryRepository.findByArcoRequest_IdOrderByChangedAtAsc(id).stream()
+                .filter(h -> h.getComment() != null && h.getComment().startsWith("[TITULAR DISCONFORME]"))
+                .reduce((first, second) -> second)
+                .map(h -> h.getComment().replaceFirst("^\\[TITULAR DISCONFORME\\]\\s*", ""))
+                .orElse("El titular no está conforme con la resolución.");
+
+        PersonResponseDTO personResponse = organizationClient.findPersonById(solicitud.getOrganizationId(), solicitud.getDataSubjectId());
+
+        AgencyClaimResponseDTO respuesta = agenciaClient.crearReclamo(
+                solicitud.getId(),
+                solicitud.getOrganizationId(),
+                solicitud.getDataSubjectId(),
+                personResponse.getData().getFullName(),
+                personResponse.getData().getEmail(),
+                solicitud.getRequestType().name(),
+                solicitud.getResolutionSummary(),
+                solicitud.getDenialLegalBasis(),
+                motivo,
+                LocalDateTime.now());
+
+        solicitud.setAgencyClaimId(respuesta.getData().getId());
+
+        ArcoRequestStatusHistory historial = new ArcoRequestStatusHistory();
+        historial.setArcoRequest(solicitud);
+        historial.setPreviousStatus(solicitud.getStatus());
+        historial.setNewStatus(solicitud.getStatus());
+        historial.setComment("[RECLAMO_AGENCIA] Reclamo registrado ante la Agencia, ID: " + respuesta.getData().getId());
+        statusHistoryRepository.save(historial);
+
+        return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
+    }
+
+    // Callback server-to-server desde Agencia-service cuando el auditor responde el reclamo
+    @Transactional
+    public ArcoRequestResponseDTO registrarRespuestaAgencia(UUID id, String response, LocalDateTime respondedAt) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
+
+        ArcoStatus estadoAnterior = solicitud.getStatus();
+
+        solicitud.setAgencyResolution(response);
+        solicitud.setAgencyRespondedAt(respondedAt != null ? respondedAt : LocalDateTime.now());
+        solicitud.setStatus(ArcoStatus.CERRADA);
+        solicitud.setClosedAt(LocalDateTime.now());
+
+        ArcoRequestStatusHistory historial = new ArcoRequestStatusHistory();
+        historial.setArcoRequest(solicitud);
+        historial.setPreviousStatus(estadoAnterior);
+        historial.setNewStatus(ArcoStatus.CERRADA);
+        historial.setComment("[RESPUESTA_AGENCIA] " + response);
         statusHistoryRepository.save(historial);
 
         return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));

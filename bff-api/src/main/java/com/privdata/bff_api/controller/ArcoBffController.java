@@ -65,4 +65,11 @@ public class ArcoBffController {
             @RequestParam String nuevoEstado) {
         return ResponseEntity.ok(service.updateVerificacionIdentidad(id, nuevoEstado));
     }
+
+    @PostMapping("/{id}/reclamo-agencia")
+    public ResponseEntity<?> reclamarAnteAgencia(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.reclamarAnteAgencia(id, authorization));
+    }
 }

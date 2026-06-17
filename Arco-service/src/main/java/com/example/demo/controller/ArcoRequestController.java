@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.request.ArcoAgencyResponseDTO;
 import com.example.demo.dto.request.ArcoCancellationRequestDTO;
 import com.example.demo.dto.request.ArcoRectificationRequestDTO;
 import com.example.demo.dto.request.UpdateArcoStatusDTO;
@@ -101,6 +102,24 @@ public class ArcoRequestController {
         return ResponseEntity.ok(new ApiResponseDTO<>(true,
                 "Disconformidad registrada. Tienes plazo para reclamar ante la Agencia (cpd.cl).",
                 arcoRequestService.registrarDisconformidadTitular(id, motivo)));
+    }
+
+    // El titular escala su disconformidad como reclamo formal ante la Agencia
+    @PostMapping("/{id}/reclamo-agencia")
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> reclamarAnteAgencia(@PathVariable UUID id) {
+        return ResponseEntity.ok(new ApiResponseDTO<>(true,
+                "Reclamo registrado ante la Agencia.",
+                arcoRequestService.reclamarAnteAgencia(id)));
+    }
+
+    // Callback server-to-server desde Agencia-service al responder un reclamo
+    @PatchMapping("/{id}/respuesta-agencia")
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> registrarRespuestaAgencia(
+            @PathVariable UUID id,
+            @RequestBody ArcoAgencyResponseDTO dto) {
+        return ResponseEntity.ok(new ApiResponseDTO<>(true,
+                "Respuesta de la Agencia registrada.",
+                arcoRequestService.registrarRespuestaAgencia(id, dto.getResponse(), dto.getRespondedAt())));
     }
 
     @PostMapping("/cancellation")
