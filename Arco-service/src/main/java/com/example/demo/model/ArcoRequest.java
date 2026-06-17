@@ -70,6 +70,10 @@ public class ArcoRequest {
     @Column(name = "resolved_at", nullable = true)
     private LocalDateTime resolvedAt;
 
+    // Email de quien gestionó/resolvió la solicitud (RESPONDIDA/RECHAZADA), para trazabilidad ante la Agencia
+    @Column(name = "resolved_by_email", nullable = true)
+    private String resolvedByEmail;
+
     @Column(name = "denial_legal_basis", nullable = true, columnDefinition = "TEXT")
     private String denialLegalBasis;
 

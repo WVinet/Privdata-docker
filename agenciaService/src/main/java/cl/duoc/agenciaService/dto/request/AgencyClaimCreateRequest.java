@@ -16,6 +16,7 @@ public class AgencyClaimCreateRequest {
     private String requestType;
     private String originalResolutionSummary;
     private String originalDenialLegalBasis;
+    private String originalResolvedByEmail;
     private String claimReason;
     private LocalDateTime submittedAt;
 }

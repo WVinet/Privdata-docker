@@ -40,6 +40,7 @@ public class AgencyClaimService {
         claim.setRequestType(dto.getRequestType());
         claim.setOriginalResolutionSummary(dto.getOriginalResolutionSummary());
         claim.setOriginalDenialLegalBasis(dto.getOriginalDenialLegalBasis());
+        claim.setOriginalResolvedByEmail(dto.getOriginalResolvedByEmail());
         claim.setClaimReason(dto.getClaimReason());
         claim.setStatus(AgencyClaimStatus.PENDIENTE);
         claim.setSubmittedAt(dto.getSubmittedAt() != null ? dto.getSubmittedAt() : LocalDateTime.now());

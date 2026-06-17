@@ -141,6 +141,9 @@ public class ArcoRequestService {
             solicitud.setAgencyClaimDeadline(
                 deadlineCalculatorService.addBusinessDays(LocalDateTime.now(), 30)
             );
+            if (dto.getChangedByEmail() != null && !dto.getChangedByEmail().isBlank()) {
+                solicitud.setResolvedByEmail(dto.getChangedByEmail());
+            }
         }
 
         // RF-ARCO-10: registrar si se notificó a terceros
@@ -224,6 +227,7 @@ public class ArcoRequestService {
                 solicitud.getRequestType().name(),
                 solicitud.getResolutionSummary(),
                 solicitud.getDenialLegalBasis(),
+                solicitud.getResolvedByEmail(),
                 motivo,
                 LocalDateTime.now());
 

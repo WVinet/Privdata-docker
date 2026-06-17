@@ -1,19 +1,21 @@
-import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import { arcoApi } from "@/lib/api"
 import type { ArcoRequest, ArcoStatus } from "@/types/arco"
 
 const TYPE_LABELS: Record<string, string> = {
   ACCESO:           "Derecho de Acceso",
   RECTIFICACION:    "Derecho de Rectificación",
-  SUPRESION:        "Derecho de Supresión",
+  CANCELLATION:     "Derecho de Cancelación",
   OPOSICION:        "Derecho de Oposición",
   PORTABILIDAD:     "Derecho de Portabilidad",
   BLOQUEO_TEMPORAL: "Bloqueo Temporal de Datos",
 }
 
 const TYPE_ICONS: Record<string, string> = {
-  ACCESO: "🔍", RECTIFICACION: "✏️", SUPRESION: "🗑️",
+  ACCESO: "🔍", RECTIFICACION: "✏️", CANCELLATION: "🗑️",
   OPOSICION: "🚫", PORTABILIDAD: "📦", BLOQUEO_TEMPORAL: "🔒",
 }
 
@@ -41,6 +43,149 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-CL", {
     day: "2-digit", month: "long", year: "numeric",
   })
+}
+
+function ConformidadSection({ req }: { req: ArcoRequest }) {
+  const queryClient = useQueryClient()
+  const [showMotivo, setShowMotivo] = useState(false)
+  const [motivo, setMotivo] = useState("")
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["arco-subject", req.dataSubjectId] })
+
+  const closeMutation = useMutation({
+    mutationFn: () => arcoApi.updateStatus(req.id, { status: "CERRADA" }),
+    onSuccess: (res) => {
+      if (!res.data.success) { toast.error(res.data.message ?? "No se pudo cerrar la solicitud."); return }
+      toast.success("¡Gracias! Solicitud cerrada.")
+      invalidate()
+    },
+    onError: () => toast.error("Error de conexión."),
+  })
+
+  const disconformidadMutation = useMutation({
+    mutationFn: () => arcoApi.registrarDisconformidad(req.id, motivo || undefined),
+    onSuccess: (res) => {
+      if (!res.data.success) { toast.error(res.data.message ?? "No se pudo registrar la disconformidad."); return }
+      toast.success("Disconformidad registrada.")
+      setShowMotivo(false)
+      invalidate()
+    },
+    onError: () => toast.error("Error de conexión."),
+  })
+
+  const reclamoMutation = useMutation({
+    mutationFn: () => arcoApi.reclamoAgencia(req.id),
+    onSuccess: (res) => {
+      if (!res.data.success) { toast.error(res.data.message ?? "No se pudo registrar el reclamo."); return }
+      toast.success("Reclamo registrado ante la Agencia de Protección de Datos.")
+      invalidate()
+    },
+    onError: () => toast.error("Error de conexión."),
+  })
+
+  // La Agencia ya respondió — la solicitud ya quedó CERRADA por el callback
+  if (req.agencyResolution) {
+    return (
+      <div
+        className="rounded-xl px-4 py-3 text-xs border-l-4 leading-relaxed whitespace-pre-line"
+        style={{ borderColor: "hsl(var(--primary))", background: "hsl(var(--primary) / 0.07)", color: "hsl(var(--primary))" }}
+      >
+        <span className="font-semibold">Respuesta de la Agencia de Protección de Datos: </span>
+        {req.agencyResolution}
+        {req.agencyRespondedAt && (
+          <p className="mt-1 opacity-80">Respondido el {formatDate(req.agencyRespondedAt)}</p>
+        )}
+      </div>
+    )
+  }
+
+  // Cerrada sin pasar por la Agencia (el titular quedó conforme) — nada más que mostrar
+  if (req.status === "CERRADA") return null
+
+  // Ya reclamó, esperando respuesta de la Agencia
+  if (req.agencyClaimId) {
+    return (
+      <div className="rounded-xl px-4 py-3 text-xs" style={{ background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>
+        Reclamo registrado ante la Agencia de Protección de Datos. Quedaremos atentos a su respuesta.
+      </div>
+    )
+  }
+
+  // Ya registró disconformidad — ofrecer escalar a la Agencia
+  if (req.titularDisconforme) {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 flex-wrap" style={{ background: "hsl(var(--muted))" }}>
+        <span className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+          Registraste tu disconformidad con esta resolución.
+        </span>
+        <button
+          onClick={() => reclamoMutation.mutate()}
+          disabled={reclamoMutation.isPending}
+          className="text-xs font-semibold px-3 py-1.5 rounded-full shrink-0 disabled:opacity-60"
+          style={{ background: "hsl(var(--destructive))", color: "white" }}
+        >
+          {reclamoMutation.isPending ? "Enviando…" : "Hacer reclamo ante la Agencia"}
+        </button>
+      </div>
+    )
+  }
+
+  // Caso por defecto: preguntar si está conforme con la resolución
+  return (
+    <div className="rounded-xl px-4 py-3 space-y-3" style={{ background: "hsl(var(--muted))" }}>
+      <p className="text-xs font-semibold" style={{ color: "hsl(var(--foreground))" }}>
+        ¿Está conforme con esta resolución?
+      </p>
+      {!showMotivo ? (
+        <div className="flex gap-2">
+          <button
+            onClick={() => closeMutation.mutate()}
+            disabled={closeMutation.isPending}
+            className="text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-60"
+            style={{ background: "hsl(var(--success))", color: "white" }}
+          >
+            Sí, estoy conforme
+          </button>
+          <button
+            onClick={() => setShowMotivo(true)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-full border"
+            style={{ borderColor: "hsl(var(--destructive))", color: "hsl(var(--destructive))" }}
+          >
+            No estoy conforme
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Cuéntanos por qué no estás conforme (opcional)"
+            rows={2}
+            className="w-full text-xs rounded-lg border p-2 resize-none"
+            style={{ borderColor: "hsl(var(--border))" }}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => disconformidadMutation.mutate()}
+              disabled={disconformidadMutation.isPending}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-60"
+              style={{ background: "hsl(var(--destructive))", color: "white" }}
+            >
+              {disconformidadMutation.isPending ? "Enviando…" : "Registrar disconformidad"}
+            </button>
+            <button
+              onClick={() => setShowMotivo(false)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full border"
+              style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function SolicitudCard({ req }: { req: ArcoRequest }) {
@@ -172,6 +317,9 @@ function SolicitudCard({ req }: { req: ArcoRequest }) {
             )}
           </div>
         )}
+
+        {/* Conformidad / disconformidad / reclamo ante la Agencia */}
+        {isTerminal && <ConformidadSection req={req} />}
       </div>
     </div>
   )

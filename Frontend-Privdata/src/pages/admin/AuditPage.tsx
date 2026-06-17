@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
-import { auditApi } from "@/lib/api"
+import { Search, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react"
+import { auditApi, arcoApi, personsApi, usersApi } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -21,6 +21,24 @@ const ACTION_CONFIG: Record<string, { label: string; className: string }> = {
   RETIRAR:  { label: "Retirar",    className: "border-orange-300 bg-orange-50 text-orange-700" },
 }
 
+// Tipos de entidad emitidos hoy por el BFF (ver AuditClient.log en cada XxxBffService)
+const ENTITY_LABELS = [
+  "Solicitud ARCO",
+  "Reclamo ante la Agencia",
+  "Consentimiento",
+  "Definición de Consentimiento",
+  "Titular",
+  "Usuario",
+]
+
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+
+const ACTOR_ROLE_CONFIG: Record<"TITULAR" | "AUDITOR_AGENCIA" | "RESPONSABLE", { label: string; className: string }> = {
+  TITULAR:         { label: "Titular",        className: "border-secondary bg-secondary text-secondary-foreground" },
+  AUDITOR_AGENCIA: { label: "Auditor Agencia", className: "border-purple-300 bg-purple-50 text-purple-700" },
+  RESPONSABLE:     { label: "Responsable",    className: "border-primary/30 bg-primary/10 text-primary" },
+}
+
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("es-CL", {
     day: "2-digit", month: "short", year: "numeric",
@@ -31,8 +49,11 @@ function fmtDate(iso: string) {
 export default function AuditPage() {
   const { getUser }  = useAuth()
   const orgId        = getUser()?.organizationId ?? ""
-  const [search, setSearch] = useState("")
-  const [page, setPage]     = useState(0)
+  const [search, setSearch]         = useState("")
+  const [filterAction, setFilterAction] = useState("")
+  const [filterEntity, setFilterEntity] = useState("")
+  const [filterDate, setFilterDate]     = useState("")
+  const [page, setPage]             = useState(0)
   const PAGE_SIZE = 50
 
   const { data, isLoading } = useQuery({
@@ -42,19 +63,91 @@ export default function AuditPage() {
     refetchInterval: 30_000,
   })
 
+  // Datos auxiliares para resolver "a quién" se refiere cada evento (titular afectado)
+  const { data: arcoData } = useQuery({
+    queryKey: ["arco", orgId],
+    queryFn: () => arcoApi.list(orgId).then((r) => r.data),
+    enabled: !!orgId,
+  })
+
+  const { data: personsData } = useQuery({
+    queryKey: ["persons", orgId],
+    queryFn: () => personsApi.list(orgId).then((r) => r.data),
+    enabled: !!orgId,
+  })
+
+  // Roles por correo, para distinguir si quien gestionó el evento es titular o responsable interno
+  const { data: usersData } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => usersApi.list().then((r) => r.data),
+  })
+
   const logs: AuditLog[] = data?.data?.content ?? []
   const totalPages        = data?.data?.totalPages ?? 1
   const totalElements     = data?.data?.totalElements ?? 0
 
+  const arcoRequests = arcoData?.data ?? []
+  const persons       = personsData?.data ?? []
+  const users         = usersData?.data ?? []
+  const arcoById            = Object.fromEntries(arcoRequests.map((r) => [r.id, r]))
+  const arcoByAgencyClaimId = Object.fromEntries(
+    arcoRequests.filter((r) => r.agencyClaimId).map((r) => [r.agencyClaimId as string, r])
+  )
+  const personsById = Object.fromEntries(persons.map((p) => [p.id, p]))
+  const rolesByEmail = Object.fromEntries(users.map((u) => [u.email.toLowerCase(), u.roles ?? []]))
+
+  // Determina si quien ejecutó el evento es el titular, un auditor de la Agencia o un responsable interno
+  function resolveActorRole(email: string | null): keyof typeof ACTOR_ROLE_CONFIG | null {
+    if (!email) return null
+    const roles = rolesByEmail[email.toLowerCase()]
+    if (!roles) return null
+    if (roles.includes("END_USER")) return "TITULAR"
+    if (roles.includes("AGENCY_AUDITOR")) return "AUDITOR_AGENCIA"
+    return "RESPONSABLE"
+  }
+
+  // Resuelve el solicitante (titular dueño de la solicitud/consentimiento), a partir de entityType + UUID en el detail
+  function resolveSolicitante(event: AuditLog): string | null {
+    const uuid = event.detail.match(UUID_RE)?.[0]
+    if (!uuid) return null
+
+    if (event.entityType === "Solicitud ARCO") {
+      const request = arcoById[uuid]
+      return request ? personsById[request.dataSubjectId]?.fullName ?? null : null
+    }
+    if (event.entityType === "Reclamo ante la Agencia") {
+      const request = arcoByAgencyClaimId[uuid]
+      return request ? personsById[request.dataSubjectId]?.fullName ?? null : null
+    }
+    if (event.entityType === "Consentimiento" && event.action === "CREATE") {
+      return personsById[uuid]?.fullName ?? null
+    }
+    return null
+  }
+
+  const hasActiveFilters = !!(search || filterAction || filterEntity || filterDate)
+
+  const clearFilters = () => {
+    setSearch("")
+    setFilterAction("")
+    setFilterEntity("")
+    setFilterDate("")
+    setPage(0)
+  }
+
   const filtered = logs.filter((e) => {
-    if (!search) return true
     const term = search.toLowerCase()
-    return (
-      e.action.toLowerCase().includes(term)       ||
-      e.entityType.toLowerCase().includes(term)   ||
-      e.detail.toLowerCase().includes(term)       ||
-      (e.performedByEmail?.toLowerCase() ?? "").includes(term)
-    )
+    const matchSearch =
+      !search ||
+      e.action.toLowerCase().includes(term)     ||
+      e.entityType.toLowerCase().includes(term) ||
+      e.detail.toLowerCase().includes(term)     ||
+      (e.performedByEmail?.toLowerCase() ?? "").includes(term) ||
+      (resolveSolicitante(e)?.toLowerCase() ?? "").includes(term)
+    const matchAction = !filterAction || e.action === filterAction
+    const matchEntity = !filterEntity || e.entityType === filterEntity
+    const matchDate   = !filterDate || e.createdAt.slice(0, 10) === filterDate
+    return matchSearch && matchAction && matchEntity && matchDate
   })
 
   return (
@@ -66,14 +159,49 @@ export default function AuditPage() {
 
       <Card>
         <CardHeader className="pb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por acción, entidad, usuario o detalle..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0) }}
-              className="pl-9"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por acción, entidad, gestionado por, solicitante o detalle…"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(0) }}
+                className="pl-9"
+              />
+            </div>
+            <select
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              value={filterAction}
+              onChange={(e) => { setFilterAction(e.target.value); setPage(0) }}
+            >
+              <option value="">Todas las acciones</option>
+              {Object.entries(ACTION_CONFIG).map(([v, c]) => (
+                <option key={v} value={v}>{c.label}</option>
+              ))}
+            </select>
+            <select
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              value={filterEntity}
+              onChange={(e) => { setFilterEntity(e.target.value); setPage(0) }}
+            >
+              <option value="">Todas las entidades</option>
+              {ENTITY_LABELS.map((v) => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={filterDate}
+                onChange={(e) => { setFilterDate(e.target.value); setPage(0) }}
+                className="text-muted-foreground flex-1"
+              />
+              {hasActiveFilters && (
+                <Button variant="outline" size="icon" onClick={clearFilters} title="Limpiar filtros">
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -91,14 +219,15 @@ export default function AuditPage() {
                       <TableHead>Acción</TableHead>
                       <TableHead>Entidad</TableHead>
                       <TableHead>Detalle</TableHead>
-                      <TableHead>Usuario</TableHead>
+                      <TableHead>Gestionado por</TableHead>
+                      <TableHead>Solicitante</TableHead>
                       <TableHead>Fecha / Hora</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
                           {logs.length === 0
                             ? "No hay eventos registrados aún."
                             : "No se encontraron eventos con ese criterio."}
@@ -106,6 +235,8 @@ export default function AuditPage() {
                       </TableRow>
                     ) : filtered.map((event) => {
                       const cfg = ACTION_CONFIG[event.action] ?? { label: event.action, className: "" }
+                      const solicitante = resolveSolicitante(event)
+                      const actorRole   = resolveActorRole(event.performedByEmail)
                       return (
                         <TableRow key={event.id}>
                           <TableCell>
@@ -119,8 +250,18 @@ export default function AuditPage() {
                           <TableCell className="text-sm max-w-xs truncate">
                             {event.detail}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {event.performedByEmail ?? "—"}
+                          <TableCell className="text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">{event.performedByEmail ?? "—"}</span>
+                              {actorRole && (
+                                <Badge variant="outline" className={ACTOR_ROLE_CONFIG[actorRole].className}>
+                                  {ACTOR_ROLE_CONFIG[actorRole].label}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {solicitante ?? <span className="text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm font-mono whitespace-nowrap">
                             {fmtDate(event.createdAt)}

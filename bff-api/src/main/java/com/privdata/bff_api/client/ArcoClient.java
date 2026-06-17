@@ -46,6 +46,7 @@ public class ArcoClient {
         mapped.put("denialLegalBasis", body.get("denialLegalBasis"));
         String userId = JwtUtil.extractUserId(authorization);
         if (userId != null) mapped.put("changedByUserId", userId);
+        mapped.put("changedByEmail", JwtUtil.extractEmail(authorization));
         return forward("PATCH", "/api/arco-request/" + id + "/estado", mapped);
     }
 

@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Fondos — gris azulado, frío, "institucional" — deliberadamente distinto a PrivData (verde/cálido) */
+    --background: 212 20% 96%;
+    --foreground: 215 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 30% 12%;
+
+    /* Primario — azul marino institucional */
+    --primary: 213 62% 28%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 213 25% 91%;
+    --secondary-foreground: 215 30% 12%;
+
+    --muted: 212 16% 91%;
+    --muted-foreground: 215 12% 44%;
+
+    --accent: 38 80% 50%;
+    --accent-foreground: 215 30% 12%;
+
+    --destructive: 4 75% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 50% 34%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 212 18% 86%;
+    --input: 212 18% 86%;
+    --ring: 213 62% 28%;
+
+    --radius: 0.6rem;
+
+    /* Sidebar — azul marino más oscuro */
+    --sidebar-background: 215 45% 16%;
+    --sidebar-foreground: 213 20% 80%;
+    --sidebar-primary: 38 80% 54%;
+    --sidebar-primary-foreground: 215 30% 12%;
+    --sidebar-accent: 213 40% 24%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 215 40% 12%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}

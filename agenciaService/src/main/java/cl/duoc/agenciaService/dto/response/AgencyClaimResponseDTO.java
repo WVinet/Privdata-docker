@@ -19,6 +19,7 @@ public class AgencyClaimResponseDTO {
     private String requestType;
     private String originalResolutionSummary;
     private String originalDenialLegalBasis;
+    private String originalResolvedByEmail;
     private String claimReason;
     private AgencyClaimStatus status;
     private String agencyResponse;
@@ -40,6 +41,7 @@ public class AgencyClaimResponseDTO {
         dto.setRequestType(e.getRequestType());
         dto.setOriginalResolutionSummary(e.getOriginalResolutionSummary());
         dto.setOriginalDenialLegalBasis(e.getOriginalDenialLegalBasis());
+        dto.setOriginalResolvedByEmail(e.getOriginalResolvedByEmail());
         dto.setClaimReason(e.getClaimReason());
         dto.setStatus(e.getStatus());
         dto.setAgencyResponse(e.getAgencyResponse());

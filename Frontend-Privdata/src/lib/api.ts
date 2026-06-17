@@ -181,6 +181,9 @@ export const arcoApi = {
   registrarDisconformidad: (id: string, motivo?: string) =>
     api.post<ApiResponse<ArcoRequest>>(`/arco/${id}/disconformidad`, { motivo }),
 
+  reclamoAgencia: (id: string) =>
+    api.post<ApiResponse<ArcoRequest>>(`/arco/${id}/reclamo-agencia`),
+
   updateVerificacionIdentidad: (id: string, nuevoEstado: string) =>
     api.patch<ApiResponse<ArcoRequest>>(
       `/arco/${id}/verificacion-identidad`,
