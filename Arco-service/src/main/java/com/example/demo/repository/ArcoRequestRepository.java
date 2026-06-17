@@ -1,5 +1,6 @@
 package com.example.demo.repository;
 
+import com.example.demo.enums.arcoRequest.ArcoRequestType;
 import com.example.demo.enums.arcoRequest.ArcoStatus;
 import com.example.demo.model.ArcoRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,5 +29,12 @@ public interface ArcoRequestRepository extends JpaRepository<ArcoRequest, UUID> 
     List<ArcoRequest> findSolicitudesListasParaCierre(
         @Param("statuses") List<ArcoStatus> statuses,
         @Param("now") LocalDateTime now
+    );
+
+    long countByDataSubjectIdAndOrganizationIdAndRequestTypeAndSubmittedAtAfter(
+            UUID dataSubjectId,
+            UUID organizationId,
+            ArcoRequestType requestType,
+            LocalDateTime fromDate
     );
 }

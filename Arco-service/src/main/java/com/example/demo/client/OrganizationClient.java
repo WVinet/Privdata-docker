@@ -79,4 +79,15 @@ public class OrganizationClient {
                 .toBodilessEntity();
 
     }
+
+    ///acceso
+//    public AccessDataResponseDTO getAccessData(UUID organizationId, UUID personId) {
+//        return orgClient.get()
+//                .uri(organizationServiceUrl
+//                        + "/api/organizations/" + organizationId
+//                        + "/persons/" + personId
+//                        + "/access-data")
+//                .retrieve()
+//                .body(AccessDataResponseDTO.class);
+//    }
 }

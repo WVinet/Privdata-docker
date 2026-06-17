@@ -1,15 +1,12 @@
-package com.example.demo.enums.arcoRequest;
+package com.example.demo.arco.rectificacion.enums;
 
-public enum ArcoStatus {
-    RECIBIDA,
+public enum RectificationStatus {
+
     IDENTIDAD_PENDIENTE,
     IDENTIDAD_VERIFICADA,
     IDENTIDAD_RECHAZADA,
     EN_GESTION,
     RESPONDIDA,
     RECHAZADA,
-    PENDIENTE_RECLAMO_AGENCIA,
-    RECLAMADA_AGENCIA,
     CERRADA
-
 }

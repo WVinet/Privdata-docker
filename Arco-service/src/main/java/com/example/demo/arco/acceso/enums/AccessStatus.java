@@ -1,6 +1,8 @@
-package com.example.demo.enums.arcoRequest;
+package com.example.demo.arco.acceso.enums;
 
-public enum ArcoStatus {
+
+public enum AccessStatus {
+
     RECIBIDA,
     IDENTIDAD_PENDIENTE,
     IDENTIDAD_VERIFICADA,
@@ -11,5 +13,4 @@ public enum ArcoStatus {
     PENDIENTE_RECLAMO_AGENCIA,
     RECLAMADA_AGENCIA,
     CERRADA
-
 }

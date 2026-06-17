@@ -19,7 +19,7 @@ import com.example.demo.model.ArcoRequest;
 import com.example.demo.model.ArcoRequestStatusHistory;
 import com.example.demo.repository.ArcoRequestRepository;
 import com.example.demo.repository.ArcoRequestStatusHistoryRepository;
-import com.example.demo.service.EmailService;
+import com.example.demo.shared.service.DeadlineCalculatorService;
 import com.example.demo.util.BusinessDaysCalculator;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
@@ -27,7 +27,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
-import com.example.demo.shared.service.DeadlineCalculatorService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -228,13 +227,13 @@ public class ArcoRequestService {
                 motivo,
                 LocalDateTime.now());
 
-        solicitud.setAgencyClaimId(respuesta.getData().getId());
+        solicitud.setAgencyClaimId(respuesta.getId());
 
         ArcoRequestStatusHistory historial = new ArcoRequestStatusHistory();
         historial.setArcoRequest(solicitud);
         historial.setPreviousStatus(solicitud.getStatus());
         historial.setNewStatus(solicitud.getStatus());
-        historial.setComment("[RECLAMO_AGENCIA] Reclamo registrado ante la Agencia, ID: " + respuesta.getData().getId());
+        historial.setComment("[RECLAMO_AGENCIA] Reclamo registrado ante la Agencia, ID: " + respuesta.getId());
         statusHistoryRepository.save(historial);
 
         return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
@@ -284,14 +283,17 @@ public class ArcoRequestService {
     }
 
     @Transactional
-    public ArcoRequestResponseDTO actualizarVerificacionIdentidad(UUID id, ArcoIdentityVerificationStatus nuevoEstado) {
+    public ArcoRequestResponseDTO actualizarVerificacionIdentidad(UUID id,
+                                                                  ArcoIdentityVerificationStatus nuevoEstado) {
         ArcoRequest solicitud = arcoRequestRepository.findById(id)
                 .orElseThrow(() -> new ArcoRequestNotFoundException(id));
+
         solicitud.setIdentityVerificationStatus(nuevoEstado);
         ArcoRequest saved = arcoRequestRepository.save(solicitud);
         notificarCambioEstado(saved, "La verificación de identidad fue actualizada a: " + nuevoEstado);
         return ArcoRequestResponseDTO.fromEntity(saved);
     }
+
 
     @Transactional
     public ArcoRequestResponseDTO actualizarResolucion(UUID id, String resolutionSummary) {
