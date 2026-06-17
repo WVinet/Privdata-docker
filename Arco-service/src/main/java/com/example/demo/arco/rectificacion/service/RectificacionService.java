@@ -110,7 +110,15 @@ public class RectificacionService {
 
         rectificationRequestRepository.save(detail);
         ArcoRequest saved = arcoRequestRepository.save(request);
-        notificarCambioEstado(saved, dto.getComment());
+        String notificationComment = dto.getComment();
+
+        if (notificationComment == null || notificationComment.isBlank()) {
+            notificationComment = Boolean.TRUE.equals(dto.getVerified())
+                    ? "La identidad del titular ha sido verificada correctamente."
+                    : "No fue posible verificar la identidad del titular.";
+        }
+
+        notificarCambioEstado(saved, notificationComment);
         return saved;
     }
 
@@ -142,7 +150,7 @@ public class RectificacionService {
 
         detail.setRectificationStatus(RectificationStatus.RESPONDIDA);
         detail.setResponseSummary(
-                dto != null && dto.getObservations() != null
+                dto != null && dto.getObservations() != null && !dto.getObservations().isBlank()
                         ? dto.getObservations()
                         : "Datos rectificados correctamente."
         );

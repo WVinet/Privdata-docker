@@ -303,10 +303,11 @@ public class PersonService {
     ///metodos relacionados con rectificacion
     public void rectifyDataSubject(UUID organizationId,
                                    UUID personId,
-                                   PersonRectificationRequestDTO requestDTO){
-        Person person = getPersonOrThrow(organizationId,personId);
+                                   PersonRectificationRequestDTO requestDTO) {
 
-        if (person.getDataStatus() == DataStatus.ANONYMIZED){
+        Person person = getPersonOrThrow(organizationId, personId);
+
+        if (person.getDataStatus() == DataStatus.ANONYMIZED) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "La persona ya se encuentra anonimizada"
@@ -320,18 +321,56 @@ public class PersonService {
                 requestDTO.getEmail()
         );
 
-        person.setFirstName(requestDTO.getFirstName());
-        person.setLastName(requestDTO.getLastName());
+        boolean firstNameChanged = false;
+        boolean lastNameChanged = false;
 
-        person.setFullName(buildFullName(
-                requestDTO.getFirstName(),
-                requestDTO.getLastName()
-        ));
+        if (requestDTO.getFirstName() != null &&
+                !requestDTO.getFirstName().isBlank()) {
 
-        person.setEmail(requestDTO.getEmail());
-        person.setPhone(requestDTO.getPhone());
-        person.setPosition(requestDTO.getPosition());
-        person.setRut(requestDTO.getRut());
+            person.setFirstName(requestDTO.getFirstName());
+            firstNameChanged = true;
+        }
+
+        if (requestDTO.getLastName() != null &&
+                !requestDTO.getLastName().isBlank()) {
+
+            person.setLastName(requestDTO.getLastName());
+            lastNameChanged = true;
+        }
+
+        if (firstNameChanged || lastNameChanged) {
+
+            person.setFullName(
+                    buildFullName(
+                            person.getFirstName(),
+                            person.getLastName()
+                    )
+            );
+        }
+
+        if (requestDTO.getEmail() != null &&
+                !requestDTO.getEmail().isBlank()) {
+
+            person.setEmail(requestDTO.getEmail());
+        }
+
+        if (requestDTO.getPhone() != null &&
+                !requestDTO.getPhone().isBlank()) {
+
+            person.setPhone(requestDTO.getPhone());
+        }
+
+        if (requestDTO.getPosition() != null &&
+                !requestDTO.getPosition().isBlank()) {
+
+            person.setPosition(requestDTO.getPosition());
+        }
+
+        if (requestDTO.getRut() != null &&
+                !requestDTO.getRut().isBlank()) {
+
+            person.setRut(requestDTO.getRut());
+        }
 
         personRepository.save(person);
     }
