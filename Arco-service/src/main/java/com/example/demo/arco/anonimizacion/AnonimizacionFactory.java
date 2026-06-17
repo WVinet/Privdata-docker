@@ -1,4 +1,4 @@
-package com.example.demo.arco.supresion;
+package com.example.demo.arco.anonimizacion;
 
 import com.example.demo.arco.common.factory.ArcoRequestFactory;
 import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
@@ -9,17 +9,17 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class SupresionFactory extends ArcoRequestFactory {
+public class AnonimizacionFactory extends ArcoRequestFactory {
 
-    private final SupresionService supresionService;
+    private final AnonimizacionService anonimizacionService;
 
     @Override
     public ArcoRequestType getTipo() {
-        return ArcoRequestType.SUPRESION;
+        return ArcoRequestType.ANONIMIZACION;
     }
 
     @Override
     protected ArcoRequest crearSolicitudEspecifica(ArcoRequestCreateDTO dto) {
-        return supresionService.crear(dto);
+        return anonimizacionService.crear(dto);
     }
 }

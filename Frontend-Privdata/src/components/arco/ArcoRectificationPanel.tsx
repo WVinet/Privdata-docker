@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2, FileEdit, CheckCircle2, AlertTriangle } from "lucide-react"
-import { personsApi } from "@/lib/api"
+import { personsApi, arcoApi } from "@/lib/api"
 import { parseRectification, getPersonFieldValue } from "@/lib/rectification"
-import type { UpdatePersonRequest } from "@/types/person"
 
 interface Props {
+  arcoRequestId: string
   dataSubjectId: string
   organizationId: string
   description: string
   onApplied: (resolutionText: string) => void
 }
 
-export default function ArcoRectificationPanel({ dataSubjectId, organizationId, description, onApplied }: Props) {
+export default function ArcoRectificationPanel({ arcoRequestId, dataSubjectId, organizationId, description, onApplied }: Props) {
   const qc = useQueryClient()
   const details = parseRectification(description)
 
@@ -24,27 +24,16 @@ export default function ArcoRectificationPanel({ dataSubjectId, organizationId, 
 
   const applyMutation = useMutation({
     mutationFn: async () => {
-      if (!person || !details) throw new Error("Datos del titular no disponibles")
-      const body: UpdatePersonRequest = {
-        firstName: details.field === "firstName" ? details.proposedValue : person.firstName,
-        lastName:  details.field === "lastName"  ? details.proposedValue : person.lastName,
-        email:     details.field === "email"     ? details.proposedValue : (person.email ?? undefined),
-        rut:       details.field === "rut"       ? details.proposedValue : (person.rut ?? undefined),
-        phone:     details.field === "phone"     ? details.proposedValue : (person.phone ?? undefined),
-        position:  details.field === "position"  ? details.proposedValue : (person.position ?? undefined),
-        departmentId: person.departmentId ?? undefined,
-      }
-      const res = await personsApi.update(organizationId, dataSubjectId, body)
+      if (!details) throw new Error("Datos de la solicitud no disponibles")
+      const observations = `Se corrigió el campo "${details.fieldLabel}": de "${details.currentValue || "—"}" a "${details.proposedValue}".`
+      const res = await arcoApi.respondRectification(arcoRequestId, observations)
       if (!res.data.success) throw new Error(res.data.message)
-      return res
+      return observations
     },
-    onSuccess: () => {
+    onSuccess: (observations) => {
       qc.invalidateQueries({ queryKey: ["person", organizationId, dataSubjectId] })
       qc.invalidateQueries({ queryKey: ["persons", organizationId] })
-      onApplied(
-        `Informe de Rectificación — Art. 11 Ley 21.719\n\n` +
-        `Se corrigió el campo "${details!.fieldLabel}": de "${details!.currentValue || "—"}" a "${details!.proposedValue}".`
-      )
+      onApplied(`Informe de Rectificación — Art. 11 Ley 21.719\n\n${observations}`)
     },
   })
 

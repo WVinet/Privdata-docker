@@ -320,10 +320,10 @@ public class ArcoRequestService {
         arcoRequest.setStatus(ArcoStatus.RECIBIDA);
         arcoRequest.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.PENDIENTE);
         arcoRequest.setSubmittedAt(LocalDateTime.now());
-        arcoRequest.setDueDate(BusinessDaysCalculator.calcularFechaLimite(LocalDateTime.now(), ArcoRequestType.CANCELLATION));
+        arcoRequest.setDueDate(BusinessDaysCalculator.calcularFechaLimite(LocalDateTime.now(), ArcoRequestType.SUPRESION));
         arcoRequest.setResolutionSummary(null);
         arcoRequest.setResolvedAt(null);
-        arcoRequest.setRequestType(ArcoRequestType.CANCELLATION);
+        arcoRequest.setRequestType(ArcoRequestType.SUPRESION);
 
         ArcoRequest saved = arcoRequestRepository.save(arcoRequest);
         notificarCreacion(saved);
@@ -335,7 +335,7 @@ public class ArcoRequestService {
         ArcoRequest solicitud = arcoRequestRepository.findById(solicitudId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Solicitud no existe"));
 
-        if (solicitud.getRequestType() != ArcoRequestType.CANCELLATION) {
+        if (solicitud.getRequestType() != ArcoRequestType.SUPRESION) {
             throw new RuntimeException("La solicitud no corresponde a cancelación");
         }
         if (solicitud.getCancellationActionType() == null) {

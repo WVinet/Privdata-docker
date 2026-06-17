@@ -93,6 +93,10 @@ public class OrganizationClient {
         return forward("PATCH", "/api/organizations/" + orgId + "/persons/" + personId + "/status", body);
     }
 
+    public Object anonymizePerson(String orgId, String personId) {
+        return forward("POST", "/api/organizations/" + orgId + "/persons/" + personId + "/anonymize", null);
+    }
+
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private Object forward(String method, String uri, Object body) {

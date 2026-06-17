@@ -108,4 +108,10 @@ public class OrganizationBffController {
             @RequestBody Map<String, Object> body) {
         return ResponseEntity.ok(service.updatePersonStatus(orgId, personId, body));
     }
+
+    @PostMapping("/{orgId}/persons/{personId}/anonymize")
+    public ResponseEntity<?> anonymizePerson(
+            @PathVariable String orgId, @PathVariable String personId) {
+        return ResponseEntity.ok(service.anonymizePerson(orgId, personId));
+    }
 }
