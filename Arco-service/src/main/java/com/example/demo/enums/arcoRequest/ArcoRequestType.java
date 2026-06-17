@@ -5,7 +5,6 @@ public enum ArcoRequestType {
     RECTIFICACION,
     CANCELLATION,
     OPOSICION,
-    PORTABILIDAD
-
-
+    PORTABILIDAD,
+    BLOQUEO_TEMPORAL
 }

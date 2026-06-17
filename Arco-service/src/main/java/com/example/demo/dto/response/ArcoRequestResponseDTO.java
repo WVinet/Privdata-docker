@@ -36,26 +36,37 @@ public class ArcoRequestResponseDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Campos nuevos RF-ARCO-CIE y RF-ARCO-10
+    private LocalDateTime agencyClaimDeadline;
+    private boolean titularDisconforme;
+    private LocalDateTime closedAt;
+    private boolean thirdPartiesNotified;
+
     public static ArcoRequestResponseDTO fromEntity(ArcoRequest e) {
-        return new ArcoRequestResponseDTO(
-                e.getId(),
-                e.getOrganizationId(),
-                e.getDataSubjectId(),
-                e.getAssignedToUserId(),
-                e.getRequestType(),
-                e.getRequestChannel(),
-                e.getStatus(),
-                e.getIdentityVerificationStatus(),
-                e.getDescription(),
-                e.getResolutionSummary(),
-                e.getSubmittedAt(),
-                e.getDueDate(),
-                e.getResolvedAt(),
-                e.getDenialLegalBasis(),
-                e.isExtensionGranted(),
-                e.getExtendedDueDate(),
-                e.getCreatedAt(),
-                e.getUpdatedAt()
-        );
+        ArcoRequestResponseDTO dto = new ArcoRequestResponseDTO();
+        dto.setId(e.getId());
+        dto.setOrganizationId(e.getOrganizationId());
+        dto.setDataSubjectId(e.getDataSubjectId());
+        dto.setAssignedToUserId(e.getAssignedToUserId());
+        dto.setRequestType(e.getRequestType());
+        dto.setRequestChannel(e.getRequestChannel());
+        dto.setStatus(e.getStatus());
+        dto.setIdentityVerificationStatus(e.getIdentityVerificationStatus());
+        dto.setDescription(e.getDescription());
+        dto.setResolutionSummary(e.getResolutionSummary());
+        dto.setSubmittedAt(e.getSubmittedAt());
+        dto.setDueDate(e.getDueDate());
+        dto.setResolvedAt(e.getResolvedAt());
+        dto.setDenialLegalBasis(e.getDenialLegalBasis());
+        dto.setExtensionGranted(e.isExtensionGranted());
+        dto.setExtendedDueDate(e.getExtendedDueDate());
+        dto.setCreatedAt(e.getCreatedAt());
+        dto.setUpdatedAt(e.getUpdatedAt());
+        // Nuevos
+        dto.setAgencyClaimDeadline(e.getAgencyClaimDeadline());
+        dto.setTitularDisconforme(e.isTitularDisconforme());
+        dto.setClosedAt(e.getClosedAt());
+        dto.setThirdPartiesNotified(e.isThirdPartiesNotified());
+        return dto;
     }
 }

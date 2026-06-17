@@ -1,7 +1,7 @@
 package com.example.demo.config;
 
-import com.example.demo.arco.common.model.ChileanHoliday;
-import com.example.demo.arco.common.repository.ChileanHolidayRepository;
+import com.example.demo.shared.model.ChileanHoliday;
+import com.example.demo.shared.repository.ChileanHolidayRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;

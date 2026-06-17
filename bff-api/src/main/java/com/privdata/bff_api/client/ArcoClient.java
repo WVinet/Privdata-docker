@@ -53,6 +53,14 @@ public class ArcoClient {
         return forward("PATCH", "/api/arco-request/" + id + "/prorroga", null);
     }
 
+    public Object registrarDisconformidad(String id, Map<String, Object> body) {
+        return forward("POST", "/api/arco-request/" + id + "/disconformidad", body);
+    }
+
+    public Object updateVerificacionIdentidad(String id, String nuevoEstado) {
+        return forward("PATCH", "/api/arco-request/" + id + "/verificacion-identidad?nuevoEstado=" + nuevoEstado, null);
+    }
+
     private Object forward(String method, String uri, Object body) {
         try {
             var spec = arcoRestClient.method(HttpMethod.valueOf(method)).uri(uri);
@@ -99,13 +107,6 @@ public class ArcoClient {
     public ArcoRequestResponseDTO ejecutarCancelacion(UUID solicitudId) {
         return arcoRestClient.post()
                 .uri("/api/arco-requests/cancellation/" + solicitudId + "/execute")
-                .retrieve()
-                .body(ArcoRequestResponseDTO.class);
-    }
-
-    public ArcoRequestResponseDTO actualizarVerificacionIdentidad(UUID id, String nuevoEstado) {
-        return arcoRestClient.patch()
-                .uri("/api/arco-requests/cancellation/" + id + "/verificacion-identidad?" + nuevoEstado)
                 .retrieve()
                 .body(ArcoRequestResponseDTO.class);
     }

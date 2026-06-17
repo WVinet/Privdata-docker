@@ -1,0 +1,1 @@
+<ide_opened_file>The user opened the file c:\Users\PC\Desktop\Privdata-docker\Arco-service\src\main\java\com\example\demo\DemoApplication.java in the IDE. This may or may not be related to the current task.</ide_opened_file>

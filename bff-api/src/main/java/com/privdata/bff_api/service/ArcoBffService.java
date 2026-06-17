@@ -71,6 +71,19 @@ public class ArcoBffService {
         return result;
     }
 
+    public Object registrarDisconformidad(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.registrarDisconformidad(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+                "Disconformidad registrada para solicitud " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object updateVerificacionIdentidad(String id, String nuevoEstado) {
+        return arcoClient.updateVerificacionIdentidad(id, nuevoEstado);
+    }
+
     private String extractDataField(Object result, String key) {
         if (!(result instanceof Map<?, ?> resultMap) || !(resultMap.get("data") instanceof Map<?, ?> data)) return null;
         Object value = data.get(key);

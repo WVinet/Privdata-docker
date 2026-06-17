@@ -16,9 +16,12 @@ public class ArcoRequestStatusUpdateDTO {
     @NotNull
     private ArcoStatus newStatus;
 
-    private UUID changedByUserId;
-
     private String comment;
 
     private String denialLegalBasis;
+
+    private UUID changedByUserId;
+
+    // RF-ARCO-10: el admin marca si notificó a terceros al resolver
+    private Boolean thirdPartiesNotified;
 }

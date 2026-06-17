@@ -8,7 +8,7 @@ import com.example.demo.dto.request.arcoRequest.ArcoRequestStatusUpdateDTO;
 import com.example.demo.dto.response.ArcoRequestResponseDTO;
 import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
 import com.example.demo.enums.arcoRequest.ArcoStatus;
-import com.example.demo.service.ArcoRequestService;
+import com.example.demo.arco.common.service.ArcoRequestService;
 import com.example.demo.shared.ApiResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/arco-request")
@@ -62,7 +63,6 @@ public class ArcoRequestController {
                 .body(new ApiResponseDTO<>(true, "Solicitud creada correctamente", arcoRequestService.crearSolicitud(dto)));
     }
 
-    ///Despues de verificar la identidad del titutar usamos cambiar estado a EN_GESTION
     @PatchMapping("/{id}/estado")
     public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> cambiarEstado(
             @PathVariable UUID id,
@@ -76,7 +76,6 @@ public class ArcoRequestController {
                 arcoRequestService.prorrogarPlazo(id)));
     }
 
-    ///Admin verifica identidad con respecto a cualquier tipo de solicitud
     @PatchMapping("/{id}/verificacion-identidad")
     public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> actualizarVerificacionIdentidad(
             @PathVariable UUID id,
@@ -93,44 +92,25 @@ public class ArcoRequestController {
                 arcoRequestService.actualizarResolucion(id, dto.getResolutionSummary())));
     }
 
-    ///endpoints derecho cancelación
-    /// Creacion de solicitud cancelacion
+    // RF-ARCO-CIE-03: el titular registra disconformidad con la resolución
+    @PostMapping("/{id}/disconformidad")
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> registrarDisconformidad(
+            @PathVariable UUID id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String motivo = body != null ? body.get("motivo") : null;
+        return ResponseEntity.ok(new ApiResponseDTO<>(true,
+                "Disconformidad registrada. Tienes plazo para reclamar ante la Agencia (cpd.cl).",
+                arcoRequestService.registrarDisconformidadTitular(id, motivo)));
+    }
+
     @PostMapping("/cancellation")
     public ResponseEntity<ArcoRequestResponseDTO> crearSolicitudCancelacion(
-            @RequestBody ArcoCancellationRequestDTO requestDTO
-    ) {
-        return ResponseEntity.ok(
-                arcoRequestService.crearSolicitudCancelacion(requestDTO)
-        );
+            @RequestBody ArcoCancellationRequestDTO requestDTO) {
+        return ResponseEntity.ok(arcoRequestService.crearSolicitudCancelacion(requestDTO));
     }
 
-    ///se ejectua el derecho dependiendo del la opcion
     @PostMapping("/cancellation/{solicitudId}/execute")
-    public ResponseEntity<ArcoRequestResponseDTO> ejecutarCancelacion(
-            @PathVariable UUID solicitudId
-    ) {
-        return ResponseEntity.ok(
-                arcoRequestService.ejecutarCancelacion(solicitudId)
-        );
-    }
-
-    ///endpoints relacionados a solicitud rectificacion
-    @PostMapping("/rectification")
-    public ResponseEntity<ArcoRequestResponseDTO> crearSolicitudRectificacion(
-            @RequestBody ArcoRectificationRequestDTO requestDTO
-    ) {
-        return ResponseEntity.ok(
-                arcoRequestService.crearSolicitudRectificacion(requestDTO)
-        );
-    }
-
-    @PostMapping("/rectification/{solicitudId}/execute")
-    public ResponseEntity<?> ejecutarRectificacion(
-            @PathVariable UUID solicitudId
-    ) {
-
-        return ResponseEntity.ok(
-                arcoRequestService.ejecutarRectificacion(solicitudId)
-        );
+    public ResponseEntity<ArcoRequestResponseDTO> ejecutarCancelacion(@PathVariable UUID solicitudId) {
+        return ResponseEntity.ok(arcoRequestService.ejecutarCancelacion(solicitudId));
     }
 }
