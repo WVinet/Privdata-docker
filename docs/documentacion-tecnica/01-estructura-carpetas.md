@@ -17,11 +17,12 @@ Privdata-docker/
 │   ├── PRD.md                       # Product Requirements Document
 │   ├── bff-contratos-y-dtos.md      # Contratos/DTOs del BFF
 │   ├── sesion-2026-06-10.md         # Notas de sesión de trabajo
-│   └── documentacion-tecnica/       # Documentación técnica de referencia (esta carpeta)
-│       ├── 01-estructura-carpetas.md
-│       ├── 02-requisitos.md
-│       ├── 03-endpoints.md
-│       └── 04-modelo-bd.md
+│   ├── documentacion-tecnica/       # Documentación técnica de referencia (esta carpeta) — refleja el sistema YA implementado
+│   │   ├── 01-estructura-carpetas.md
+│   │   ├── 02-requisitos.md
+│   │   ├── 03-endpoints.md
+│   │   └── 04-modelo-bd.md
+│   └── agencia-service/             # Diseño de un microservicio NUEVO, aún no implementado (simula la Agencia de Protección de Datos)
 ├── Auth-service/             # Microservicio de autenticación — :8080 — postgres-auth :5436
 ├── Organization-service/     # Microservicio de organización — :8081 — postgres-organization :5433
 ├── Arco-service/             # Microservicio de solicitudes ARCO — :8082 — postgres-arco :5434
@@ -62,7 +63,7 @@ Auth-service/src/main/java/com/privdata/authservice/
 ├── controller/      # AuthController, AuditLogController, PasswordResetController,
 │                    # NotificationController, HealthController, TestSecurityController
 ├── dto/             # request/ y response/ (Login, Register, Invite, AssignRole, Audit, Password, Notification...)
-├── enums/           # UserStatus (PENDING, ACTIVE, BLOCKED, INACTVE)
+├── enums/           # UserStatus (PENDING, ACTIVE, BLOCKED, INACTIVE)
 ├── exception/       # Manejo de errores (credenciales inválidas, usuario no encontrado, etc.)
 ├── mapper/          # Mapeo User/Role/Permission ↔ DTOs
 ├── model/           # User, Role, Permission, UserRole, RolePermissions, RefreshToken, AuditLog, PasswordResetCode
@@ -96,25 +97,43 @@ Responsabilidad: datos maestros de la organización, departamentos, personas (ti
 
 ## 5. Arco-service (`:8082`, BD `arco_db`)
 
+Refactorizado a un patrón **Factory Method** por tipo de solicitud (`Map<ArcoRequestType, ArcoRequestFactory>` en `ArcoRequestService.crearSolicitud()`). Los helpers reutilizables (`AuditLog`, `ChileanHoliday`, `DeadlineCalculatorService`, etc.) se extrajeron a un paquete `shared/` independiente de `arco/`.
+
 ```
 Arco-service/src/main/java/com/example/demo/
-├── arco/            # Submódulo de flujos ARCO específicos (p. ej. opposition)
-├── client/          # Clientes HTTP hacia otros servicios (si aplica)
+├── arco/
+│   ├── common/
+│   │   ├── factory/ArcoRequestFactory.java        # Template method abstracto: crear() → validarContenidoMinimoArt11() + crearSolicitudEspecifica()
+│   │   └── service/ArcoRequestService.java        # Router del Factory Method + resto de lógica (estado, prórroga, disconformidad, cancelación)
+│   ├── acceso/{AccesoService,AccesoFactory}.java
+│   ├── rectificacion/{RectificacionService,RectificacionFactory}.java
+│   ├── supresion/{SupresionService,SupresionFactory,BloqueoTemporalFactory}.java   # SupresionFactory→CANCELLATION, BloqueoTemporalFactory→BLOQUEO_TEMPORAL (misma lógica de bloqueo inmediato)
+│   ├── oposicion/
+│   │   ├── OposicionService.java / OposicionFactory.java   # Livianos — usados por el router activo (operan sobre arco_request)
+│   │   ├── OppositionService.java                          # Subsistema detallado (459 líneas), movido pero SIN controller conectado — dormido
+│   │   ├── model/ repository/ enums/ exception/ dto/request/   # Soporte de OppositionService (opposition_request, agency_claim, temporary_block, third_party_notification, evidence_file)
+│   └── portabilidad/{PortabilidadService,PortabilidadFactory}.java
+├── shared/                  # Extraído de arco/common/* original — reutilizable fuera del flujo ARCO
+│   ├── ApiResponseDTO.java
+│   ├── model/{AuditLog,ChileanHoliday}.java
+│   ├── repository/{AuditLogRepository,ChileanHolidayRepository}.java
+│   ├── service/{AuditService,DeadlineCalculatorService}.java
+│   └── enums/{ActorType,ArcoType}.java
+├── client/          # OrganizationClient, ComplianceClient
 ├── config/          # SecurityConfig
 ├── controller/      # ArcoRequestController, ArcoRequestActionsController,
 │                    # ArcoRequestEvidencesController, ArcoRequestStatusHistoryController, HealthController
 ├── dto/             # request/ y response/ (ArcoRequest, Actions, Evidences, StatusHistory, Cancellation)
-├── enums/           # ArcoStatus, ArcoRequestType, ArcoRequestChannel, ArcoIdentityVerificationStatus,
+├── enums/           # ArcoStatus, ArcoRequestType (incl. BLOQUEO_TEMPORAL), ArcoRequestChannel, ArcoIdentityVerificationStatus,
 │                    # ArcoCancellationType, ArcoActionType, ArcoEvidenceType, ArcoFileType, ArcoHistoryStatus
 ├── exception/       # Manejo de errores
 ├── model/           # ArcoRequest, ArcoRequestActions, ArcoRequestEvidences, ArcoRequestStatusHistory
 ├── repository/      # JpaRepository de cada entidad
-├── service/         # Lógica de negocio: plazos (Art. 11), cambios de estado, ejecución de cancelación
-├── shared/          # ApiResponseDTO<T>
-└── util/            # Utilidades (cálculo de fechas, etc.)
+├── service/         # ArcoRequestService quedó movido a arco/common/service — aquí quedan servicios auxiliares (EmailService, etc.)
+└── util/            # BusinessDaysCalculator y otras utilidades (cálculo de plazos hábiles)
 ```
 
-Responsabilidad: ciclo de vida completo de las solicitudes ARCO (Acceso, Rectificación, Cancelación, Oposición, Portabilidad), historial de estados, evidencias y acciones ejecutadas.
+Responsabilidad: ciclo de vida completo de las 6 solicitudes ARCO (Acceso, Rectificación, Cancelación, Oposición, Portabilidad, Bloqueo Temporal), historial de estados, evidencias y acciones ejecutadas. Ver `docs/documentacion-tecnica/04-modelo-bd.md` para el modelo de datos completo.
 
 ---
 

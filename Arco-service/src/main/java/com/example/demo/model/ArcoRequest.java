@@ -96,6 +96,17 @@ public class ArcoRequest {
     @Column(name = "third_parties_notified", nullable = false, columnDefinition = "boolean default false")
     private boolean thirdPartiesNotified = false;
 
+    // Reclamo ante la Agencia (Agencia-service) — referencia al agency_claim.id creado allí
+    @Column(name = "agency_claim_id", nullable = true)
+    private UUID agencyClaimId;
+
+    // Respuesta de la Agencia, sincronizada vía callback PATCH /respuesta-agencia
+    @Column(name = "agency_resolution", nullable = true, columnDefinition = "TEXT")
+    private String agencyResolution;
+
+    @Column(name = "agency_responded_at", nullable = true)
+    private LocalDateTime agencyRespondedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

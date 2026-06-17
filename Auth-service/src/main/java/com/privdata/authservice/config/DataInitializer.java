@@ -24,6 +24,7 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final AdminProperties adminProperties;
     private final TitularProperties titularProperties;
+    private final AgencyAuditorProperties agencyAuditorProperties;
 
     @Override
     public void run(String... args){
@@ -32,6 +33,7 @@ public class DataInitializer implements CommandLineRunner {
         seedRolePermissions();
         seedSuperAdmin();
         seedTestTitular();
+        seedTestAgencyAuditor();
     }
 
     private void seedRoles(){
@@ -40,7 +42,10 @@ public class DataInitializer implements CommandLineRunner {
                 "ORG_ADMIN",
                 "ANALYST",
                 "AUDITOR",
-                "END_USER"
+                "END_USER",
+                // Rol del "tercero simulado" (Agencia de Protección de Datos) — sin permisos finos,
+                // el rol mismo es el gate de acceso al panel de Agencia-service.
+                "AGENCY_AUDITOR"
         );
 
         for (String roleName : roleNames){
@@ -234,6 +239,39 @@ public class DataInitializer implements CommandLineRunner {
         userRole.setRole(endUserRole);
         userRole.setActive(true);
         userRole.setAssignedBy(savedTitular.getId());
+        userRole.setExpiresAt(LocalDateTime.now().plusYears(99));
+
+        userRoleRepository.save(userRole);
+    }
+
+    private void seedTestAgencyAuditor() {
+
+        UUID auditorPersonId = UUID.fromString(agencyAuditorProperties.getPersonId());
+        if (userRepository.existsByEmail(agencyAuditorProperties.getEmail())) return;
+
+        Role agencyAuditorRole = roleRepository.findByName("AGENCY_AUDITOR")
+                .orElseThrow(() -> new RuntimeException("Rol AGENCY_AUDITOR no encontrado"));
+
+        User auditor = new User();
+        auditor.setEmail(agencyAuditorProperties.getEmail());
+        auditor.setPasswordHash(passwordEncoder.encode(agencyAuditorProperties.getPassword()));
+        // Simplificación de single-tenant: el auditor "externo" igual necesita un organizationId/personId
+        // válidos en PrivData porque User los exige NOT NULL — no implica que pertenezca a la organización.
+        auditor.setOrganizationId(UUID.fromString(adminProperties.getOrganizationId()));
+        auditor.setPersonId(auditorPersonId);
+        auditor.setStatus(UserStatus.ACTIVE);
+        auditor.setActive(true);
+        auditor.setFailedLoginAttempts(0);
+        auditor.setLockedUntil(LocalDateTime.now());
+        auditor.setPasswordChangedAt(LocalDateTime.now());
+
+        User savedAuditor = userRepository.save(auditor);
+
+        UserRole userRole = new UserRole();
+        userRole.setUser(savedAuditor);
+        userRole.setRole(agencyAuditorRole);
+        userRole.setActive(true);
+        userRole.setAssignedBy(savedAuditor.getId());
         userRole.setExpiresAt(LocalDateTime.now().plusYears(99));
 
         userRoleRepository.save(userRole);
