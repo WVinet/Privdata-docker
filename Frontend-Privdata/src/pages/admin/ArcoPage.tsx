@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 const TYPE_LABELS: Record<string, string> = {
   ACCESO:          "Acceso",
   RECTIFICACION:   "Rectificación",
-  SUPRESION:       "Supresión",
+  CANCELLATION:    "Supresión",
   OPOSICION:       "Oposición",
   PORTABILIDAD:    "Portabilidad",
   BLOQUEO_TEMPORAL:"Bloqueo temporal",
@@ -485,7 +485,9 @@ export default function ArcoPage() {
     enabled: !!orgId,
   })
 
-  const requests = data?.data ?? []
+  const requests = [...(data?.data ?? [])].sort(
+    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+  )
   const persons = personsData?.data ?? []
   const personsById = Object.fromEntries(persons.map((p) => [p.id, p]))
 
@@ -645,7 +647,7 @@ export default function ArcoPage() {
                         const isOverdue = days < 0 && !["RESPONDIDA", "CERRADA"].includes(r.status)
                         const titular = personsById[r.dataSubjectId]
                         return (
-                          <TableRow key={r.id}>
+                          <TableRow key={r.id} className={["CERRADA", "RESPONDIDA"].includes(r.status) ? "bg-muted/40" : undefined}>
                             <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
                               {r.id}
                             </TableCell>

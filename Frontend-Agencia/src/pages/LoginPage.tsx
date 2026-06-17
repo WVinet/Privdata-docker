@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
-import { Shield, Eye, EyeOff, Loader2 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Landmark, Eye, EyeOff, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,8 +13,8 @@ export default function LoginPage() {
   const [showPwd, setShowPwd]   = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState("")
-  const navigate           = useNavigate()
-  const { login, getUser } = useAuth()
+  const navigate  = useNavigate()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,14 +23,7 @@ export default function LoginPage() {
     const { ok, message } = await login(email, password)
     setLoading(false)
     if (ok) {
-      const user = getUser()
-      if (user?.status === "PENDING") {
-        navigate("/completar-perfil")
-      } else if (user?.authorities.includes("ROLE_END_USER")) {
-        navigate("/portal")
-      } else {
-        navigate("/dashboard")
-      }
+      navigate("/reclamos")
     } else {
       setError(message)
     }
@@ -41,17 +34,19 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3">
-            <Shield className="w-6 h-6 text-white" />
+            <Landmark className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">PrivData</h1>
-          <p className="text-sm text-muted-foreground mt-1">Cumplimiento · Ley 21.719</p>
+          <h1 className="text-2xl font-bold text-foreground text-center">
+            Agencia de Protección de Datos Personales
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Portal del Auditor · Ley 21.719</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Iniciar sesión</CardTitle>
             <CardDescription>
-              Ingresa tus credenciales para acceder al sistema.
+              Acceso exclusivo para auditores de la Agencia.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -61,7 +56,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="usuario@empresa.cl"
+                  placeholder="auditor@agencia.cl"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -95,14 +90,6 @@ export default function LoginPage() {
               {error && (
                 <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
                   <p className="text-sm text-destructive">{error}</p>
-                  {error.includes("Auditor de la Agencia") && (
-                    <a
-                      href="http://localhost:5174/login"
-                      className="text-sm font-medium text-destructive underline hover:no-underline"
-                    >
-                      Ingresar como Auditor Agencia
-                    </a>
-                  )}
                 </div>
               )}
 
@@ -112,15 +99,6 @@ export default function LoginPage() {
                   : "Ingresar"
                 }
               </Button>
-
-              <div className="text-center">
-                <Link
-                  to="/recuperar-contrasena"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </div>
             </form>
           </CardContent>
         </Card>

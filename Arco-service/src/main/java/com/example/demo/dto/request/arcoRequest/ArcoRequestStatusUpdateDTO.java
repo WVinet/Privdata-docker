@@ -22,6 +22,8 @@ public class ArcoRequestStatusUpdateDTO {
 
     private UUID changedByUserId;
 
+    private String changedByEmail;
+
     // RF-ARCO-10: el admin marca si notificó a terceros al resolver
     private Boolean thirdPartiesNotified;
 }

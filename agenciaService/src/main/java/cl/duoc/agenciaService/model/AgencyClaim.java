@@ -57,6 +57,10 @@ public class AgencyClaim {
     @Column(name = "original_denial_legal_basis", columnDefinition = "TEXT")
     private String originalDenialLegalBasis;
 
+    // Email de quien gestionó/resolvió la solicitud ARCO original en PrivData
+    @Column(name = "original_resolved_by_email")
+    private String originalResolvedByEmail;
+
     @Column(name = "claim_reason", nullable = false, columnDefinition = "TEXT")
     private String claimReason;
 

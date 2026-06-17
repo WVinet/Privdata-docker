@@ -28,6 +28,7 @@ public class AgenciaClient {
                                                 String requestType,
                                                 String originalResolutionSummary,
                                                 String originalDenialLegalBasis,
+                                                String originalResolvedByEmail,
                                                 String claimReason,
                                                 LocalDateTime submittedAt) {
         Map<String, Object> body = new HashMap<>();
@@ -39,6 +40,7 @@ public class AgenciaClient {
         body.put("requestType", requestType);
         body.put("originalResolutionSummary", originalResolutionSummary);
         body.put("originalDenialLegalBasis", originalDenialLegalBasis);
+        body.put("originalResolvedByEmail", originalResolvedByEmail);
         body.put("claimReason", claimReason);
         body.put("submittedAt", submittedAt);
 

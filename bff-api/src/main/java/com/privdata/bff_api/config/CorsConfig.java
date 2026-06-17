@@ -13,6 +13,10 @@ public class CorsConfig {
     @Value("${frontend.url}")
     private String frontendUrl;
 
+    //url del portal de la Agencia (Frontend-Agencia)
+    @Value("${agencia.frontend.url}")
+    private String agenciaFrontendUrl;
+
     //Bean que registra la configuracion CORS para todos los endpoints
     @Bean
     public WebMvcConfigurer corsConfigurer(){
@@ -22,7 +26,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry){
                 registry.addMapping("/api/**")//aplica CORS a rutas del BFF
-                        .allowedOrigins(frontendUrl)//permite react
+                        .allowedOrigins(frontendUrl, agenciaFrontendUrl)//permite ambos frontends React
                         .allowedMethods("GET","POST","DELETE","PATCH","PUT","OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);

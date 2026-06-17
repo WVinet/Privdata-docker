@@ -3,11 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Building2, Pencil, Plus, ToggleLeft, ToggleRight,
   Loader2, X, MapPin, Phone, Mail, Hash, Briefcase,
-  Users, Copy, Check, UserPlus,
+  Users,
 } from "lucide-react"
 import { organizationsApi, departmentsApi, personsApi } from "@/lib/api"
-import type { Organization, OrganizationUpdateRequest, Department, DepartmentCreateRequest } from "@/types/organization"
-import type { InvitePersonRequest } from "@/types/person"
+import type { Organization, OrganizationUpdateRequest, DepartmentCreateRequest } from "@/types/organization"
 import { useAuth } from "@/hooks/use-auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,13 +14,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-const ROLES = [
-  { value: "END_USER",  label: "Titular (END_USER)" },
-  { value: "ANALYST",   label: "Analista (ANALYST)" },
-  { value: "AUDITOR",   label: "Auditor (AUDITOR)" },
-  { value: "ORG_ADMIN", label: "Administrador (ORG_ADMIN)" },
-]
 
 // ── Modal editar organización ──────────────────────────────────────────────────
 function EditOrgModal({ org, onClose }: { org: Organization; onClose: () => void }) {
@@ -162,169 +154,6 @@ function AddDeptModal({ orgId, onClose }: { orgId: string; onClose: () => void }
   )
 }
 
-// ── Modal invitar persona ──────────────────────────────────────────────────────
-function InvitePersonModal({
-  orgId,
-  departments,
-  onClose,
-}: {
-  orgId: string
-  departments: Department[]
-  onClose: () => void
-}) {
-  const qc = useQueryClient()
-  const [form, setForm] = useState<InvitePersonRequest>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    position: "",
-    departmentId: "",
-    roleName: "END_USER",
-  })
-  const [error, setError] = useState("")
-  const [tempPassword, setTempPassword] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-
-  const set = (k: keyof InvitePersonRequest) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setForm((f) => ({ ...f, [k]: e.target.value }))
-
-  const mutation = useMutation({
-    mutationFn: () => {
-      const body: InvitePersonRequest = {
-        ...form,
-        departmentId: form.departmentId || undefined,
-        position: form.position || undefined,
-      }
-      return personsApi.invite(orgId, body)
-    },
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["persons", orgId] })
-      const pwd = res.data.data?.user?.data?.temporaryPassword
-      setTempPassword(pwd ?? null)
-    },
-    onError: (e: unknown) =>
-      setError(
-        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-          "Error al invitar a la persona"
-      ),
-  })
-
-  const copyPassword = () => {
-    if (!tempPassword) return
-    navigator.clipboard.writeText(tempPassword)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-lg space-y-4 p-6">
-        <div className="flex items-start justify-between">
-          <p className="font-semibold text-foreground">Invitar persona</p>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {tempPassword ? (
-          // ── Estado: éxito ──
-          <div className="space-y-4">
-            <div className="rounded-lg bg-primary/10 border border-primary/20 p-4 space-y-2 text-center">
-              <p className="text-sm font-medium text-foreground">
-                ¡Persona invitada correctamente!
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Comparte esta contraseña temporal con{" "}
-                <span className="font-medium text-foreground">{form.firstName}</span>. Deberá usarla
-                en su primer inicio de sesión.
-              </p>
-              <div className="flex items-center justify-center gap-2 mt-3">
-                <code className="px-3 py-1.5 rounded-md bg-muted font-mono text-sm tracking-wider">
-                  {tempPassword}
-                </code>
-                <Button variant="outline" size="sm" onClick={copyPassword}>
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button size="sm" onClick={onClose}>Cerrar</Button>
-            </div>
-          </div>
-        ) : (
-          // ── Formulario ──
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Nombre *</Label>
-                <Input placeholder="Juan" value={form.firstName} onChange={set("firstName")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Apellido *</Label>
-                <Input placeholder="Pérez" value={form.lastName} onChange={set("lastName")} />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Correo electrónico *</Label>
-                <Input
-                  type="email"
-                  placeholder="juan.perez@empresa.cl"
-                  value={form.email}
-                  onChange={set("email")}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Cargo</Label>
-                <Input placeholder="ej. Analista de datos" value={form.position ?? ""} onChange={set("position")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Departamento</Label>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={form.departmentId ?? ""}
-                  onChange={set("departmentId")}
-                >
-                  <option value="">Sin departamento</option>
-                  {departments.filter((d) => d.isActive).map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Rol en el sistema *</Label>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={form.roleName}
-                  onChange={set("roleName")}
-                >
-                  {ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {error && <p className="text-sm text-destructive">{error}</p>}
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-              <Button
-                size="sm"
-                onClick={() => mutation.mutate()}
-                disabled={!form.firstName.trim() || !form.lastName.trim() || !form.email.trim() || mutation.isPending}
-              >
-                {mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                <UserPlus className="w-4 h-4 mr-1.5" />
-                Invitar
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── Info field ─────────────────────────────────────────────────────────────────
 function InfoField({ icon: Icon, label, value }: {
   icon: React.ElementType
@@ -353,7 +182,6 @@ export default function MiOrganizacionPage() {
 
   const [editingOrg, setEditingOrg]     = useState(false)
   const [addingDept, setAddingDept]     = useState(false)
-  const [invitingPerson, setInviting]   = useState(false)
 
   const { data: orgData, isLoading: loadingOrg } = useQuery({
     queryKey: ["my-org", orgId],
@@ -396,13 +224,6 @@ export default function MiOrganizacionPage() {
       )}
       {addingDept && (
         <AddDeptModal orgId={orgId} onClose={() => setAddingDept(false)} />
-      )}
-      {invitingPerson && (
-        <InvitePersonModal
-          orgId={orgId}
-          departments={depts}
-          onClose={() => setInviting(false)}
-        />
       )}
 
       <div className="space-y-6">
@@ -542,9 +363,9 @@ export default function MiOrganizacionPage() {
                   <Badge variant="secondary" className="text-xs">{persons.length}</Badge>
                 )}
               </div>
-              <Button size="sm" onClick={() => setInviting(true)}>
-                <UserPlus className="w-4 h-4 mr-1.5" />Invitar persona
-              </Button>
+              <p className="text-xs text-muted-foreground">
+                Para registrar personas, usa Usuarios (personal interno) o Titulares (titulares de datos)
+              </p>
             </div>
           </CardHeader>
 

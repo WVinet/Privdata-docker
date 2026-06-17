@@ -3,7 +3,7 @@ export type ArcoStatus =
   | "RESPONDIDA" | "RECHAZADA" | "CERRADA"
 
 export type ArcoRequestType =
-  | "ACCESO" | "RECTIFICACION" | "SUPRESION"
+  | "ACCESO" | "RECTIFICACION" | "CANCELLATION"
   | "OPOSICION" | "PORTABILIDAD" | "BLOQUEO_TEMPORAL"
 
 export type ArcoRequestChannel =
@@ -32,6 +32,9 @@ export interface ArcoRequest {
   titularDisconforme?: boolean
   closedAt?: string
   thirdPartiesNotified?: boolean
+  agencyClaimId?: string | null
+  agencyResolution?: string | null
+  agencyRespondedAt?: string | null
 }
 
 export interface CreateArcoRequest {

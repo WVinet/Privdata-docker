@@ -30,6 +30,7 @@ public class ArcoRequestResponseDTO {
     private LocalDateTime submittedAt;
     private LocalDateTime dueDate;
     private LocalDateTime resolvedAt;
+    private String resolvedByEmail;
     private String denialLegalBasis;
     private boolean extensionGranted;
     private LocalDateTime extendedDueDate;
@@ -62,6 +63,7 @@ public class ArcoRequestResponseDTO {
         dto.setSubmittedAt(e.getSubmittedAt());
         dto.setDueDate(e.getDueDate());
         dto.setResolvedAt(e.getResolvedAt());
+        dto.setResolvedByEmail(e.getResolvedByEmail());
         dto.setDenialLegalBasis(e.getDenialLegalBasis());
         dto.setExtensionGranted(e.isExtensionGranted());
         dto.setExtendedDueDate(e.getExtendedDueDate());

@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom"
 import { authApi } from "@/lib/api"
 import type { MeResponse } from "@/types/auth"
 
-const TOKEN_KEY = "privdata_token"
-const USER_KEY  = "privdata_user"
+const TOKEN_KEY = "agencia_token"
+const USER_KEY  = "agencia_user"
 
 function saveSession(token: string, user: MeResponse) {
   sessionStorage.setItem(TOKEN_KEY, token)
@@ -35,14 +35,6 @@ export function useAuth() {
     return user ?? getStoredUser()
   }, [user])
 
-  // Acepta tanto "ARCO_VIEW" como "ROLE_ADMIN"
-  const hasPermission = useCallback((permission: string): boolean => {
-    const current = user ?? getStoredUser()
-    if (!current) return false
-    const norm = permission.toUpperCase()
-    return current.authorities.some((a) => a === norm || a === `ROLE_${norm}`)
-  }, [user])
-
   const hasRole = useCallback((role: string): boolean => {
     const current = user ?? getStoredUser()
     if (!current) return false
@@ -51,6 +43,7 @@ export function useAuth() {
 
   // 1. Llama /auth/login → guarda token
   // 2. Llama /auth/me    → guarda usuario completo con authorities
+  // 3. Exige el rol AGENCY_AUDITOR — este portal es solo para el auditor de la Agencia
   const login = useCallback(async (
     email: string,
     password: string
@@ -62,7 +55,7 @@ export function useAuth() {
         return { ok: false, message: loginRes.data?.message ?? "Error al iniciar sesión" }
       }
 
-      sessionStorage.setItem(TOKEN_KEY, token) // necesario para que /auth/me lleve el JWT
+      sessionStorage.setItem(TOKEN_KEY, token)
 
       const meRes = await authApi.me()
       const userData = meRes.data?.data
@@ -71,30 +64,22 @@ export function useAuth() {
         return { ok: false, message: "No se pudo obtener el perfil del usuario" }
       }
 
-      // Las cuentas de auditor de la Agencia no tienen acceso a este portal — usan Frontend-Agencia
-      if (userData.authorities.includes("ROLE_AGENCY_AUDITOR")) {
+      if (!userData.authorities.includes("ROLE_AGENCY_AUDITOR")) {
         clearSession()
-        return { ok: false, message: "Esta es una cuenta de Auditor de la Agencia." }
+        return { ok: false, message: "Esta cuenta no tiene acceso al portal de la Agencia." }
       }
 
       saveSession(token, userData)
       setUser(userData)
 
-  return { ok: true, message: "Sesión iniciada" }
-
-  } catch (error: unknown) {
-    clearSession()
-
-    const rawMsg =
-      (error as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message ?? "Credenciales inválidas"
-
-    const msg = rawMsg.includes("Credenciales inválidas")
-      ? "Credenciales inválidas"
-      : rawMsg
-
-    return { ok: false, message: msg }
-  }
+      return { ok: true, message: "Sesión iniciada" }
+    } catch (error: unknown) {
+      clearSession()
+      const rawMsg =
+        (error as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message ?? "Credenciales inválidas"
+      return { ok: false, message: rawMsg }
+    }
   }, [])
 
   const logout = useCallback(() => {
@@ -103,5 +88,5 @@ export function useAuth() {
     navigate("/login")
   }, [navigate])
 
-  return { isAuthenticated, getUser, hasPermission, hasRole, login, logout, user }
+  return { isAuthenticated, getUser, hasRole, login, logout, user }
 }
