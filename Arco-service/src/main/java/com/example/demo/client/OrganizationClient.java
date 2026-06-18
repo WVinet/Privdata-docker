@@ -122,4 +122,23 @@ public class OrganizationClient {
                 .toBodilessEntity();
     }
 
+    ///Anonimizacion
+    public void anonymizePerson(
+            UUID organizationId,
+            UUID personId
+    ) {
+
+        orgClient.post()
+                .uri(
+                        organizationServiceUrl
+                                + "/api/organizations/"
+                                + organizationId
+                                + "/persons/"
+                                + personId
+                                + "/anonymize"
+                )
+                .retrieve()
+                .toBodilessEntity();
+    }
+
 }
