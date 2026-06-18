@@ -110,6 +110,49 @@ public class ArcoClient {
         return forward("PATCH", "/api/arso/opposition/" + id + "/respond", body);
     }
 
+    public Object createPortability(Map<String, Object> body) {
+        return forward("POST", "/api/arso/portability", body);
+    }
+
+    public Object verifyPortabilityIdentity(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/portability/" + id + "/verify-identity", body);
+    }
+
+    public Object respondPortability(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/portability/" + id + "/respond", body);
+    }
+
+    public org.springframework.http.ResponseEntity<byte[]> downloadPortability(String id) {
+        return arcoRestClient.get()
+                .uri("/api/arso/portability/" + id + "/download")
+                .retrieve()
+                .toEntity(byte[].class);
+    }
+
+    public Object createBlocking(Map<String, Object> body) {
+        return forward("POST", "/api/arso/blocking", body);
+    }
+
+    public Object verifyBlockingIdentity(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/blocking/" + id + "/verify-identity", body);
+    }
+
+    public Object respondBlocking(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/blocking/" + id + "/respond", body);
+    }
+
+    public Object createAnonymization(Map<String, Object> body) {
+        return forward("POST", "/api/arso/anonymization", body);
+    }
+
+    public Object verifyAnonymizationIdentity(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/anonymization/" + id + "/verify-identity", body);
+    }
+
+    public Object respondAnonymization(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/anonymization/" + id + "/respond", body);
+    }
+
     private Object forward(String method, String uri, Object body) {
         try {
             var spec = arcoRestClient.method(HttpMethod.valueOf(method)).uri(uri);

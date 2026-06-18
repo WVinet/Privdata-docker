@@ -37,3 +37,17 @@ export interface DepartmentCreateRequest {
   name: string
   description?: string
 }
+
+export interface JobPosition {
+  id: string
+  organizationId: string
+  name: string
+  description: string | null
+  isActive: boolean
+  createdAt: string
+}
+
+export interface JobPositionCreateRequest {
+  name: string
+  description?: string
+}

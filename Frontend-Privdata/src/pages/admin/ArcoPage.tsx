@@ -125,9 +125,12 @@ function UpdateStatusModal({
   const canExtend = !request.extensionGranted && NOT_RESOLVED.includes(effectiveStatus)
   const availableActions: ActionKey[] = canExtend ? [...transitions, "PRORROGA"] : transitions
 
-  // Acceso, Rectificación, Supresión y Oposición tienen su propio flujo de verificación de identidad
-  // (AccesoService/RectificacionService/SupresionService/OppositionService) en vez del auto-paso a EN_GESTION genérico.
-  const requiresExplicitIdentity = ["ACCESO", "RECTIFICACION", "SUPRESION", "OPOSICION"].includes(request.requestType)
+  // Acceso, Rectificación, Supresión, Oposición, Portabilidad, Bloqueo y Anonimización tienen su propio flujo
+  // de verificación de identidad (Xxx Service) en vez del auto-paso a EN_GESTION genérico.
+  const requiresExplicitIdentity = [
+    "ACCESO", "RECTIFICACION", "SUPRESION", "OPOSICION",
+    "PORTABILIDAD", "BLOQUEO_TEMPORAL", "ANONIMIZACION",
+  ].includes(request.requestType)
   const [identityComment, setIdentityComment] = useState("")
 
   const autoGestionMutation = useMutation({
@@ -148,7 +151,10 @@ function UpdateStatusModal({
         request.requestType === "ACCESO" ? arcoApi.verifyAccessIdentity :
         request.requestType === "RECTIFICACION" ? arcoApi.verifyRectificationIdentity :
         request.requestType === "SUPRESION" ? arcoApi.verifySuppressionIdentity :
-        arcoApi.verifyOppositionIdentity
+        request.requestType === "OPOSICION" ? arcoApi.verifyOppositionIdentity :
+        request.requestType === "PORTABILIDAD" ? arcoApi.verifyPortabilityIdentity :
+        request.requestType === "BLOQUEO_TEMPORAL" ? arcoApi.verifyBlockingIdentity :
+        arcoApi.verifyAnonymizationIdentity
       const res = await call(request.id, verified, identityComment.trim() || undefined)
       if (!res.data.success) throw new Error(res.data.message)
       return verified
@@ -315,11 +321,16 @@ function UpdateStatusModal({
 
         {request.requestType === "PORTABILIDAD" && pendingAction === null && (
           <ArcoPortabilityPanel
+            arcoRequestId={request.id}
             dataSubjectId={request.dataSubjectId}
             organizationId={request.organizationId}
-            onGenerateResolution={(text) => {
+            description={request.description}
+            status={effectiveStatus}
+            onApplied={(text) => {
+              // El panel ya llamó a respondPortability; se deja el modal abierto para permitir
+              // descargar el archivo generado antes de cerrar.
               setComment(text)
-              if (transitions.includes("RESPONDIDA")) setPendingAction("RESPONDIDA")
+              qc.invalidateQueries({ queryKey: ["arco"] })
             }}
           />
         )}
@@ -341,19 +352,31 @@ function UpdateStatusModal({
 
         {request.requestType === "BLOQUEO_TEMPORAL" && pendingAction === null && (
           <ArcoBlockingPanel
+            arcoRequestId={request.id}
             dataSubjectId={request.dataSubjectId}
             organizationId={request.organizationId}
             description={request.description}
-            onApplied={(text) => setComment(text)}
+            onApplied={(text) => {
+              // El panel ya llamó a respondBlocking y dejó la solicitud resuelta en el backend.
+              setComment(text)
+              qc.invalidateQueries({ queryKey: ["arco"] })
+              onClose()
+            }}
           />
         )}
 
         {request.requestType === "ANONIMIZACION" && pendingAction === null && (
           <ArcoAnonymizationPanel
+            arcoRequestId={request.id}
             dataSubjectId={request.dataSubjectId}
             organizationId={request.organizationId}
             description={request.description}
-            onApplied={(text) => setComment(text)}
+            onApplied={(text) => {
+              // El panel ya llamó a respondAnonymization y dejó la solicitud resuelta en el backend.
+              setComment(text)
+              qc.invalidateQueries({ queryKey: ["arco"] })
+              onClose()
+            }}
           />
         )}
 
@@ -768,9 +791,17 @@ export default function ArcoPage() {
                               {TYPE_LABELS[r.requestType] ?? r.requestType}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={statusVariant(r.status)}>
-                                {STATUS_LABELS[r.status] ?? r.status}
-                              </Badge>
+                              <div className="flex flex-col gap-1">
+                                <Badge variant={statusVariant(r.status)} className="w-fit">
+                                  {STATUS_LABELS[r.status] ?? r.status}
+                                </Badge>
+                                {r.agencyClaimId && (
+                                  <Badge variant="outline" className="w-fit text-[10px] gap-1 border-destructive/40 text-destructive">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    {r.agencyRespondedAt ? "Reclamo resuelto por Agencia" : "Reclamo en Agencia"}
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
                               {formatDate(r.submittedAt)}

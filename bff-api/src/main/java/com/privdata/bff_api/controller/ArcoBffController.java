@@ -157,4 +157,78 @@ public class ArcoBffController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         return ResponseEntity.ok(service.respondOpposition(id, body, authorization));
     }
+
+    @PostMapping("/portability")
+    public ResponseEntity<?> createPortability(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.createPortability(body, authorization));
+    }
+
+    @PatchMapping("/portability/{id}/verify-identity")
+    public ResponseEntity<?> verifyPortabilityIdentity(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.verifyPortabilityIdentity(id, body, authorization));
+    }
+
+    @PatchMapping("/portability/{id}/respond")
+    public ResponseEntity<?> respondPortability(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.respondPortability(id, body, authorization));
+    }
+
+    @GetMapping("/portability/{id}/download")
+    public ResponseEntity<byte[]> downloadPortability(@PathVariable String id) {
+        return service.downloadPortability(id);
+    }
+
+    @PostMapping("/blocking")
+    public ResponseEntity<?> createBlocking(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.createBlocking(body, authorization));
+    }
+
+    @PatchMapping("/blocking/{id}/verify-identity")
+    public ResponseEntity<?> verifyBlockingIdentity(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.verifyBlockingIdentity(id, body, authorization));
+    }
+
+    @PatchMapping("/blocking/{id}/respond")
+    public ResponseEntity<?> respondBlocking(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.respondBlocking(id, body, authorization));
+    }
+
+    @PostMapping("/anonymization")
+    public ResponseEntity<?> createAnonymization(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.createAnonymization(body, authorization));
+    }
+
+    @PatchMapping("/anonymization/{id}/verify-identity")
+    public ResponseEntity<?> verifyAnonymizationIdentity(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.verifyAnonymizationIdentity(id, body, authorization));
+    }
+
+    @PatchMapping("/anonymization/{id}/respond")
+    public ResponseEntity<?> respondAnonymization(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.respondAnonymization(id, body, authorization));
+    }
 }

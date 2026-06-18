@@ -192,6 +192,91 @@ public class ArcoBffService {
         return result;
     }
 
+    public Object createPortability(Map<String, Object> body, String authorization) {
+        Object result = arcoClient.createPortability(body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "CREATE", "Solicitud ARSO",
+                "Nueva solicitud de portabilidad registrada",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object verifyPortabilityIdentity(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.verifyPortabilityIdentity(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Verificación de identidad registrada para solicitud de portabilidad " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object respondPortability(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.respondPortability(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Solicitud de portabilidad respondida " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public org.springframework.http.ResponseEntity<byte[]> downloadPortability(String id) {
+        return arcoClient.downloadPortability(id);
+    }
+
+    public Object createBlocking(Map<String, Object> body, String authorization) {
+        Object result = arcoClient.createBlocking(body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "CREATE", "Solicitud ARSO",
+                "Nueva solicitud de bloqueo registrada",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object verifyBlockingIdentity(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.verifyBlockingIdentity(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Verificación de identidad registrada para solicitud de bloqueo " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object respondBlocking(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.respondBlocking(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Solicitud de bloqueo respondida " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object createAnonymization(Map<String, Object> body, String authorization) {
+        Object result = arcoClient.createAnonymization(body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "CREATE", "Solicitud ARSO",
+                "Nueva solicitud de anonimización registrada",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object verifyAnonymizationIdentity(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.verifyAnonymizationIdentity(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Verificación de identidad registrada para solicitud de anonimización " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object respondAnonymization(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.respondAnonymization(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Solicitud de anonimización respondida " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
     private String extractDataField(Object result, String key) {
         if (!(result instanceof Map<?, ?> resultMap) || !(resultMap.get("data") instanceof Map<?, ?> data)) return null;
         Object value = data.get(key);

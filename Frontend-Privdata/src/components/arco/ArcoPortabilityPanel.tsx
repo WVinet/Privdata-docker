@@ -1,7 +1,9 @@
-import { useQuery } from "@tanstack/react-query"
-import { Loader2, Download, FileJson, ShieldCheck, AlertTriangle, UserRound } from "lucide-react"
-import { complianceApi, personsApi } from "@/lib/api"
+import { useState } from "react"
+import { useQuery, useMutation } from "@tanstack/react-query"
+import { Loader2, Download, FileJson, ShieldCheck, AlertTriangle, UserRound, CheckCircle2, XCircle } from "lucide-react"
+import { complianceApi, personsApi, arcoApi } from "@/lib/api"
 import type { Consent, TreatmentActivity } from "@/types/compliance"
+import { parsePortability, PORTABILITY_CAUSE_LABELS } from "@/lib/portability"
 
 const LEGAL_BASIS_LABEL: Record<string, string> = {
   CONSENTIMIENTO:   "Consentimiento (Art. 12)",
@@ -18,12 +20,22 @@ function formatDate(iso: string | null) {
 }
 
 interface Props {
+  arcoRequestId: string
   dataSubjectId: string
   organizationId: string
-  onGenerateResolution: (text: string) => void
+  description: string
+  status: string
+  onApplied: (resolutionText: string) => void
 }
 
-export default function ArcoPortabilityPanel({ dataSubjectId, organizationId, onGenerateResolution }: Props) {
+export default function ArcoPortabilityPanel({ arcoRequestId, dataSubjectId, organizationId, description, status, onApplied }: Props) {
+  const details = parsePortability(description)
+  const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle")
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [observations, setObservations] = useState("")
+  const [downloadError, setDownloadError] = useState("")
+  const [justApproved, setJustApproved] = useState(false)
+
   const { data: personData, isLoading: loadingPerson } = useQuery({
     queryKey: ["person", organizationId, dataSubjectId],
     queryFn: () => personsApi.getById(organizationId, dataSubjectId).then(r => r.data),
@@ -47,6 +59,45 @@ export default function ArcoPortabilityPanel({ dataSubjectId, organizationId, on
 
   const portableActivities = activities.filter(a => a.status === "ACTIVE" && a.legalBasis === "CONSENTIMIENTO")
   const excludedActivities = activities.filter(a => a.status === "ACTIVE" && a.legalBasis !== "CONSENTIMIENTO")
+
+  const respondMutation = useMutation({
+    mutationFn: async (approved: boolean) => {
+      const res = await arcoApi.respondPortability(arcoRequestId, {
+        approved,
+        observations: approved ? observations.trim() || undefined : undefined,
+        rejectionReason: !approved ? rejectionReason.trim() || undefined : undefined,
+      })
+      if (!res.data.success) throw new Error(res.data.message)
+      return { approved, data: res.data.data }
+    },
+    onSuccess: ({ approved, data }) => {
+      setMode("idle")
+      if (approved) setJustApproved(true)
+      onApplied(
+        approved
+          ? `Informe de Portabilidad — Art. 8 bis Ley 21.719\n\nSolicitud aprobada. Se generó un archivo con los datos del titular disponible para descarga.` +
+            (observations.trim() ? `\n\n${observations.trim()}` : "")
+          : `Portabilidad rechazada — Art. 8 bis Ley 21.719\n\n${data?.resolutionSummary ?? rejectionReason.trim()}`
+      )
+    },
+  })
+
+  const downloadMutation = useMutation({
+    mutationFn: async () => {
+      const res = await arcoApi.downloadPortability(arcoRequestId)
+      return res.data
+    },
+    onSuccess: (blob) => {
+      setDownloadError("")
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `portabilidad-${dataSubjectId}.json`
+      link.click()
+      URL.revokeObjectURL(url)
+    },
+    onError: () => setDownloadError("No se pudo descargar el archivo generado"),
+  })
 
   function buildExportData() {
     return {
@@ -80,34 +131,23 @@ export default function ArcoPortabilityPanel({ dataSubjectId, organizationId, on
     }
   }
 
-  function handleDownload() {
+  function handlePreviewDownload() {
     const blob = new Blob([JSON.stringify(buildExportData(), null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `portabilidad-${dataSubjectId}.json`
+    link.download = `portabilidad-vista-previa-${dataSubjectId}.json`
     link.click()
     URL.revokeObjectURL(url)
   }
 
-  function buildResolution() {
-    const lines: string[] = []
-    lines.push(`Informe de Portabilidad — Art. 9 Ley 21.719`)
-    lines.push(`Fecha de emisión: ${formatDate(new Date().toISOString())}`)
-    lines.push("")
-    lines.push("A continuación se entregan tus datos personales en un formato estructurado, genérico y de uso común (JSON), conforme al Art. 9 de la Ley 21.719. Solo se incluyen los datos cuyo tratamiento se basa en tu consentimiento.")
-    lines.push("")
-    lines.push(JSON.stringify(buildExportData(), null, 2))
-
-    if (excludedActivities.length > 0) {
-      lines.push("")
-      lines.push(`Nota: ${excludedActivities.length} actividad(es) de tratamiento no se incluyeron en esta exportación por no estar basadas en tu consentimiento (Art. 9 Ley 21.719):`)
-      excludedActivities.forEach((a) => {
-        lines.push(`  - ${a.name} — Base legal: ${LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis}`)
-      })
-    }
-
-    onGenerateResolution(lines.join("\n"))
+  if (!details) {
+    return (
+      <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Solicitud de portabilidad</p>
+        <p className="whitespace-pre-line">{description}</p>
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -119,38 +159,40 @@ export default function ArcoPortabilityPanel({ dataSubjectId, organizationId, on
     )
   }
 
+  const alreadyApplied = status === "RESPONDIDA" || justApproved
+
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4 text-sm">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 font-semibold text-foreground">
-          <FileJson className="w-4 h-4 text-primary" />
-          Exportación de datos (Portabilidad)
+      <div className="flex items-center gap-2 font-semibold text-foreground">
+        <FileJson className="w-4 h-4 text-primary" />
+        Solicitud de portabilidad
+      </div>
+
+      <div className="rounded-lg bg-background border border-border px-3 py-2 space-y-1.5 text-xs">
+        <div>
+          <span className="text-muted-foreground">Titular:</span>{" "}
+          <span className="font-medium text-foreground">{person?.fullName ?? "—"}</span>
+          {person?.rut && <span className="text-foreground"> · {person.rut}</span>}
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted inline-flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Descargar JSON
-          </button>
-          <button
-            type="button"
-            onClick={buildResolution}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-            style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
-          >
-            Usar como resolución →
-          </button>
+        <div>
+          <span className="text-muted-foreground">Motivo invocado:</span>{" "}
+          <span className="font-medium text-foreground">{PORTABILITY_CAUSE_LABELS[details.cause]}</span>
+        </div>
+        {details.destinationOrganization && (
+          <div>
+            <span className="text-muted-foreground">Responsable de destino:</span>{" "}
+            <span className="text-foreground">{details.destinationOrganization}</span>
+          </div>
+        )}
+        <div>
+          <span className="text-muted-foreground">Detalle indicado por el titular:</span>{" "}
+          <span className="text-foreground">{details.reason}</span>
         </div>
       </div>
 
       <p className="text-xs text-muted-foreground">
         Conforme al Art. 9 de la Ley 21.719, la portabilidad solo procede sobre datos tratados de forma automatizada y cuyo
-        tratamiento se base en el <span className="font-medium text-foreground">consentimiento</span> del titular. Los datos
-        identificativos y consentimientos se incluyen siempre; las actividades de tratamiento solo se incluyen si su base
-        legal es consentimiento.
+        tratamiento se base en el <span className="font-medium text-foreground">consentimiento</span> del titular.
       </p>
 
       {/* Datos identificativos */}
@@ -217,22 +259,6 @@ export default function ArcoPortabilityPanel({ dataSubjectId, organizationId, on
               <div key={a.id} className="rounded-lg bg-background border border-border px-3 py-2 space-y-0.5">
                 <p className="text-xs font-medium text-foreground">{a.name}</p>
                 <p className="text-xs text-muted-foreground">{a.purpose}</p>
-                {a.dataCategories.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {a.dataCategories.map(dc => (
-                      <span
-                        key={dc.id}
-                        className="text-xs px-1.5 py-0.5 rounded-full"
-                        style={{
-                          background: dc.sensitive ? "hsl(var(--destructive) / 0.1)" : "hsl(var(--muted))",
-                          color: dc.sensitive ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))",
-                        }}
-                      >
-                        {dc.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -253,6 +279,125 @@ export default function ArcoPortabilityPanel({ dataSubjectId, organizationId, on
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={handlePreviewDownload}
+        className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted inline-flex items-center gap-1.5"
+      >
+        <Download className="w-3.5 h-3.5" />
+        Descargar vista previa (JSON)
+      </button>
+
+      {alreadyApplied ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "hsl(var(--success))" }}>
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            La solicitud ya fue respondida. El archivo oficial quedó generado y disponible para descarga.
+          </div>
+          {downloadError && <p className="text-xs text-destructive">{downloadError}</p>}
+          <button
+            type="button"
+            onClick={() => downloadMutation.mutate()}
+            disabled={downloadMutation.isPending}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+            style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
+          >
+            {downloadMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <Download className="w-3.5 h-3.5" />
+            Descargar archivo oficial
+          </button>
+        </div>
+      ) : mode === "approve" ? (
+        <div className="rounded-lg border border-primary/40 bg-background p-3 space-y-2">
+          <p className="flex items-start gap-1.5 text-xs font-medium text-primary">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            Esta acción generará el archivo de exportación oficial y lo dejará disponible para descarga.
+          </p>
+          <textarea
+            rows={2}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Observaciones para el titular (opcional)…"
+            value={observations}
+            onChange={(e) => setObservations(e.target.value)}
+          />
+          {respondMutation.isError && (
+            <p className="text-xs text-destructive">{(respondMutation.error as Error).message}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => respondMutation.mutate(true)}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+              style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
+            >
+              {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Sí, aprobar y generar archivo
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("idle")}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : mode === "reject" ? (
+        <div className="rounded-lg border border-border bg-background p-3 space-y-2">
+          <textarea
+            rows={2}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Motivo del rechazo (opcional — si se deja vacío se usa un texto estándar)…"
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+          />
+          {respondMutation.isError && (
+            <p className="text-xs text-destructive">{(respondMutation.error as Error).message}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => respondMutation.mutate(false)}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+              style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
+            >
+              {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Confirmar rechazo
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("idle")}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("approve")}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+            style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
+          >
+            Aprobar y generar archivo
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("reject")}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted inline-flex items-center gap-1.5"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            Rechazar
+          </button>
         </div>
       )}
     </div>

@@ -73,6 +73,37 @@ public class OrganizationBffController {
         return ResponseEntity.ok(service.updateDepartmentStatus(orgId, deptId, body));
     }
 
+    // ── Cargos ────────────────────────────────────────────────────────────────
+
+    @GetMapping("/{orgId}/job-positions")
+    public ResponseEntity<?> listJobPositions(@PathVariable String orgId) {
+        return ResponseEntity.ok(service.listJobPositions(orgId));
+    }
+
+    @GetMapping("/{orgId}/job-positions/{jobPositionId}")
+    public ResponseEntity<?> getJobPosition(@PathVariable String orgId, @PathVariable String jobPositionId) {
+        return ResponseEntity.ok(service.getJobPosition(orgId, jobPositionId));
+    }
+
+    @PostMapping("/{orgId}/job-positions")
+    public ResponseEntity<?> createJobPosition(@PathVariable String orgId, @RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(service.createJobPosition(orgId, body));
+    }
+
+    @PutMapping("/{orgId}/job-positions/{jobPositionId}")
+    public ResponseEntity<?> updateJobPosition(
+            @PathVariable String orgId, @PathVariable String jobPositionId,
+            @RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(service.updateJobPosition(orgId, jobPositionId, body));
+    }
+
+    @PatchMapping("/{orgId}/job-positions/{jobPositionId}/status")
+    public ResponseEntity<?> updateJobPositionStatus(
+            @PathVariable String orgId, @PathVariable String jobPositionId,
+            @RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(service.updateJobPositionStatus(orgId, jobPositionId, body));
+    }
+
     // ── Personas ──────────────────────────────────────────────────────────────
 
     @GetMapping("/{orgId}/persons/{personId}")

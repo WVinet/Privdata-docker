@@ -30,6 +30,12 @@ public class OrganizationBffService {
     public Object updateDepartment(String orgId, String deptId, Map<String, Object> b) { return organizationClient.updateDepartment(orgId, deptId, b); }
     public Object updateDepartmentStatus(String orgId, String deptId, Map<String, Object> b){ return organizationClient.updateDepartmentStatus(orgId, deptId, b); }
 
+    public Object listJobPositions(String orgId)                                          { return organizationClient.listJobPositions(orgId); }
+    public Object getJobPosition(String orgId, String jobPositionId)                       { return organizationClient.getJobPosition(orgId, jobPositionId); }
+    public Object createJobPosition(String orgId, Map<String, Object> body)                { return organizationClient.createJobPosition(orgId, body); }
+    public Object updateJobPosition(String orgId, String jobPositionId, Map<String, Object> b)  { return organizationClient.updateJobPosition(orgId, jobPositionId, b); }
+    public Object updateJobPositionStatus(String orgId, String jobPositionId, Map<String, Object> b){ return organizationClient.updateJobPositionStatus(orgId, jobPositionId, b); }
+
     public Object getPerson(String orgId, String personId)                     { return organizationClient.getPerson(orgId, personId); }
     public Object listPersons(String orgId, String departmentId)               { return organizationClient.listPersons(orgId, departmentId); }
     public Object updatePerson(String orgId, String personId, Map<String, Object> b)      { return organizationClient.updatePerson(orgId, personId, b); }

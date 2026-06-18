@@ -7,6 +7,7 @@ import type {
 import type {
   Organization, OrganizationCreateRequest, OrganizationUpdateRequest,
   Department, DepartmentCreateRequest,
+  JobPosition, JobPositionCreateRequest,
 } from "@/types/organization"
 import type {
   Person, InvitePersonRequest, UpdatePersonRequest, InvitePersonResponse,
@@ -15,6 +16,9 @@ import type {
   ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel,
   CreateArcoRequest, UpdateArcoStatus, CreateSuppressionDetails, RespondSuppression,
   CreateOppositionDetails, RespondOpposition,
+  CreatePortabilityDetails, RespondPortability,
+  CreateBlockingDetails, RespondBlocking,
+  CreateAnonymizationDetails, RespondAnonymization,
 } from "@/types/arco"
 import type {
   Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus,
@@ -24,7 +28,7 @@ import type {
 import type { AuditPage } from "@/types/audit"
 
 export type { ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel, CreateArcoRequest, UpdateArcoStatus }
-export type { Organization, OrganizationCreateRequest, OrganizationUpdateRequest, Department, DepartmentCreateRequest }
+export type { Organization, OrganizationCreateRequest, OrganizationUpdateRequest, Department, DepartmentCreateRequest, JobPosition, JobPositionCreateRequest }
 export type { Person, InvitePersonRequest, UpdatePersonRequest, InvitePersonResponse }
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "/api"
@@ -133,6 +137,21 @@ export const departmentsApi = {
     ),
 }
 
+// ── Job Positions (Cargos) ──────────────────────────────────────────────────────
+export const jobPositionsApi = {
+  list: (organizationId: string) =>
+    api.get<ApiResponse<JobPosition[]>>(`/organizations/${organizationId}/job-positions`),
+
+  create: (organizationId: string, body: JobPositionCreateRequest) =>
+    api.post<ApiResponse<JobPosition>>(`/organizations/${organizationId}/job-positions`, body),
+
+  updateStatus: (organizationId: string, jobPositionId: string, isActive: boolean) =>
+    api.patch<ApiResponse<JobPosition>>(
+      `/organizations/${organizationId}/job-positions/${jobPositionId}/status`,
+      { isActive }
+    ),
+}
+
 // ── Persons ───────────────────────────────────────────────────────────────────
 export const personsApi = {
   getById: (organizationId: string, personId: string) =>
@@ -231,6 +250,36 @@ export const arcoApi = {
 
   respondOpposition: (id: string, body: RespondOpposition) =>
     api.patch<ApiResponse<ArcoRequest>>(`/arco/opposition/${id}/respond`, body),
+
+  createPortability: (arcoRequest: CreateArcoRequest, details: CreatePortabilityDetails) =>
+    api.post<ApiResponse<ArcoRequest>>("/arco/portability", { arcoRequest, ...details }),
+
+  verifyPortabilityIdentity: (id: string, verified: boolean, comment?: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/portability/${id}/verify-identity`, { verified, comment }),
+
+  respondPortability: (id: string, body: RespondPortability) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/portability/${id}/respond`, body),
+
+  downloadPortability: (id: string) =>
+    api.get<Blob>(`/arco/portability/${id}/download`, { responseType: "blob" }),
+
+  createBlocking: (arcoRequest: CreateArcoRequest, details: CreateBlockingDetails) =>
+    api.post<ApiResponse<ArcoRequest>>("/arco/blocking", { arcoRequest, ...details }),
+
+  verifyBlockingIdentity: (id: string, verified: boolean, comment?: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/blocking/${id}/verify-identity`, { verified, comment }),
+
+  respondBlocking: (id: string, body: RespondBlocking) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/blocking/${id}/respond`, body),
+
+  createAnonymization: (arcoRequest: CreateArcoRequest, details: CreateAnonymizationDetails) =>
+    api.post<ApiResponse<ArcoRequest>>("/arco/anonymization", { arcoRequest, ...details }),
+
+  verifyAnonymizationIdentity: (id: string, verified: boolean, comment?: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/anonymization/${id}/verify-identity`, { verified, comment }),
+
+  respondAnonymization: (id: string, body: RespondAnonymization) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/anonymization/${id}/respond`, body),
 }
 
 // ── Compliance ────────────────────────────────────────────────────────────────
