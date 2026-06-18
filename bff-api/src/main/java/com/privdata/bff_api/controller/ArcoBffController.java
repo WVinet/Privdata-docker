@@ -134,4 +134,27 @@ public class ArcoBffController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         return ResponseEntity.ok(service.respondSuppression(id, body, authorization));
     }
+
+    @PostMapping("/opposition")
+    public ResponseEntity<?> createOpposition(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.createOpposition(body, authorization));
+    }
+
+    @PatchMapping("/opposition/{id}/verify-identity")
+    public ResponseEntity<?> verifyOppositionIdentity(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.verifyOppositionIdentity(id, body, authorization));
+    }
+
+    @PatchMapping("/opposition/{id}/respond")
+    public ResponseEntity<?> respondOpposition(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.respondOpposition(id, body, authorization));
+    }
 }

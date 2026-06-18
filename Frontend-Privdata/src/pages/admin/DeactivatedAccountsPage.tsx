@@ -12,24 +12,27 @@ import type { DataStatus } from "@/types/person"
 import type { ArcoRequestType } from "@/types/arco"
 
 const DATA_STATUS_LABEL: Record<DataStatus, string> = {
-  ACTIVE:              "Activo",
-  BLOCKED:              "Bloqueado",
-  DELETION_REQUESTED:  "Eliminación solicitada",
-  ANONYMIZED:          "Anonimizado",
+  ACTIVE:                "Activo",
+  BLOCKED:               "Bloqueado",
+  DELETION_REQUESTED:    "Eliminación solicitada",
+  PROCESSING_RESTRICTED: "Tratamiento restringido",
+  ANONYMIZED:            "Anonimizado",
 }
 
 const DATA_STATUS_VARIANT: Record<DataStatus, "default" | "secondary" | "destructive" | "outline"> = {
-  ACTIVE:              "default",
-  BLOCKED:              "destructive",
-  DELETION_REQUESTED:  "destructive",
-  ANONYMIZED:          "secondary",
+  ACTIVE:                "default",
+  BLOCKED:               "destructive",
+  DELETION_REQUESTED:    "destructive",
+  PROCESSING_RESTRICTED: "outline",
+  ANONYMIZED:            "secondary",
 }
 
 const DATA_STATUS_REQUEST_TYPE: Record<DataStatus, ArcoRequestType | null> = {
-  ACTIVE:              null,
-  BLOCKED:              "BLOQUEO_TEMPORAL",
-  DELETION_REQUESTED:  "SUPRESION",
-  ANONYMIZED:          "ANONIMIZACION",
+  ACTIVE:                null,
+  BLOCKED:               "BLOQUEO_TEMPORAL",
+  DELETION_REQUESTED:    "SUPRESION",
+  PROCESSING_RESTRICTED: "OPOSICION",
+  ANONYMIZED:            "ANONIMIZACION",
 }
 
 export default function DeactivatedAccountsPage() {
@@ -85,7 +88,7 @@ export default function DeactivatedAccountsPage() {
         </Link>
         <h1 className="text-2xl font-bold text-foreground">Cuentas desactivadas</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Titulares cuyos datos fueron bloqueados, anonimizados o marcados para eliminación tras resolverse una solicitud ARSO.
+          Titulares cuyos datos fueron bloqueados, anonimizados o marcados para eliminación tras resolverse una solicitud ARSOP.
         </p>
       </div>
 
@@ -115,7 +118,7 @@ export default function DeactivatedAccountsPage() {
                     <TableHead>RUT</TableHead>
                     <TableHead>Correo</TableHead>
                     <TableHead>Estado de datos</TableHead>
-                    <TableHead>Solicitud ARSO</TableHead>
+                    <TableHead>Solicitud ARSOP</TableHead>
                     <TableHead>Resuelta</TableHead>
                   </TableRow>
                 </TableHeader>

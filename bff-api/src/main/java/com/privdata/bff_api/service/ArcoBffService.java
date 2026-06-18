@@ -156,6 +156,33 @@ public class ArcoBffService {
         return result;
     }
 
+    public Object createOpposition(Map<String, Object> body, String authorization) {
+        Object result = arcoClient.createOpposition(body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "CREATE", "Solicitud ARSO",
+                "Nueva solicitud de oposición registrada",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object verifyOppositionIdentity(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.verifyOppositionIdentity(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Verificación de identidad registrada para solicitud de oposición " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object respondOpposition(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.respondOpposition(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Solicitud de oposición respondida " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
     public Object reclamarAnteAgencia(String id, String authorization) {
         Object result = arcoClient.reclamarAnteAgencia(id);
         String orgId  = extractDataField(result, "organizationId");

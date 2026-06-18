@@ -73,3 +73,23 @@ export interface RespondSuppression {
   exceptionApplies?: boolean
   retentionExpiresAt?: string
 }
+
+export type OppositionCause = "LEGITIMATE_INTEREST" | "DIRECT_MARKETING" | "PUBLIC_SOURCE"
+
+export interface CreateOppositionDetails {
+  cause: OppositionCause
+  reason: string
+  processingPurpose?: string
+  opposedTreatment?: string
+  treatmentActivityId?: string
+}
+
+export interface RespondOpposition {
+  approved: boolean
+  observations?: string
+  rejectionReason?: string
+  overridingLegitimateGrounds?: boolean
+  legalObligationApplies?: boolean
+  publicInterestApplies?: boolean
+  exceptionApplies?: boolean
+}

@@ -1,4 +1,4 @@
-export type DataStatus = "ACTIVE" | "BLOCKED" | "DELETION_REQUESTED" | "ANONYMIZED"
+export type DataStatus = "ACTIVE" | "BLOCKED" | "DELETION_REQUESTED" | "PROCESSING_RESTRICTED" | "ANONYMIZED"
 
 export interface Person {
   id: string

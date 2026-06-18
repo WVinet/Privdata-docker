@@ -375,7 +375,7 @@ export default function TitularSeguimiento({ organizationId, dataSubjectId }: Pr
           Seguimiento de Solicitudes
         </h2>
         <p className="text-sm mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
-          Estado y avance de tus solicitudes ARSO — Art. 11 Ley 21.719.
+          Estado y avance de tus solicitudes ARSOP — Art. 11 Ley 21.719.
         </p>
       </div>
 

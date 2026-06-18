@@ -116,7 +116,7 @@ export default function DashboardPage() {
       bg: "bg-green-50",
     },
     {
-      title: "Solicitudes ARSO",
+      title: "Solicitudes ARSOP",
       value: arcoList.length,
       icon: ClipboardList,
       description: "Total de solicitudes",
@@ -170,7 +170,7 @@ export default function DashboardPage() {
         {/* Solicitudes ARCO recientes */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Solicitudes ARSO Recientes</CardTitle>
+            <CardTitle className="text-base">Solicitudes ARSOP Recientes</CardTitle>
           </CardHeader>
           <CardContent>
             {arcoLoading ? (

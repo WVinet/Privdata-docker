@@ -69,7 +69,7 @@ export default function TitularInicio({ organizationId, dataSubjectId, name, rut
     },
     {
       icon: "⚖️",
-      title: "Derechos ARSO",
+      title: "Derechos ARSOP",
       description: "Acceso, rectificación, supresión, portabilidad y más.",
       tab: "arco" as TitularTab,
       accent: "hsl(var(--info))",

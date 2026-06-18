@@ -40,7 +40,8 @@ public class OppositionService {
             OppositionCause cause,
             String reason,
             String processingPurpose,
-            String opposedTreatment
+            String opposedTreatment,
+            UUID treatmentActivityId
     ) {
 
         ArcoRequest request = new ArcoRequest();
@@ -80,6 +81,7 @@ public class OppositionService {
                 .reason(reason)
                 .processingPurpose(processingPurpose)
                 .opposedTreatment(opposedTreatment)
+                .treatmentActivityId(treatmentActivityId)
                 .build();
 
         oppositionRequestRepository.save(detail);
@@ -269,6 +271,7 @@ public class OppositionService {
         organizationClient.restrictProcessing(
                 request.getOrganizationId(),
                 request.getDataSubjectId(),
+                detail.getTreatmentActivityId(),
                 detail.getProcessingPurpose()
         );
 

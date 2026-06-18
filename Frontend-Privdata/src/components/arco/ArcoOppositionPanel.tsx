@@ -1,38 +1,61 @@
-import { useQuery } from "@tanstack/react-query"
-import { Loader2, Ban, CheckCircle2, XCircle, HelpCircle } from "lucide-react"
-import { complianceApi } from "@/lib/api"
-import { parseOpposition } from "@/lib/opposition"
-import type { TreatmentActivity } from "@/types/compliance"
-
-const LEGAL_BASIS_LABEL: Record<string, string> = {
-  CONSENTIMIENTO:   "Consentimiento (Art. 12)",
-  CONTRATO:         "Contrato (Art. 13 c)",
-  OBLIGACION_LEGAL: "Obligación legal (Art. 13 b)",
-  INTERES_LEGITIMO: "Interés legítimo (Art. 13 d)",
-  INTERES_VITAL:    "Interés vital (Art. 13 e)",
-  FUNCION_PUBLICA:  "Función pública (Art. 20)",
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" })
-}
+import { useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { Loader2, Ban, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
+import { personsApi, arcoApi } from "@/lib/api"
+import { parseOpposition, OPPOSITION_CAUSE_LABELS } from "@/lib/opposition"
 
 interface Props {
+  arcoRequestId: string
   dataSubjectId: string
   organizationId: string
   description: string
-  onGenerateResolution: (text: string) => void
+  onApplied: (resolutionText: string) => void
 }
 
-export default function ArcoOppositionPanel({ organizationId, description, onGenerateResolution }: Props) {
+export default function ArcoOppositionPanel({ arcoRequestId, dataSubjectId, organizationId, description, onApplied }: Props) {
+  const qc = useQueryClient()
   const details = parseOpposition(description)
+  const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle")
+  const [overridingLegitimateGrounds, setOverridingLegitimateGrounds] = useState(false)
+  const [legalObligationApplies, setLegalObligationApplies] = useState(false)
+  const [publicInterestApplies, setPublicInterestApplies] = useState(false)
+  const [exceptionApplies, setExceptionApplies] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [observations, setObservations] = useState("")
 
-  const { data: ratData, isLoading } = useQuery({
-    queryKey: ["rat", organizationId],
-    queryFn: () => complianceApi.getRat(organizationId).then(r => r.data),
+  const { data: personData, isLoading: loadingPerson } = useQuery({
+    queryKey: ["person", organizationId, dataSubjectId],
+    queryFn: () => personsApi.getById(organizationId, dataSubjectId).then(r => r.data),
     enabled: !!details,
   })
-  const activities: TreatmentActivity[] = ratData ?? []
+  const person = personData?.data
+
+  const respondMutation = useMutation({
+    mutationFn: async (approved: boolean) => {
+      const res = await arcoApi.respondOpposition(arcoRequestId, {
+        approved,
+        observations: approved ? observations.trim() || undefined : undefined,
+        rejectionReason: !approved ? rejectionReason.trim() || undefined : undefined,
+        overridingLegitimateGrounds: !approved ? overridingLegitimateGrounds : undefined,
+        legalObligationApplies: !approved ? legalObligationApplies : undefined,
+        publicInterestApplies: !approved ? publicInterestApplies : undefined,
+        exceptionApplies: !approved ? exceptionApplies : undefined,
+      })
+      if (!res.data.success) throw new Error(res.data.message)
+      return { approved, data: res.data.data }
+    },
+    onSuccess: ({ approved, data }) => {
+      qc.invalidateQueries({ queryKey: ["person", organizationId, dataSubjectId] })
+      qc.invalidateQueries({ queryKey: ["persons", organizationId] })
+      setMode("idle")
+      onApplied(
+        approved
+          ? `Informe de Oposición — Art. 8 Ley 21.719\n\nSolicitud aprobada. Se restringió el tratamiento de los datos del titular para la finalidad indicada.` +
+            (observations.trim() ? `\n\n${observations.trim()}` : "")
+          : `Informe de Oposición — Art. 8 Ley 21.719\n\nSolicitud rechazada.\n\n${data?.resolutionSummary ?? rejectionReason.trim()}`
+      )
+    },
+  })
 
   if (!details) {
     return (
@@ -43,135 +66,179 @@ export default function ArcoOppositionPanel({ organizationId, description, onGen
     )
   }
 
-  if (isLoading) {
+  if (loadingPerson) {
     return (
       <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        Cargando actividades de tratamiento…
+        Cargando datos del titular…
       </div>
     )
   }
 
-  const evaluated = details.activities.map((ref) => {
-    const current = activities.find(a => a.id === ref.id)
-    if (!current) {
-      return { ref, current, status: "NO_VIGENTE" as const }
-    }
-    if (current.legalBasis === "INTERES_LEGITIMO") {
-      return { ref, current, status: "PROCEDE" as const }
-    }
-    return { ref, current, status: "NO_PROCEDE" as const }
-  })
-
-  const granted = evaluated.filter(e => e.status === "PROCEDE")
-  const denied = evaluated.filter(e => e.status === "NO_PROCEDE")
-  const notFound = evaluated.filter(e => e.status === "NO_VIGENTE")
-
-  function buildResolution() {
-    const lines: string[] = []
-    lines.push(`Resolución de Oposición — Art. 8 Ley 21.719`)
-    lines.push(`Fecha de emisión: ${formatDate(new Date().toISOString())}`)
-    lines.push("")
-    lines.push(`Evaluamos tu oposición al tratamiento de tus datos para ${details!.activities.length} finalidad(es). Resultado:`)
-
-    if (granted.length > 0) {
-      lines.push("")
-      lines.push(`ACOGIDAS (${granted.length}):`)
-      granted.forEach(({ ref, current }) => {
-        lines.push(`  - "${ref.name}" — Finalidad: ${current!.purpose}`)
-        lines.push(`    Conforme al Art. 8 de la Ley 21.719, dado que el tratamiento se basaba en interés legítimo, dejaremos de tratar tus datos para esta finalidad.`)
-      })
-    }
-
-    if (denied.length > 0) {
-      lines.push("")
-      lines.push(`NO PROCEDEN (${denied.length}):`)
-      denied.forEach(({ ref, current }) => {
-        lines.push(`  - "${ref.name}" — Finalidad: ${current!.purpose}`)
-        lines.push(`    Base legal: ${LEGAL_BASIS_LABEL[current!.legalBasis] ?? current!.legalBasis}. El derecho de oposición no procede para esta base legal conforme al Art. 8 de la Ley 21.719, ya que prevalece sobre la solicitud.`)
-      })
-    }
-
-    if (notFound.length > 0) {
-      lines.push("")
-      lines.push(`SIN EFECTO (${notFound.length}):`)
-      notFound.forEach(({ ref }) => {
-        lines.push(`  - "${ref.name}" — Esta actividad de tratamiento ya no se encuentra vigente.`)
-      })
-    }
-
-    lines.push("")
-    lines.push(`Motivo indicado por el titular: ${details!.reason}`)
-
-    onGenerateResolution(lines.join("\n"))
-  }
+  const alreadyApplied = person?.dataStatus === "PROCESSING_RESTRICTED"
 
   return (
-    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4 text-sm">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 font-semibold text-foreground">
-          <Ban className="w-4 h-4 text-primary" />
-          Solicitud de oposición ({details.activities.length})
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3 text-sm">
+      <div className="flex items-center gap-2 font-semibold text-foreground">
+        <Ban className="w-4 h-4 text-primary" />
+        Solicitud de oposición
+      </div>
+
+      <div className="rounded-lg bg-background border border-border px-3 py-2 space-y-1.5 text-xs">
+        <div>
+          <span className="text-muted-foreground">Titular:</span>{" "}
+          <span className="font-medium text-foreground">{person?.fullName ?? "—"}</span>
+          {person?.rut && <span className="text-foreground"> · {person.rut}</span>}
+          {person?.email && <span className="text-foreground"> · {person.email}</span>}
         </div>
-        <button
-          type="button"
-          onClick={buildResolution}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-          style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
-        >
-          Usar como resolución →
-        </button>
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        Conforme al Art. 8 de la Ley 21.719, la oposición procede cuando el tratamiento se basa en{" "}
-        <span className="font-medium text-foreground">interés legítimo</span>, salvo que existan motivos legítimos
-        imperiosos que prevalezcan. Para las demás bases legales, el derecho de oposición no aplica.
-      </p>
-
-      <div className="space-y-1.5">
-        {evaluated.map(({ ref, current, status }) => (
-          <div key={ref.id} className="rounded-lg bg-background border border-border px-3 py-2 space-y-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="text-xs">
-                <p className="font-medium text-foreground">{ref.name}</p>
-                {current && <p className="text-muted-foreground">{current.purpose}</p>}
-              </div>
-              {status === "PROCEDE" && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0"
-                  style={{ background: "hsl(var(--success) / 0.12)", color: "hsl(var(--success))" }}>
-                  <CheckCircle2 className="w-3 h-3" /> Procede
-                </span>
-              )}
-              {status === "NO_PROCEDE" && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0"
-                  style={{ background: "hsl(var(--destructive) / 0.1)", color: "hsl(var(--destructive))" }}>
-                  <XCircle className="w-3 h-3" /> No procede
-                </span>
-              )}
-              {status === "NO_VIGENTE" && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0"
-                  style={{ background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>
-                  <HelpCircle className="w-3 h-3" /> No vigente
-                </span>
-              )}
-            </div>
-            {status === "NO_PROCEDE" && current && (
-              <p className="text-xs text-muted-foreground">
-                Base legal: <span className="font-medium text-foreground">{LEGAL_BASIS_LABEL[current.legalBasis] ?? current.legalBasis}</span> — prevalece sobre la oposición (Art. 8).
-              </p>
-            )}
-            {status === "NO_VIGENTE" && (
-              <p className="text-xs text-muted-foreground">Esta actividad de tratamiento ya no se encuentra vigente.</p>
-            )}
+        <div>
+          <span className="text-muted-foreground">Causal invocada:</span>{" "}
+          <span className="font-medium text-foreground">{OPPOSITION_CAUSE_LABELS[details.cause]}</span>
+        </div>
+        {details.opposedTreatment && (
+          <div>
+            <span className="text-muted-foreground">Tratamiento al que se opone:</span>{" "}
+            <span className="text-foreground">{details.opposedTreatment}</span>
+            {details.processingPurpose && <span className="text-foreground"> — {details.processingPurpose}</span>}
           </div>
-        ))}
+        )}
+        <div>
+          <span className="text-muted-foreground">Motivo indicado por el titular:</span>{" "}
+          <span className="text-foreground">{details.reason}</span>
+        </div>
       </div>
 
-      <div className="rounded-lg bg-background border border-border px-3 py-2 text-xs">
-        <span className="text-muted-foreground">Motivo indicado por el titular:</span>{" "}
-        <span className="text-foreground">{details.reason}</span>
-      </div>
+      {alreadyApplied ? (
+        <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "hsl(var(--success))" }}>
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          La oposición ya fue aplicada: el tratamiento de los datos del titular quedó restringido.
+        </div>
+      ) : mode === "approve" ? (
+        <div className="rounded-lg border border-primary/40 bg-background p-3 space-y-2">
+          <p className="flex items-start gap-1.5 text-xs font-medium text-primary">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            Esta acción restringirá el tratamiento de los datos del titular para la finalidad indicada. El titular permanece activo.
+          </p>
+          <textarea
+            rows={2}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Observaciones para el titular (opcional)…"
+            value={observations}
+            onChange={(e) => setObservations(e.target.value)}
+          />
+          {respondMutation.isError && (
+            <p className="text-xs text-destructive">{(respondMutation.error as Error).message}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => respondMutation.mutate(true)}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+              style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
+            >
+              {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Sí, aprobar y restringir
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("idle")}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : mode === "reject" ? (
+        <div className="rounded-lg border border-border bg-background p-3 space-y-2">
+          <label className="flex items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={overridingLegitimateGrounds}
+              onChange={(e) => setOverridingLegitimateGrounds(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded"
+            />
+            Existen motivos legítimos imperiosos para continuar el tratamiento
+          </label>
+          <label className="flex items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={legalObligationApplies}
+              onChange={(e) => setLegalObligationApplies(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded"
+            />
+            Existe una obligación legal que exige continuar el tratamiento
+          </label>
+          <label className="flex items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={publicInterestApplies}
+              onChange={(e) => setPublicInterestApplies(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded"
+            />
+            Existe un interés público que justifica continuar el tratamiento
+          </label>
+          <label className="flex items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={exceptionApplies}
+              onChange={(e) => setExceptionApplies(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded"
+            />
+            Aplica otra excepción legal
+          </label>
+          <textarea
+            rows={2}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Motivo del rechazo (opcional — si se deja vacío se usa un texto estándar según la causal)…"
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+          />
+          {respondMutation.isError && (
+            <p className="text-xs text-destructive">{(respondMutation.error as Error).message}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => respondMutation.mutate(false)}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+              style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
+            >
+              {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Confirmar rechazo
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("idle")}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("approve")}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+            style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
+          >
+            Aprobar y restringir
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("reject")}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted inline-flex items-center gap-1.5"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            Rechazar
+          </button>
+        </div>
+      )}
     </div>
   )
 }

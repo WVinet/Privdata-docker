@@ -32,7 +32,8 @@ public class OppositionController {
                                 dto.getCause(),
                                 dto.getReason(),
                                 dto.getProcessingPurpose(),
-                                dto.getOpposedTreatment()
+                                dto.getOpposedTreatment(),
+                                dto.getTreatmentActivityId()
                         )
                 )
         );
