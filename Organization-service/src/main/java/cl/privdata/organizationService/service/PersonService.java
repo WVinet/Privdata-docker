@@ -375,5 +375,47 @@ public class PersonService {
         personRepository.save(person);
     }
 
+    ///Metodo de oposicion
+    public void restrictProcessing(
+            UUID organizationId,
+            UUID personId,
+            String purpose
+    ) {
+
+        Person person = getPersonOrThrow(
+                organizationId,
+                personId
+        );
+
+        if (person.getDataStatus() == DataStatus.ANONYMIZED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede restringir el tratamiento de una persona anonimizada"
+            );
+        }
+
+        if (person.getDataStatus() == DataStatus.DELETION_REQUESTED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede restringir el tratamiento de una persona en proceso de supresión"
+            );
+        }
+
+        if (person.getDataStatus() == DataStatus.PROCESSING_RESTRICTED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La persona ya tiene una oposición aplicada"
+            );
+        }
+
+        person.setBlocked(true);
+
+        person.setDataStatus(
+                DataStatus.PROCESSING_RESTRICTED
+        );
+
+        personRepository.save(person);
+    }
+
 
 }

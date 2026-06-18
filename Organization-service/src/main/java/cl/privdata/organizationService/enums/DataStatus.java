@@ -4,5 +4,6 @@ public enum DataStatus {
     ACTIVE,
     BLOCKED,
     DELETION_REQUESTED,
+    PROCESSING_RESTRICTED,
     ANONYMIZED
 }
