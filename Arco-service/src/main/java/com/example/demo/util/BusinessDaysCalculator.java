@@ -24,6 +24,7 @@ public class BusinessDaysCalculator {
             case RECTIFICACION:
             case OPOSICION:
             case PORTABILIDAD:
+            case ANONIMIZACION:
             default:
                 return inicio.plusDays(30);
         }

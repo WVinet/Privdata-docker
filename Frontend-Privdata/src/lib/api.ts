@@ -153,6 +153,9 @@ export const personsApi = {
       `/organizations/${organizationId}/persons/${personId}/status`,
       { isActive }
     ),
+
+  anonymize: (organizationId: string, personId: string) =>
+    api.post<ApiResponse<Person>>(`/organizations/${organizationId}/persons/${personId}/anonymize`),
 }
 
 // ── ARCO ──────────────────────────────────────────────────────────────────────
@@ -190,6 +193,24 @@ export const arcoApi = {
       null,
       { params: { nuevoEstado } }
     ),
+
+  verifyAccessIdentity: (id: string, verified: boolean, comment?: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/access/${id}/verify-identity`, { verified, comment }),
+
+  respondAccess: (id: string, observations: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/access/${id}/respond`, { observations }),
+
+  createRectification: (
+    arcoRequest: CreateArcoRequest,
+    rectificationData: Partial<Record<"firstName" | "lastName" | "rut" | "email" | "phone" | "position", string>>
+  ) =>
+    api.post<ApiResponse<ArcoRequest>>("/arco/rectification", { arcoRequest, rectificationData }),
+
+  verifyRectificationIdentity: (id: string, verified: boolean, comment?: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/rectification/${id}/verify-identity`, { verified, comment }),
+
+  respondRectification: (id: string, observations: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/rectification/${id}/respond`, { observations }),
 }
 
 // ── Compliance ────────────────────────────────────────────────────────────────

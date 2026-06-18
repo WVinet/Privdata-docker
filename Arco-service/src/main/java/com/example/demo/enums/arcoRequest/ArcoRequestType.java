@@ -6,5 +6,6 @@ public enum ArcoRequestType {
     SUPRESION,
     OPOSICION,
     PORTABILIDAD,
-    BLOQUEO_TEMPORAL
+    BLOQUEO_TEMPORAL,
+    ANONIMIZACION
 }

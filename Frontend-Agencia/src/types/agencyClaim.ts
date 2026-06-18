@@ -40,8 +40,8 @@ export type ArcoStatus =
   | "RESPONDIDA" | "RECHAZADA" | "CERRADA"
 
 export type ArcoRequestType =
-  | "ACCESO" | "RECTIFICACION" | "CANCELLATION"
-  | "OPOSICION" | "PORTABILIDAD" | "BLOQUEO_TEMPORAL"
+  | "ACCESO" | "RECTIFICACION" | "SUPRESION"
+  | "OPOSICION" | "PORTABILIDAD" | "BLOQUEO_TEMPORAL" | "ANONIMIZACION"
 
 export interface ArcoRequestOverview {
   id: string

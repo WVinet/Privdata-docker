@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { agencyApi } from "@/lib/api"
 
 const TYPE_LABELS: Record<string, string> = {
-  ACCESO: "Acceso", RECTIFICACION: "Rectificación", CANCELLATION: "Supresión",
+  ACCESO: "Acceso", RECTIFICACION: "Rectificación", SUPRESION: "Supresión",
   OPOSICION: "Oposición", PORTABILIDAD: "Portabilidad", BLOQUEO_TEMPORAL: "Bloqueo temporal",
+  ANONIMIZACION: "Anonimización",
 }
 
 function formatDate(value: string) {
