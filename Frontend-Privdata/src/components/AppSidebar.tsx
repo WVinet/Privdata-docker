@@ -6,6 +6,7 @@ import {
   FileCheck,
   ClipboardList,
   DatabaseZap,
+  FileSpreadsheet,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -27,7 +28,8 @@ const navItems: NavItem[] = [
   { label: "Dashboard",        path: "/dashboard",       icon: LayoutDashboard },
   { label: "Titulares",        path: "/titulares",       icon: UserCheck },
   { label: "Consentimientos",  path: "/consentimientos", icon: FileCheck },
-  { label: "Solicitudes ARCO", path: "/arco",            icon: ClipboardList },
+  { label: "Solicitudes ARSOP", path: "/arco",           icon: ClipboardList },
+  { label: "Registro de Tratamientos", path: "/rat",     icon: FileSpreadsheet },
   { label: "Auditoría",        path: "/auditoria",       icon: DatabaseZap },
 ]
 

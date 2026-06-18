@@ -19,8 +19,32 @@ public class ComplianceBffService {
         return complianceClient.getConsentsByDataSubject(dataSubjectId);
     }
 
-    public Object getRat(String organizationId) {
-        return complianceClient.getRat(organizationId);
+    public Object getRat(String organizationId, String status) {
+        return complianceClient.getRat(organizationId, status);
+    }
+
+    public Object createRat(Object body, String authorization) {
+        Object result = complianceClient.createRat(body);
+        String orgId = null;
+        String name  = "nueva actividad";
+        if (body instanceof Map<?, ?> m) {
+            Object o = m.get("organizationId");
+            Object n = m.get("name");
+            if (o != null) orgId = o.toString();
+            if (n != null) name  = n.toString();
+        }
+        auditClient.log(orgId, "CREATE", "Actividad de Tratamiento",
+                "Actividad de tratamiento creada: \"" + name + "\"",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object updateRat(String id, Object body, String authorization) {
+        Object result = complianceClient.updateRat(id, body);
+        auditClient.log(null, "UPDATE", "Actividad de Tratamiento",
+                "Actividad de tratamiento actualizada (id: " + id + ")",
+                JwtUtil.extractEmail(authorization));
+        return result;
     }
 
     public Object revokeConsent(String consentId, String authorization) {

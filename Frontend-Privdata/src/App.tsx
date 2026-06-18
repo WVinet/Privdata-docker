@@ -18,6 +18,8 @@ import TitularesPage from "@/pages/admin/TitularesPage"
 import ConsentsPage from "@/pages/admin/ConsentsPage"
 import ArcoPage from "@/pages/admin/ArcoPage"
 import AuditPage from "@/pages/admin/AuditPage"
+import DeactivatedAccountsPage from "@/pages/admin/DeactivatedAccountsPage"
+import RatPage from "@/pages/admin/RatPage"
 
 // Admin — mantenedores
 import MiOrganizacionPage from "@/pages/admin/MiOrganizacionPage"
@@ -47,6 +49,8 @@ function App() {
             <Route path="/titulares"       element={<TitularesPage />} />
             <Route path="/consentimientos" element={<ConsentsPage />} />
             <Route path="/arco"            element={<ArcoPage />} />
+            <Route path="/rat"             element={<RatPage />} />
+            <Route path="/cuentas-desactivadas" element={<DeactivatedAccountsPage />} />
             <Route path="/auditoria"       element={<AuditPage />} />
 
             <Route path="/admin/organizacion" element={<MiOrganizacionPage />} />

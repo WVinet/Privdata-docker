@@ -85,16 +85,20 @@ public class OrganizationClient {
     public void restrictProcessing(
             UUID organizationId,
             UUID personId,
+            UUID treatmentActivityId,
             String purpose
     ) {
 
+        String uri = organizationServiceUrl
+                + "/api/organizations/"
+                + organizationId
+                + "/persons/"
+                + personId
+                + "/restrict-processing"
+                + (treatmentActivityId != null ? "?treatmentActivityId=" + treatmentActivityId : "");
+
         orgClient.patch()
-                .uri(organizationServiceUrl
-                        + "/api/organizations/"
-                        + organizationId
-                        + "/persons/"
-                        + personId
-                        + "/restrict-processing")
+                .uri(uri)
                 .retrieve()
                 .toBodilessEntity();
     }

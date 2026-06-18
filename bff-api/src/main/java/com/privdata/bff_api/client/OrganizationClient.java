@@ -109,13 +109,13 @@ public class OrganizationClient {
         } catch (HttpClientErrorException ex) {
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", ex.getStatusText());
+            err.put("message", extractMessage(ex.getResponseBodyAsString(), ex.getStatusText()));
             err.put("data", null);
             return err;
         } catch (HttpServerErrorException ex) {
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "Error interno en Organization-service: " + ex.getStatusCode());
+            err.put("message", "Error interno en Organization-service: " + extractMessage(ex.getResponseBodyAsString(), ex.getStatusCode().toString()));
             err.put("data", null);
             return err;
         } catch (ResourceAccessException ex) {
@@ -125,5 +125,10 @@ public class OrganizationClient {
             err.put("data", null);
             return err;
         }
+    }
+
+    private String extractMessage(String responseBody, String fallback) {
+        var m = java.util.regex.Pattern.compile("\"message\"\\s*:\\s*\"([^\"]+)\"").matcher(responseBody);
+        return m.find() ? m.group(1) : fallback;
     }
 }

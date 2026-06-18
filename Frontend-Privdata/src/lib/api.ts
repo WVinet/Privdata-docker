@@ -13,11 +13,13 @@ import type {
 } from "@/types/person"
 import type {
   ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel,
-  CreateArcoRequest, UpdateArcoStatus,
+  CreateArcoRequest, UpdateArcoStatus, CreateSuppressionDetails, RespondSuppression,
+  CreateOppositionDetails, RespondOpposition,
 } from "@/types/arco"
 import type {
   Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus,
   ConsentDefinition, ConsentCreateRequest,
+  TreatmentActivityCreateRequest, TreatmentActivityUpdateRequest, TreatmentActivityStatus,
 } from "@/types/compliance"
 import type { AuditPage } from "@/types/audit"
 
@@ -211,6 +213,24 @@ export const arcoApi = {
 
   respondRectification: (id: string, observations: string) =>
     api.patch<ApiResponse<ArcoRequest>>(`/arco/rectification/${id}/respond`, { observations }),
+
+  createSuppression: (arcoRequest: CreateArcoRequest, details: CreateSuppressionDetails) =>
+    api.post<ApiResponse<ArcoRequest>>("/arco/suppression", { arcoRequest, ...details }),
+
+  verifySuppressionIdentity: (id: string, verified: boolean, comment?: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/suppression/${id}/verify-identity`, { verified, comment }),
+
+  respondSuppression: (id: string, body: RespondSuppression) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/suppression/${id}/respond`, body),
+
+  createOpposition: (arcoRequest: CreateArcoRequest, details: CreateOppositionDetails) =>
+    api.post<ApiResponse<ArcoRequest>>("/arco/opposition", { arcoRequest, ...details }),
+
+  verifyOppositionIdentity: (id: string, verified: boolean, comment?: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/opposition/${id}/verify-identity`, { verified, comment }),
+
+  respondOpposition: (id: string, body: RespondOpposition) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/opposition/${id}/respond`, body),
 }
 
 // ── Compliance ────────────────────────────────────────────────────────────────
@@ -218,8 +238,14 @@ export const complianceApi = {
   getConsentsBySubject: (dataSubjectId: string) =>
     api.get<Consent[]>(`/compliance/consents/data-subject/${dataSubjectId}`),
 
-  getRat: (organizationId: string) =>
-    api.get<TreatmentActivity[]>(`/compliance/rat`, { params: { organizationId } }),
+  getRat: (organizationId: string, status?: TreatmentActivityStatus) =>
+    api.get<TreatmentActivity[]>(`/compliance/rat`, { params: { organizationId, status } }),
+
+  createRat: (body: TreatmentActivityCreateRequest) =>
+    api.post<ApiResponse<TreatmentActivity>>(`/compliance/rat`, body),
+
+  updateRat: (id: string, body: TreatmentActivityUpdateRequest) =>
+    api.put<ApiResponse<TreatmentActivity>>(`/compliance/rat/${id}`, body),
 
   revokeConsent: (consentId: string) =>
     api.post<ApiResponse<Consent>>(`/compliance/consents/${consentId}/revoke`),

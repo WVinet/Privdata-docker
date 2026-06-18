@@ -125,9 +125,9 @@ function UpdateStatusModal({
   const canExtend = !request.extensionGranted && NOT_RESOLVED.includes(effectiveStatus)
   const availableActions: ActionKey[] = canExtend ? [...transitions, "PRORROGA"] : transitions
 
-  // Acceso y Rectificación tienen su propio flujo de verificación de identidad
-  // (AccesoService/RectificacionService) en vez del auto-paso a EN_GESTION genérico.
-  const requiresExplicitIdentity = request.requestType === "ACCESO" || request.requestType === "RECTIFICACION"
+  // Acceso, Rectificación, Supresión y Oposición tienen su propio flujo de verificación de identidad
+  // (AccesoService/RectificacionService/SupresionService/OppositionService) en vez del auto-paso a EN_GESTION genérico.
+  const requiresExplicitIdentity = ["ACCESO", "RECTIFICACION", "SUPRESION", "OPOSICION"].includes(request.requestType)
   const [identityComment, setIdentityComment] = useState("")
 
   const autoGestionMutation = useMutation({
@@ -144,7 +144,11 @@ function UpdateStatusModal({
 
   const verifyIdentityMutation = useMutation({
     mutationFn: async (verified: boolean) => {
-      const call = request.requestType === "ACCESO" ? arcoApi.verifyAccessIdentity : arcoApi.verifyRectificationIdentity
+      const call =
+        request.requestType === "ACCESO" ? arcoApi.verifyAccessIdentity :
+        request.requestType === "RECTIFICACION" ? arcoApi.verifyRectificationIdentity :
+        request.requestType === "SUPRESION" ? arcoApi.verifySuppressionIdentity :
+        arcoApi.verifyOppositionIdentity
       const res = await call(request.id, verified, identityComment.trim() || undefined)
       if (!res.data.success) throw new Error(res.data.message)
       return verified
@@ -177,6 +181,24 @@ function UpdateStatusModal({
       }
       if (pendingAction === "RESPONDIDA" && request.requestType === "RECTIFICACION") {
         const res = await arcoApi.respondRectification(request.id, comment.trim())
+        if (!res.data.success) throw new Error(res.data.message)
+        return res
+      }
+      if (request.requestType === "SUPRESION" && (pendingAction === "RESPONDIDA" || pendingAction === "RECHAZADA")) {
+        const res = await arcoApi.respondSuppression(request.id, {
+          approved: pendingAction === "RESPONDIDA",
+          observations: pendingAction === "RESPONDIDA" ? comment.trim() : undefined,
+          rejectionReason: pendingAction === "RECHAZADA" ? comment.trim() : undefined,
+        })
+        if (!res.data.success) throw new Error(res.data.message)
+        return res
+      }
+      if (request.requestType === "OPOSICION" && (pendingAction === "RESPONDIDA" || pendingAction === "RECHAZADA")) {
+        const res = await arcoApi.respondOpposition(request.id, {
+          approved: pendingAction === "RESPONDIDA",
+          observations: pendingAction === "RESPONDIDA" ? comment.trim() : undefined,
+          rejectionReason: pendingAction === "RECHAZADA" ? comment.trim() : undefined,
+        })
         if (!res.data.success) throw new Error(res.data.message)
         return res
       }
@@ -278,10 +300,16 @@ function UpdateStatusModal({
 
         {request.requestType === "SUPRESION" && pendingAction === null && (
           <ArcoSuppressionPanel
+            arcoRequestId={request.id}
             dataSubjectId={request.dataSubjectId}
             organizationId={request.organizationId}
             description={request.description}
-            onApplied={(text) => setComment(text)}
+            onApplied={(text) => {
+              // El panel ya llamó a respondSuppression y dejó la solicitud resuelta en el backend.
+              setComment(text)
+              qc.invalidateQueries({ queryKey: ["arco"] })
+              onClose()
+            }}
           />
         )}
 
@@ -298,12 +326,15 @@ function UpdateStatusModal({
 
         {request.requestType === "OPOSICION" && pendingAction === null && (
           <ArcoOppositionPanel
+            arcoRequestId={request.id}
             dataSubjectId={request.dataSubjectId}
             organizationId={request.organizationId}
             description={request.description}
-            onGenerateResolution={(text) => {
+            onApplied={(text) => {
+              // El panel ya llamó a respondOpposition y dejó la solicitud resuelta en el backend.
               setComment(text)
-              if (transitions.includes("RESPONDIDA")) setPendingAction("RESPONDIDA")
+              qc.invalidateQueries({ queryKey: ["arco"] })
+              onClose()
             }}
           />
         )}
@@ -599,7 +630,7 @@ export default function ArcoPage() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Solicitudes ARCO</h1>
+          <h1 className="text-2xl font-bold text-foreground">Solicitudes ARSOP</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Acceso · Rectificación · Supresión · Oposición · Portabilidad · Bloqueo — Art. 11 Ley 21.719
           </p>
@@ -708,7 +739,7 @@ export default function ArcoPage() {
                       <TableRow>
                         <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                           {requests.length === 0
-                            ? "No hay solicitudes ARCO registradas."
+                            ? "No hay solicitudes ARSOP registradas."
                             : "No hay solicitudes que coincidan con el filtro."}
                         </TableCell>
                       </TableRow>

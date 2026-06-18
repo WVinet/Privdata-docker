@@ -32,9 +32,21 @@ public class ComplianceClient {
                 body != null ? body : new HashMap<>());
     }
 
-    public Object getRat(String organizationId) {
-        String uri = "/api/compliance/rat" + (organizationId != null ? "?organizationId=" + organizationId + "&status=ACTIVE" : "");
-        return forward("GET", uri, null);
+    public Object getRat(String organizationId, String status) {
+        StringBuilder uri = new StringBuilder("/api/compliance/rat");
+        if (organizationId != null) {
+            uri.append("?organizationId=").append(organizationId);
+            if (status != null && !status.isBlank()) uri.append("&status=").append(status);
+        }
+        return forward("GET", uri.toString(), null);
+    }
+
+    public Object createRat(Object body) {
+        return forward("POST", "/api/compliance/rat", body);
+    }
+
+    public Object updateRat(String id, Object body) {
+        return forward("PUT", "/api/compliance/rat/" + id, body);
     }
 
     public Object getDataCategories() {

@@ -17,7 +17,7 @@ interface TitularPortalLayoutProps {
 const navItems: { id: TitularTab; label: string; Icon: React.ElementType }[] = [
   { id: "inicio",          label: "Inicio",          Icon: Home },
   { id: "consentimientos", label: "Consentimientos",  Icon: Bell },
-  { id: "arco",            label: "Derechos ARCO",    Icon: Scale },
+  { id: "arco",            label: "Derechos ARSOP",   Icon: Scale },
   { id: "seguimiento",     label: "Seguimiento",      Icon: ClipboardList },
 ]
 

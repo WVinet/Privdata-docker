@@ -1,6 +1,7 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Search, UserPlus, Loader2, X, Copy, Check } from "lucide-react"
+import { Search, UserPlus, Loader2, X, Copy, Check, UserX } from "lucide-react"
 import { usersApi, personsApi, departmentsApi } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -212,11 +213,20 @@ export default function TitularesPage() {
 
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-y-3">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Titulares</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Registro de titulares de datos personales
-            </p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Titulares</h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Registro de titulares de datos personales
+              </p>
+            </div>
+            <Link
+              to="/cuentas-desactivadas"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive hover:underline"
+            >
+              <UserX className="w-4 h-4" />
+              Cuentas desactivadas
+            </Link>
           </div>
           <RequirePermission permission="USER_CREATE">
             <Button onClick={() => setInviting(true)}>

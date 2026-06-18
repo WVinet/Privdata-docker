@@ -27,8 +27,26 @@ public class ComplianceBffController {
     }
 
     @GetMapping("/rat")
-    public ResponseEntity<?> getRat(@RequestParam(required = false) String organizationId) {
-        return ResponseEntity.ok(service.getRat(organizationId));
+    public ResponseEntity<?> getRat(
+            @RequestParam(required = false) String organizationId,
+            @RequestParam(required = false) String status
+    ) {
+        return ResponseEntity.ok(service.getRat(organizationId, status));
+    }
+
+    @PostMapping("/rat")
+    public ResponseEntity<?> createRat(
+            @RequestBody Object body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.createRat(body, authorization));
+    }
+
+    @PutMapping("/rat/{id}")
+    public ResponseEntity<?> updateRat(
+            @PathVariable String id,
+            @RequestBody Object body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.updateRat(id, body, authorization));
     }
 
     @PostMapping("/consents/{consentId}/revoke")

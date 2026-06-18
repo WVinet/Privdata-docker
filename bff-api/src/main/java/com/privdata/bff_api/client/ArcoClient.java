@@ -86,6 +86,30 @@ public class ArcoClient {
         return forward("PATCH", "/api/arso/rectification/" + id + "/respond", body);
     }
 
+    public Object createSuppression(Map<String, Object> body) {
+        return forward("POST", "/api/arso/suppression", body);
+    }
+
+    public Object verifySuppressionIdentity(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/suppression/" + id + "/verify-identity", body);
+    }
+
+    public Object respondSuppression(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/suppression/" + id + "/respond", body);
+    }
+
+    public Object createOpposition(Map<String, Object> body) {
+        return forward("POST", "/api/arso/opposition", body);
+    }
+
+    public Object verifyOppositionIdentity(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/opposition/" + id + "/verify-identity", body);
+    }
+
+    public Object respondOpposition(String id, Map<String, Object> body) {
+        return forward("PATCH", "/api/arso/opposition/" + id + "/respond", body);
+    }
+
     private Object forward(String method, String uri, Object body) {
         try {
             var spec = arcoRestClient.method(HttpMethod.valueOf(method)).uri(uri);

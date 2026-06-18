@@ -17,9 +17,11 @@ import cl.privdata.organizationService.dto.response.PersonResponseDTO;
 import cl.privdata.organizationService.model.Department;
 import cl.privdata.organizationService.model.Organization;
 import cl.privdata.organizationService.model.Person;
+import cl.privdata.organizationService.model.ProcessingRestriction;
 import cl.privdata.organizationService.repository.DepartmentRepository;
 import cl.privdata.organizationService.repository.OrganizationRepository;
 import cl.privdata.organizationService.repository.PersonRepository;
+import cl.privdata.organizationService.repository.ProcessingRestrictionRepository;
 
 
 @Service
@@ -29,16 +31,19 @@ public class PersonService {
     private final PersonRepository personRepository;
     private final OrganizationRepository organizationRepository;
     private final DepartmentRepository departmentRepository;
+    private final ProcessingRestrictionRepository processingRestrictionRepository;
 
 
     public PersonService(
             PersonRepository personRepository,
             OrganizationRepository organizationRepository,
-            DepartmentRepository departmentRepository
+            DepartmentRepository departmentRepository,
+            ProcessingRestrictionRepository processingRestrictionRepository
     ) {
         this.personRepository = personRepository;
         this.organizationRepository = organizationRepository;
         this.departmentRepository = departmentRepository;
+        this.processingRestrictionRepository = processingRestrictionRepository;
     }
 
     public PersonResponseDTO create(UUID organizationId, PersonCreateRequestDTO request) {
@@ -379,6 +384,7 @@ public class PersonService {
     public void restrictProcessing(
             UUID organizationId,
             UUID personId,
+            UUID treatmentActivityId,
             String purpose
     ) {
 
@@ -401,7 +407,31 @@ public class PersonService {
             );
         }
 
-        if (person.getDataStatus() == DataStatus.PROCESSING_RESTRICTED) {
+        if (treatmentActivityId != null) {
+            // Restricción acotada a una finalidad/actividad de tratamiento: cada oposición
+            // aprobada se registra por separado, así el titular puede oponerse a varias
+            // finalidades de forma independiente (Art. 19 Ley 21.719).
+            boolean yaRestringida = processingRestrictionRepository
+                    .existsByPerson_IdAndTreatmentActivityId(personId, treatmentActivityId);
+
+            if (yaRestringida) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Ya existe una restricción de tratamiento aplicada para esta finalidad"
+                );
+            }
+
+            processingRestrictionRepository.save(
+                    ProcessingRestriction.builder()
+                            .organizationId(organizationId)
+                            .person(person)
+                            .treatmentActivityId(treatmentActivityId)
+                            .purpose(purpose)
+                            .build()
+            );
+        } else if (person.getDataStatus() == DataStatus.PROCESSING_RESTRICTED) {
+            // Solicitudes sin finalidad asociada (legado): no hay forma de distinguir
+            // finalidades, así que se mantiene el resguardo global anterior.
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "La persona ya tiene una oposición aplicada"

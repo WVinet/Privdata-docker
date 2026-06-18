@@ -48,6 +48,8 @@ public class OppositionRequest {
     @Column(columnDefinition = "TEXT")
     private String opposedTreatment;
 
+    private UUID treatmentActivityId;
+
     private Boolean overridingLegitimateGrounds;
 
     private Boolean legalObligationApplies;

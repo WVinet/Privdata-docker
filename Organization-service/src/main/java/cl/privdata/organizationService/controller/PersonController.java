@@ -152,12 +152,14 @@ public class PersonController {
     public ResponseEntity<Void> restrictProcessing(
             @PathVariable UUID organizationId,
             @PathVariable UUID personId,
+            @RequestParam(required = false) UUID treatmentActivityId,
             @RequestParam(required = false) String purpose
     ) {
 
         personService.restrictProcessing(
                 organizationId,
                 personId,
+                treatmentActivityId,
                 purpose
         );
 

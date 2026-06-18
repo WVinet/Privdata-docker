@@ -4,6 +4,8 @@ import com.example.demo.arco.oposicion.enums.OppositionCause;
 import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
 import lombok.Data;
 
+import java.util.UUID;
+
 @Data
 public class CreateOppositionDTO {
 
@@ -16,4 +18,6 @@ public class CreateOppositionDTO {
     private String processingPurpose;
 
     private String opposedTreatment;
+
+    private UUID treatmentActivityId;
 }

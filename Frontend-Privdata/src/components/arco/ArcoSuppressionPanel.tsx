@@ -1,22 +1,32 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Loader2, Trash2, CheckCircle2, AlertTriangle } from "lucide-react"
-import { personsApi, complianceApi } from "@/lib/api"
-import { parseSuppression } from "@/lib/suppression"
-import type { UpdatePersonRequest } from "@/types/person"
-import type { Consent } from "@/types/compliance"
+import { Loader2, Trash2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
+import { personsApi, arcoApi } from "@/lib/api"
+import { parseSuppression, SUPPRESSION_CAUSE_LABELS } from "@/lib/suppression"
+import type { SuppressionCause } from "@/types/arco"
 
 interface Props {
+  arcoRequestId: string
   dataSubjectId: string
   organizationId: string
   description: string
   onApplied: (resolutionText: string) => void
 }
 
-export default function ArcoSuppressionPanel({ dataSubjectId, organizationId, description, onApplied }: Props) {
+const CAUSE_ASSESSMENT: Record<SuppressionCause, { field: "dataStillNecessary" | "anotherLegalBasisExists" | "retentionPeriodStillValid"; label: string }> = {
+  DATA_NOT_NECESSARY: { field: "dataStillNecessary", label: "Los datos siguen siendo necesarios para la finalidad declarada" },
+  CONSENT_REVOKED: { field: "anotherLegalBasisExists", label: "Existe otro fundamento legal que autoriza el tratamiento" },
+  DATA_EXPIRED: { field: "retentionPeriodStillValid", label: "Los datos aún se encuentran dentro del plazo de conservación" },
+}
+
+export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, organizationId, description, onApplied }: Props) {
   const qc = useQueryClient()
   const details = parseSuppression(description)
-  const [confirming, setConfirming] = useState(false)
+  const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle")
+  const [assessmentChecked, setAssessmentChecked] = useState(false)
+  const [exceptionApplies, setExceptionApplies] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [observations, setObservations] = useState("")
 
   const { data: personData, isLoading: loadingPerson } = useQuery({
     queryKey: ["person", organizationId, dataSubjectId],
@@ -25,50 +35,28 @@ export default function ArcoSuppressionPanel({ dataSubjectId, organizationId, de
   })
   const person = personData?.data
 
-  const { data: consentsData, isLoading: loadingConsents } = useQuery({
-    queryKey: ["consents-subject", dataSubjectId],
-    queryFn: () => complianceApi.getConsentsBySubject(dataSubjectId).then(r => r.data),
-    enabled: !!details,
-  })
-  const consents: Consent[] = consentsData ?? []
-  const activeConsents = consents.filter(c => c.status === "ACTIVE")
-
-  const applyMutation = useMutation({
-    mutationFn: async () => {
-      if (!person) throw new Error("Datos del titular no disponibles")
-
-      const body: UpdatePersonRequest = {
-        firstName: "Titular",
-        lastName: "(anonimizado)",
-        rut: undefined,
-        email: undefined,
-        phone: undefined,
-        position: undefined,
-        departmentId: person.departmentId ?? undefined,
-      }
-      const updateRes = await personsApi.update(organizationId, dataSubjectId, body)
-      if (!updateRes.data.success) throw new Error(updateRes.data.message)
-
-      const statusRes = await personsApi.updateStatus(organizationId, dataSubjectId, false)
-      if (!statusRes.data.success) throw new Error(statusRes.data.message)
-
-      for (const consent of activeConsents) {
-        const revokeRes = await complianceApi.revokeConsent(consent.id)
-        if (!revokeRes.data.success) throw new Error(revokeRes.data.message)
-      }
+  const respondMutation = useMutation({
+    mutationFn: async (approved: boolean) => {
+      const assessment = details ? CAUSE_ASSESSMENT[details.cause] : null
+      const res = await arcoApi.respondSuppression(arcoRequestId, {
+        approved,
+        observations: approved ? observations.trim() || undefined : undefined,
+        rejectionReason: !approved ? rejectionReason.trim() || undefined : undefined,
+        exceptionApplies: !approved ? exceptionApplies : undefined,
+        ...(assessment && !approved ? { [assessment.field]: assessmentChecked } : {}),
+      })
+      if (!res.data.success) throw new Error(res.data.message)
+      return { approved, data: res.data.data }
     },
-    onSuccess: () => {
+    onSuccess: ({ approved, data }) => {
       qc.invalidateQueries({ queryKey: ["person", organizationId, dataSubjectId] })
       qc.invalidateQueries({ queryKey: ["persons", organizationId] })
-      qc.invalidateQueries({ queryKey: ["consents-subject", dataSubjectId] })
-      setConfirming(false)
+      setMode("idle")
       onApplied(
-        `Informe de Supresión — Art. 11 Ley 21.719\n\n` +
-        `Se anonimizaron los datos identificativos del titular, su cuenta fue desactivada` +
-        (activeConsents.length > 0
-          ? ` y se revocaron ${activeConsents.length} consentimiento(s) activo(s).`
-          : `.`) +
-        `\n\nMotivo indicado por el titular: ${details!.reason}`
+        approved
+          ? `Informe de Supresión — Art. 11 Ley 21.719\n\nSolicitud aprobada. Los datos del titular fueron marcados para eliminación y su cuenta fue desactivada.` +
+            (observations.trim() ? `\n\n${observations.trim()}` : "")
+          : `Informe de Supresión — Art. 11 Ley 21.719\n\nSolicitud rechazada.\n\n${data?.resolutionSummary ?? rejectionReason.trim()}`
       )
     },
   })
@@ -82,7 +70,7 @@ export default function ArcoSuppressionPanel({ dataSubjectId, organizationId, de
     )
   }
 
-  if (loadingPerson || loadingConsents) {
+  if (loadingPerson) {
     return (
       <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -92,6 +80,7 @@ export default function ArcoSuppressionPanel({ dataSubjectId, organizationId, de
   }
 
   const alreadyApplied = person?.isActive === false
+  const assessment = CAUSE_ASSESSMENT[details.cause]
 
   return (
     <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 space-y-3 text-sm">
@@ -109,8 +98,8 @@ export default function ArcoSuppressionPanel({ dataSubjectId, organizationId, de
           {person?.phone && <span className="text-foreground"> · {person.phone}</span>}
         </div>
         <div>
-          <span className="text-muted-foreground">Consentimientos activos:</span>{" "}
-          <span className="font-medium text-foreground">{activeConsents.length}</span>
+          <span className="text-muted-foreground">Causal invocada:</span>{" "}
+          <span className="font-medium text-foreground">{SUPPRESSION_CAUSE_LABELS[details.cause]}</span>
         </div>
         <div>
           <span className="text-muted-foreground">Motivo indicado por el titular:</span>{" "}
@@ -121,34 +110,90 @@ export default function ArcoSuppressionPanel({ dataSubjectId, organizationId, de
       {alreadyApplied ? (
         <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "hsl(var(--success))" }}>
           <CheckCircle2 className="w-3.5 h-3.5" />
-          La supresión ya fue aplicada: los datos del titular fueron anonimizados y su cuenta está desactivada.
+          La solicitud ya fue resuelta: los datos del titular fueron marcados para eliminación y su cuenta está desactivada.
         </div>
-      ) : confirming ? (
+      ) : mode === "approve" ? (
         <div className="rounded-lg border border-destructive/40 bg-background p-3 space-y-2">
           <p className="flex items-start gap-1.5 text-xs font-medium text-destructive">
             <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            Esta acción anonimizará los datos del titular, desactivará su cuenta
-            {activeConsents.length > 0 && ` y revocará ${activeConsents.length} consentimiento(s) activo(s)`}.
-            No se puede deshacer fácilmente. ¿Confirmas que deseas continuar?
+            Esta acción marcará los datos del titular para eliminación y desactivará su cuenta de inmediato. No se puede deshacer fácilmente.
           </p>
-          {applyMutation.isError && (
-            <p className="text-xs text-destructive">{(applyMutation.error as Error).message}</p>
+          <textarea
+            rows={2}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Observaciones para el titular (opcional)…"
+            value={observations}
+            onChange={(e) => setObservations(e.target.value)}
+          />
+          {respondMutation.isError && (
+            <p className="text-xs text-destructive">{(respondMutation.error as Error).message}</p>
           )}
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => applyMutation.mutate()}
-              disabled={applyMutation.isPending}
+              onClick={() => respondMutation.mutate(true)}
+              disabled={respondMutation.isPending}
               className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
               style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
             >
-              {applyMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Sí, aplicar supresión
+              {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Sí, aprobar y suprimir
             </button>
             <button
               type="button"
-              onClick={() => setConfirming(false)}
-              disabled={applyMutation.isPending}
+              onClick={() => setMode("idle")}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : mode === "reject" ? (
+        <div className="rounded-lg border border-border bg-background p-3 space-y-2">
+          <label className="flex items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={assessmentChecked}
+              onChange={(e) => setAssessmentChecked(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded"
+            />
+            {assessment.label}
+          </label>
+          <label className="flex items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={exceptionApplies}
+              onChange={(e) => setExceptionApplies(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded"
+            />
+            Aplica una excepción legal que impide la supresión
+          </label>
+          <textarea
+            rows={2}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Motivo del rechazo (opcional — si se deja vacío se usa un texto estándar según la evaluación marcada)…"
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+          />
+          {respondMutation.isError && (
+            <p className="text-xs text-destructive">{(respondMutation.error as Error).message}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => respondMutation.mutate(false)}
+              disabled={respondMutation.isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+              style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
+            >
+              {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Confirmar rechazo
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("idle")}
+              disabled={respondMutation.isPending}
               className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted"
             >
               Cancelar
@@ -156,20 +201,24 @@ export default function ArcoSuppressionPanel({ dataSubjectId, organizationId, de
           </div>
         </div>
       ) : (
-        <>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setConfirming(true)}
+            onClick={() => setMode("approve")}
             className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
             style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
           >
-            Aplicar supresión
+            Aprobar y suprimir
           </button>
-          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            Esto anonimizará los datos del titular, desactivará su cuenta y revocará sus consentimientos activos de inmediato. Verifica la solicitud antes de aplicar.
-          </p>
-        </>
+          <button
+            type="button"
+            onClick={() => setMode("reject")}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted inline-flex items-center gap-1.5"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            Rechazar
+          </button>
+        </div>
       )}
     </div>
   )

@@ -105,7 +105,7 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
         <div>
           {(!collapsed || mobile) && (
             <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-              Solicitudes ARCO
+              Solicitudes ARSO
             </p>
           )}
           <ul className="space-y-1 px-2">
