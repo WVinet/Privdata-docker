@@ -43,8 +43,8 @@ public class ArcoBffService {
     public Object create(Map<String, Object> body, String authorization) {
         Object result = arcoClient.create(body);
         String orgId  = body.get("organizationId") != null ? body.get("organizationId").toString() : null;
-        String type   = body.get("requestType")    != null ? body.get("requestType").toString()    : "ARCO";
-        auditClient.log(orgId, "CREATE", "Solicitud ARCO",
+        String type   = body.get("requestType")    != null ? body.get("requestType").toString()    : "ARSO";
+        auditClient.log(orgId, "CREATE", "Solicitud ARSO",
                 "Nueva solicitud " + type + " registrada",
                 JwtUtil.extractEmail(authorization));
         return result;
@@ -55,7 +55,7 @@ public class ArcoBffService {
         String orgId   = extractDataField(result, "organizationId");
         String status  = body.get("status") != null ? body.get("status").toString() : "actualizado";
 
-        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
                 "Estado actualizado a '" + status + "' para solicitud " + id,
                 JwtUtil.extractEmail(authorization));
 
@@ -65,7 +65,7 @@ public class ArcoBffService {
     public Object extendDeadline(String id, String authorization) {
         Object result = arcoClient.extendDeadline(id);
         String orgId  = extractDataField(result, "organizationId");
-        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
                 "Prórroga de 30 días otorgada para solicitud " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
@@ -74,7 +74,7 @@ public class ArcoBffService {
     public Object registrarDisconformidad(String id, Map<String, Object> body, String authorization) {
         Object result = arcoClient.registrarDisconformidad(id, body);
         String orgId  = extractDataField(result, "organizationId");
-        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
                 "Disconformidad registrada para solicitud " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
@@ -87,7 +87,7 @@ public class ArcoBffService {
     public Object verifyAccessIdentity(String id, Map<String, Object> body, String authorization) {
         Object result = arcoClient.verifyAccessIdentity(id, body);
         String orgId  = extractDataField(result, "organizationId");
-        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
                 "Verificación de identidad registrada para solicitud de acceso " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
@@ -96,7 +96,7 @@ public class ArcoBffService {
     public Object respondAccess(String id, Map<String, Object> body, String authorization) {
         Object result = arcoClient.respondAccess(id, body);
         String orgId  = extractDataField(result, "organizationId");
-        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
                 "Solicitud de acceso respondida " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
@@ -105,7 +105,7 @@ public class ArcoBffService {
     public Object createRectification(Map<String, Object> body, String authorization) {
         Object result = arcoClient.createRectification(body);
         String orgId  = extractDataField(result, "organizationId");
-        auditClient.log(orgId, "CREATE", "Solicitud ARCO",
+        auditClient.log(orgId, "CREATE", "Solicitud ARSO",
                 "Nueva solicitud de rectificación registrada",
                 JwtUtil.extractEmail(authorization));
         return result;
@@ -114,7 +114,7 @@ public class ArcoBffService {
     public Object verifyRectificationIdentity(String id, Map<String, Object> body, String authorization) {
         Object result = arcoClient.verifyRectificationIdentity(id, body);
         String orgId  = extractDataField(result, "organizationId");
-        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
                 "Verificación de identidad registrada para solicitud de rectificación " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
@@ -123,8 +123,35 @@ public class ArcoBffService {
     public Object respondRectification(String id, Map<String, Object> body, String authorization) {
         Object result = arcoClient.respondRectification(id, body);
         String orgId  = extractDataField(result, "organizationId");
-        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
                 "Solicitud de rectificación respondida " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object createSuppression(Map<String, Object> body, String authorization) {
+        Object result = arcoClient.createSuppression(body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "CREATE", "Solicitud ARSO",
+                "Nueva solicitud de supresión registrada",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object verifySuppressionIdentity(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.verifySuppressionIdentity(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Verificación de identidad registrada para solicitud de supresión " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object respondSuppression(String id, Map<String, Object> body, String authorization) {
+        Object result = arcoClient.respondSuppression(id, body);
+        String orgId  = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Solicitud de supresión respondida " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
     }
@@ -132,7 +159,7 @@ public class ArcoBffService {
     public Object reclamarAnteAgencia(String id, String authorization) {
         Object result = arcoClient.reclamarAnteAgencia(id);
         String orgId  = extractDataField(result, "organizationId");
-        auditClient.log(orgId, "UPDATE", "Solicitud ARCO",
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
                 "Reclamo registrado ante la Agencia para la solicitud " + id,
                 JwtUtil.extractEmail(authorization));
         return result;

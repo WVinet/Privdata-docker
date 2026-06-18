@@ -1,3 +1,5 @@
+export type DataStatus = "ACTIVE" | "BLOCKED" | "DELETION_REQUESTED" | "ANONYMIZED"
+
 export interface Person {
   id: string
   organizationId: string
@@ -13,6 +15,10 @@ export interface Person {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  blocked: boolean
+  anonymized: boolean
+  deletionRequest: boolean
+  dataStatus: DataStatus
 }
 
 export interface InvitePersonRequest {

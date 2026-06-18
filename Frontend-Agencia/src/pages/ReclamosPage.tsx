@@ -73,7 +73,7 @@ export default function ReclamosPage() {
       <div>
         <h1 className="text-xl font-semibold text-foreground">Reclamos</h1>
         <p className="text-sm text-muted-foreground">
-          Panel de transparencia de solicitudes ARCO y reclamos pendientes de resolución.
+          Panel de transparencia de solicitudes ARSO y reclamos pendientes de resolución.
         </p>
       </div>
 
@@ -82,7 +82,7 @@ export default function ReclamosPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <ListChecks className="w-4 h-4" /> Solicitudes ARCO (PrivData)
+              <ListChecks className="w-4 h-4" /> Solicitudes ARSO (PrivData)
             </CardTitle>
             <CardDescription>
               Panel de transparencia — solo lectura. Las marcadas con reclamo o disconformidad aparecen primero.

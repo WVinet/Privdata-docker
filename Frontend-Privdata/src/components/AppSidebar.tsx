@@ -27,7 +27,7 @@ const navItems: NavItem[] = [
   { label: "Dashboard",        path: "/dashboard",       icon: LayoutDashboard },
   { label: "Titulares",        path: "/titulares",       icon: UserCheck },
   { label: "Consentimientos",  path: "/consentimientos", icon: FileCheck },
-  { label: "Solicitudes ARCO", path: "/arco",            icon: ClipboardList },
+  { label: "Solicitudes ARSO", path: "/arco",            icon: ClipboardList },
   { label: "Auditoría",        path: "/auditoria",       icon: DatabaseZap },
 ]
 

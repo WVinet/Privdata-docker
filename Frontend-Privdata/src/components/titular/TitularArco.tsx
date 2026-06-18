@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { arcoApi, personsApi, complianceApi } from "@/lib/api"
-import type { ArcoRequestType } from "@/types/arco"
+import type { ArcoRequestType, CreateSuppressionDetails } from "@/types/arco"
 import type { TreatmentActivity } from "@/types/compliance"
 import { RECTIFIABLE_FIELDS, encodeRectification, getPersonFieldValue, type RectifiableField } from "@/lib/rectification"
 import { encodeSuppression } from "@/lib/suppression"
@@ -144,6 +144,7 @@ const formSchema = z
     rectField: z.string().optional(),
     rectNewValue: z.string().optional(),
     rectReason: z.string().optional(),
+    suppressCause: z.string().optional(),
     suppressReason: z.string().optional(),
     suppressConfirm: z.boolean().optional(),
     oppositionActivities: z.array(z.string()).optional(),
@@ -169,6 +170,9 @@ const formSchema = z
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["rectReason"], message: "Indica el motivo de la corrección" })
       }
     } else if (data.mode === "suppression") {
+      if (!data.suppressCause) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["suppressCause"], message: "Selecciona la causal de la solicitud de supresión" })
+      }
       if (!data.suppressReason?.trim()) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["suppressReason"], message: "Indica el motivo de la solicitud de supresión" })
       }
@@ -250,7 +254,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
     reset,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressReason: "", suppressConfirm: false, oppositionActivities: [], oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false },
+    defaultValues: { email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionActivities: [], oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false },
   })
 
   const rectField = watch("rectField") as RectifiableField | "" | undefined
@@ -269,7 +273,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
 
   async function onSubmit(data: FormData) {
     if (!selectedRight) {
-      toast.error("Selecciona un derecho ARCO antes de enviar.")
+      toast.error("Selecciona un derecho ARSO antes de enviar.")
       return
     }
     if (!organizationId || !dataSubjectId) {
@@ -288,7 +292,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
         reason: data.rectReason!.trim(),
       })
     } else if (selectedRight.id === "suppression") {
-      description = encodeSuppression(data.suppressReason!.trim())
+      description = encodeSuppression(data.suppressCause as CreateSuppressionDetails["cause"], data.suppressReason!.trim())
     } else if (selectedRight.id === "opposition") {
       const selectedIds = data.oppositionActivities ?? []
       const selectedActivities = treatmentActivities
@@ -325,6 +329,20 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
             },
             { [data.rectField as RectifiableField]: data.rectNewValue!.trim() }
           )
+        : selectedRight.id === "suppression"
+        ? await arcoApi.createSuppression(
+            {
+              organizationId,
+              dataSubjectId,
+              requestType: RIGHT_TO_TYPE[selectedRight.id],
+              requestChannel: "WEB_PORTAL",
+              description,
+            },
+            {
+              cause: data.suppressCause as CreateSuppressionDetails["cause"],
+              reason: data.suppressReason!.trim(),
+            }
+          )
         : await arcoApi.create({
             organizationId,
             dataSubjectId,
@@ -349,7 +367,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   function handleSuccessClose() {
     setSuccessOpen(false)
     setSelectedRight(null)
-    reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressReason: "", suppressConfirm: false, oppositionActivities: [], oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
+    reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionActivities: [], oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
     onSolicitudCreated()
   }
 
@@ -638,11 +656,35 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
               >
                 <p className="font-bold">Si tu solicitud es aprobada:</p>
                 <ul className="list-disc list-inside space-y-0.5">
-                  <li>Tus datos identificativos (nombre, RUT, correo, teléfono, cargo) serán anonimizados.</li>
+                  <li>Tus datos quedarán marcados para eliminación.</li>
                   <li>Tu cuenta será desactivada y no podrás volver a iniciar sesión.</li>
-                  <li>Tus consentimientos activos serán revocados.</li>
                 </ul>
                 <p>Esta acción puede ser irreversible y solo procede cuando no exista una obligación legal de conservar tus datos.</p>
+              </div>
+
+              {/* Causal */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Causal de la solicitud
+                </label>
+                <select
+                  {...register("suppressCause")}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
+                  style={{ borderColor: "hsl(var(--border))" }}
+                >
+                  <option value="">Selecciona una opción...</option>
+                  <option value="DATA_NOT_NECESSARY">Mis datos ya no son necesarios para la finalidad con que fueron recopilados</option>
+                  <option value="CONSENT_REVOKED">Revoqué el consentimiento que di para el tratamiento</option>
+                  <option value="DATA_EXPIRED">Venció el plazo de conservación de mis datos</option>
+                </select>
+                {errors.suppressCause && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.suppressCause.message}
+                  </p>
+                )}
               </div>
 
               {/* Motivo */}
@@ -684,8 +726,8 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                   className="text-xs leading-relaxed"
                   style={{ color: "hsl(var(--destructive))" }}
                 >
-                  Entiendo que, de aprobarse, mis datos serán anonimizados, mi cuenta será
-                  desactivada y mis consentimientos activos serán revocados.
+                  Entiendo que, de aprobarse, mis datos quedarán marcados para eliminación y mi
+                  cuenta será desactivada.
                 </label>
               </div>
               {errors.suppressConfirm && (
@@ -1028,7 +1070,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
               type="button"
               onClick={() => {
                 setSelectedRight(null)
-                reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressReason: "", suppressConfirm: false, oppositionActivities: [], oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
+                reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionActivities: [], oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
               }}
               className="px-5 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-muted"
               style={{

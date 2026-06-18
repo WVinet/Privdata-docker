@@ -23,7 +23,7 @@ const ACTION_CONFIG: Record<string, { label: string; className: string }> = {
 
 // Tipos de entidad emitidos hoy por el BFF (ver AuditClient.log en cada XxxBffService)
 const ENTITY_LABELS = [
-  "Solicitud ARCO",
+  "Solicitud ARSO",
   "Reclamo ante la Agencia",
   "Consentimiento",
   "Definición de Consentimiento",
@@ -111,7 +111,7 @@ export default function AuditPage() {
     const uuid = event.detail.match(UUID_RE)?.[0]
     if (!uuid) return null
 
-    if (event.entityType === "Solicitud ARCO") {
+    if (event.entityType === "Solicitud ARSO") {
       const request = arcoById[uuid]
       return request ? personsById[request.dataSubjectId]?.fullName ?? null : null
     }

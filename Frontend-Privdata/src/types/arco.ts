@@ -51,3 +51,25 @@ export interface UpdateArcoStatus {
   resolutionSummary?: string
   denialLegalBasis?: string
 }
+
+export type SuppressionCause = "DATA_NOT_NECESSARY" | "CONSENT_REVOKED" | "DATA_EXPIRED"
+
+export interface CreateSuppressionDetails {
+  cause: SuppressionCause
+  reason: string
+  originalPurpose?: string
+  consentRevokedAt?: string
+  dataCollectedAt?: string
+  retentionExpiresAt?: string
+}
+
+export interface RespondSuppression {
+  approved: boolean
+  observations?: string
+  rejectionReason?: string
+  dataStillNecessary?: boolean
+  anotherLegalBasisExists?: boolean
+  retentionPeriodStillValid?: boolean
+  exceptionApplies?: boolean
+  retentionExpiresAt?: string
+}

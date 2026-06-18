@@ -13,7 +13,7 @@ import type {
 } from "@/types/person"
 import type {
   ArcoRequest, ArcoStatus, ArcoRequestType, ArcoRequestChannel,
-  CreateArcoRequest, UpdateArcoStatus,
+  CreateArcoRequest, UpdateArcoStatus, CreateSuppressionDetails, RespondSuppression,
 } from "@/types/arco"
 import type {
   Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus,
@@ -211,6 +211,15 @@ export const arcoApi = {
 
   respondRectification: (id: string, observations: string) =>
     api.patch<ApiResponse<ArcoRequest>>(`/arco/rectification/${id}/respond`, { observations }),
+
+  createSuppression: (arcoRequest: CreateArcoRequest, details: CreateSuppressionDetails) =>
+    api.post<ApiResponse<ArcoRequest>>("/arco/suppression", { arcoRequest, ...details }),
+
+  verifySuppressionIdentity: (id: string, verified: boolean, comment?: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/suppression/${id}/verify-identity`, { verified, comment }),
+
+  respondSuppression: (id: string, body: RespondSuppression) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/suppression/${id}/respond`, body),
 }
 
 // ── Compliance ────────────────────────────────────────────────────────────────
