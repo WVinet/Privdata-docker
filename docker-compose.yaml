@@ -103,17 +103,19 @@ services:
     profiles: ["app"]
     depends_on:
       - postgres-arco
+      - organization-service
     environment:
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-arco:5432/arco_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
+      ORGANIZATION_SERVICE_URL: http://organization-service:8081
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
     ports:
       - "8082:8082"
     volumes:
-    - ./portability-files:/app/portability-files
+      - ./portability-files:/app/portability-files
 
   compliance-service:
     build: ./compliance-service
