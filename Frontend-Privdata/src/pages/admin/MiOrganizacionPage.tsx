@@ -5,8 +5,8 @@ import {
   Loader2, X, MapPin, Phone, Mail, Hash, Briefcase,
   Users,
 } from "lucide-react"
-import { organizationsApi, departmentsApi, personsApi } from "@/lib/api"
-import type { Organization, OrganizationUpdateRequest, DepartmentCreateRequest } from "@/types/organization"
+import { organizationsApi, departmentsApi, jobPositionsApi, personsApi } from "@/lib/api"
+import type { Organization, OrganizationUpdateRequest, DepartmentCreateRequest, JobPositionCreateRequest } from "@/types/organization"
 import { useAuth } from "@/hooks/use-auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -154,6 +154,66 @@ function AddDeptModal({ orgId, onClose }: { orgId: string; onClose: () => void }
   )
 }
 
+// ── Modal agregar cargo ────────────────────────────────────────────────────────
+function AddCargoModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
+  const qc = useQueryClient()
+  const [form, setForm] = useState<JobPositionCreateRequest>({ name: "", description: "" })
+  const [error, setError] = useState("")
+
+  const mutation = useMutation({
+    mutationFn: () => jobPositionsApi.create(orgId, form),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["job-positions", orgId] }); onClose() },
+    onError: (e: unknown) =>
+      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Error al crear"),
+  })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm space-y-4 p-6">
+        <div className="flex items-start justify-between">
+          <p className="font-semibold text-foreground">Nuevo cargo</p>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Nombre *</Label>
+            <Input
+              placeholder="ej. Analista de Cumplimiento Normativo"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Descripción</Label>
+            <Input
+              placeholder="ej. Gestiona el RAT y solicitudes ARSOP"
+              value={form.description ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+          <Button
+            size="sm"
+            onClick={() => mutation.mutate()}
+            disabled={!form.name.trim() || mutation.isPending}
+          >
+            {mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Agregar
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Info field ─────────────────────────────────────────────────────────────────
 function InfoField({ icon: Icon, label, value }: {
   icon: React.ElementType
@@ -182,6 +242,7 @@ export default function MiOrganizacionPage() {
 
   const [editingOrg, setEditingOrg]     = useState(false)
   const [addingDept, setAddingDept]     = useState(false)
+  const [addingCargo, setAddingCargo]   = useState(false)
 
   const { data: orgData, isLoading: loadingOrg } = useQuery({
     queryKey: ["my-org", orgId],
@@ -192,6 +253,12 @@ export default function MiOrganizacionPage() {
   const { data: deptData, isLoading: loadingDepts } = useQuery({
     queryKey: ["departments", orgId],
     queryFn:  () => departmentsApi.list(orgId).then((r) => r.data),
+    enabled:  !!orgId,
+  })
+
+  const { data: cargoData, isLoading: loadingCargos } = useQuery({
+    queryKey: ["job-positions", orgId],
+    queryFn:  () => jobPositionsApi.list(orgId).then((r) => r.data),
     enabled:  !!orgId,
   })
 
@@ -207,6 +274,12 @@ export default function MiOrganizacionPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["departments", orgId] }),
   })
 
+  const toggleCargo = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      jobPositionsApi.updateStatus(orgId, id, isActive),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["job-positions", orgId] }),
+  })
+
   const togglePerson = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       personsApi.updateStatus(orgId, id, isActive),
@@ -215,6 +288,7 @@ export default function MiOrganizacionPage() {
 
   const org     = orgData?.data
   const depts   = deptData?.data   ?? []
+  const cargos  = cargoData?.data  ?? []
   const persons = personsData?.data ?? []
 
   return (
@@ -224,6 +298,9 @@ export default function MiOrganizacionPage() {
       )}
       {addingDept && (
         <AddDeptModal orgId={orgId} onClose={() => setAddingDept(false)} />
+      )}
+      {addingCargo && (
+        <AddCargoModal orgId={orgId} onClose={() => setAddingCargo(false)} />
       )}
 
       <div className="space-y-6">
@@ -337,6 +414,76 @@ export default function MiOrganizacionPage() {
                               title={dept.isActive ? "Desactivar" : "Activar"}
                             >
                               {dept.isActive
+                                ? <ToggleRight className="w-4 h-4 text-success" />
+                                : <ToggleLeft  className="w-4 h-4 text-muted-foreground" />
+                              }
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Card cargos ── */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Cargos</CardTitle>
+              <Button size="sm" onClick={() => setAddingCargo(true)}>
+                <Plus className="w-4 h-4 mr-1.5" />Agregar
+              </Button>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-0">
+            {loadingCargos ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cargos.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No hay cargos registrados. Agrega el primero.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      cargos.map((cargo) => (
+                        <TableRow key={cargo.id}>
+                          <TableCell className="font-medium">{cargo.name}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {cargo.description ?? "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={cargo.isActive ? "default" : "secondary"}>
+                              {cargo.isActive ? "Activo" : "Inactivo"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleCargo.mutate({ id: cargo.id, isActive: !cargo.isActive })}
+                              disabled={toggleCargo.isPending}
+                              title={cargo.isActive ? "Desactivar" : "Activar"}
+                            >
+                              {cargo.isActive
                                 ? <ToggleRight className="w-4 h-4 text-success" />
                                 : <ToggleLeft  className="w-4 h-4 text-muted-foreground" />
                               }

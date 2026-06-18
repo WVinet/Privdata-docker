@@ -69,6 +69,28 @@ public class OrganizationClient {
         return forward("PATCH", "/api/organizations/" + orgId + "/departments/" + deptId + "/status", body);
     }
 
+    // ── Cargos ────────────────────────────────────────────────────────────────
+
+    public Object listJobPositions(String orgId) {
+        return forward("GET", "/api/organizations/" + orgId + "/job-positions", null);
+    }
+
+    public Object getJobPosition(String orgId, String jobPositionId) {
+        return forward("GET", "/api/organizations/" + orgId + "/job-positions/" + jobPositionId, null);
+    }
+
+    public Object createJobPosition(String orgId, Map<String, Object> body) {
+        return forward("POST", "/api/organizations/" + orgId + "/job-positions", body);
+    }
+
+    public Object updateJobPosition(String orgId, String jobPositionId, Map<String, Object> body) {
+        return forward("PUT", "/api/organizations/" + orgId + "/job-positions/" + jobPositionId, body);
+    }
+
+    public Object updateJobPositionStatus(String orgId, String jobPositionId, Map<String, Object> body) {
+        return forward("PATCH", "/api/organizations/" + orgId + "/job-positions/" + jobPositionId + "/status", body);
+    }
+
     // ── Personas ──────────────────────────────────────────────────────────────
 
     public Object getPerson(String orgId, String personId) {

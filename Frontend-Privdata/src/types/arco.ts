@@ -93,3 +93,52 @@ export interface RespondOpposition {
   publicInterestApplies?: boolean
   exceptionApplies?: boolean
 }
+
+export type PortabilityCause = "USER_REQUEST" | "TRANSFER_TO_OTHER_PROVIDER" | "PERSONAL_BACKUP"
+
+export interface CreatePortabilityDetails {
+  cause: PortabilityCause
+  destinationOrganization?: string
+  reason: string
+}
+
+export interface RespondPortability {
+  approved: boolean
+  observations?: string
+  rejectionReason?: string
+}
+
+export type BlockingCause = "PROCESSING_UNDER_CHALLENGE" | "UNLAWFUL_PROCESSING" | "PENDING_SUPPRESSION_REVIEW"
+
+export interface CreateBlockingDetails {
+  cause: BlockingCause
+  reason: string
+}
+
+export interface RespondBlocking {
+  approved: boolean
+  observations?: string
+  rejectionReason?: string
+  legalObligationApplies?: boolean
+  exceptionApplies?: boolean
+}
+
+export type AnonymizationCause =
+  | "DATA_NO_LONGER_REQUIRES_IDENTIFICATION"
+  | "PRIVACY_PRESERVING_RETENTION"
+  | "STATISTICAL_OR_RESEARCH_PURPOSE"
+
+export interface CreateAnonymizationDetails {
+  cause: AnonymizationCause
+  reason: string
+}
+
+export interface RespondAnonymization {
+  approved: boolean
+  observations?: string
+  rejectionReason?: string
+  legalObligationApplies?: boolean
+  identificationStillRequired?: boolean
+  technicalImpossibility?: boolean
+  exceptionApplies?: boolean
+}

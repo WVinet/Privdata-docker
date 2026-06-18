@@ -6,13 +6,17 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { arcoApi, personsApi, complianceApi } from "@/lib/api"
-import type { ArcoRequestType, CreateSuppressionDetails, CreateOppositionDetails } from "@/types/arco"
+import type {
+  ArcoRequestType, CreateSuppressionDetails, CreateOppositionDetails,
+  CreatePortabilityDetails, CreateBlockingDetails, CreateAnonymizationDetails,
+} from "@/types/arco"
 import type { TreatmentActivity } from "@/types/compliance"
 import { RECTIFIABLE_FIELDS, encodeRectification, getPersonFieldValue, type RectifiableField } from "@/lib/rectification"
 import { encodeSuppression } from "@/lib/suppression"
 import { encodeOpposition } from "@/lib/opposition"
-import { BLOCKING_RELATED_TYPES, encodeBlocking, type BlockingRelatedType } from "@/lib/blocking"
-import { encodeAnonymization } from "@/lib/anonymization"
+import { PORTABILITY_CAUSE_LABELS, encodePortability } from "@/lib/portability"
+import { BLOCKING_CAUSE_LABELS, encodeBlocking } from "@/lib/blocking"
+import { ANONYMIZATION_CAUSE_LABELS, encodeAnonymization } from "@/lib/anonymization"
 
 type ArcoRight = {
   id: string
@@ -138,7 +142,7 @@ const dataOptions = [
 const formSchema = z
   .object({
     email: z.string().email("Email inválido"),
-    mode: z.enum(["other", "rectification", "suppression", "opposition", "blocking", "anonymization"]),
+    mode: z.enum(["other", "rectification", "suppression", "opposition", "portability", "blocking", "anonymization"]),
     dataScope: z.string().optional(),
     description: z.string().optional(),
     rectField: z.string().optional(),
@@ -150,9 +154,12 @@ const formSchema = z
     oppositionCause: z.string().optional(),
     oppositionActivityId: z.string().optional(),
     oppositionReason: z.string().optional(),
-    blockRelatedType: z.string().optional(),
-    blockRelatedId: z.string().optional(),
+    portabilityCause: z.string().optional(),
+    portabilityDestination: z.string().optional(),
+    portabilityReason: z.string().optional(),
+    blockCause: z.string().optional(),
     blockReason: z.string().optional(),
+    anonymizeCause: z.string().optional(),
     anonymizeReason: z.string().optional(),
     anonymizeConfirm: z.boolean().optional(),
     declaration: z
@@ -190,14 +197,27 @@ const formSchema = z
       if (!data.oppositionReason?.trim()) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["oppositionReason"], message: "Indica el motivo de la oposición" })
       }
+    } else if (data.mode === "portability") {
+      if (!data.portabilityCause) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["portabilityCause"], message: "Selecciona el motivo de tu solicitud de portabilidad" })
+      }
+      if (data.portabilityCause === "TRANSFER_TO_OTHER_PROVIDER" && !data.portabilityDestination?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["portabilityDestination"], message: "Indica a qué responsable deseas transferir tus datos" })
+      }
+      if (!data.portabilityReason?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["portabilityReason"], message: "Indica el motivo de la solicitud de portabilidad" })
+      }
     } else if (data.mode === "blocking") {
-      if (!data.blockRelatedType?.trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["blockRelatedType"], message: "Selecciona a qué solicitud se refiere el bloqueo" })
+      if (!data.blockCause) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["blockCause"], message: "Selecciona la causal del bloqueo" })
       }
       if (!data.blockReason?.trim()) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["blockReason"], message: "Indica el motivo del bloqueo" })
       }
     } else if (data.mode === "anonymization") {
+      if (!data.anonymizeCause) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["anonymizeCause"], message: "Selecciona la causal de la solicitud de anonimización" })
+      }
       if (!data.anonymizeReason?.trim()) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["anonymizeReason"], message: "Indica el motivo de la solicitud de anonimización" })
       }
@@ -258,7 +278,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
     reset,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false },
+    defaultValues: { email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", blockCause: "", blockReason: "", anonymizeCause: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false },
   })
 
   const rectField = watch("rectField") as RectifiableField | "" | undefined
@@ -269,6 +289,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
       selectedRight?.id === "rectification" ? "rectification" :
       selectedRight?.id === "suppression"   ? "suppression" :
       selectedRight?.id === "opposition"    ? "opposition" :
+      selectedRight?.id === "portability"   ? "portability" :
       selectedRight?.id === "blocking"      ? "blocking" :
       selectedRight?.id === "anonymization" ? "anonymization" :
       "other"
@@ -305,14 +326,22 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
         opposedTreatment: oppositionActivity?.name,
         processingPurpose: oppositionActivity?.purpose,
       })
+    } else if (selectedRight.id === "portability") {
+      description = encodePortability({
+        cause: data.portabilityCause as CreatePortabilityDetails["cause"],
+        destinationOrganization: data.portabilityDestination?.trim() || undefined,
+        reason: data.portabilityReason!.trim(),
+      })
     } else if (selectedRight.id === "blocking") {
       description = encodeBlocking({
-        relatedType: data.blockRelatedType as BlockingRelatedType,
-        relatedRequestId: data.blockRelatedId?.trim() || undefined,
+        cause: data.blockCause as CreateBlockingDetails["cause"],
         reason: data.blockReason!.trim(),
       })
     } else if (selectedRight.id === "anonymization") {
-      description = encodeAnonymization(data.anonymizeReason!.trim())
+      description = encodeAnonymization({
+        cause: data.anonymizeCause as CreateAnonymizationDetails["cause"],
+        reason: data.anonymizeReason!.trim(),
+      })
     } else {
       description = data.description
         ? `${data.dataScope} — ${data.description}`
@@ -363,6 +392,49 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
               treatmentActivityId: data.oppositionActivityId,
             }
           )
+        : selectedRight.id === "portability"
+        ? await arcoApi.createPortability(
+            {
+              organizationId,
+              dataSubjectId,
+              requestType: RIGHT_TO_TYPE[selectedRight.id],
+              requestChannel: "WEB_PORTAL",
+              description,
+            },
+            {
+              cause: data.portabilityCause as CreatePortabilityDetails["cause"],
+              destinationOrganization: data.portabilityDestination?.trim() || undefined,
+              reason: data.portabilityReason!.trim(),
+            }
+          )
+        : selectedRight.id === "blocking"
+        ? await arcoApi.createBlocking(
+            {
+              organizationId,
+              dataSubjectId,
+              requestType: RIGHT_TO_TYPE[selectedRight.id],
+              requestChannel: "WEB_PORTAL",
+              description,
+            },
+            {
+              cause: data.blockCause as CreateBlockingDetails["cause"],
+              reason: data.blockReason!.trim(),
+            }
+          )
+        : selectedRight.id === "anonymization"
+        ? await arcoApi.createAnonymization(
+            {
+              organizationId,
+              dataSubjectId,
+              requestType: RIGHT_TO_TYPE[selectedRight.id],
+              requestChannel: "WEB_PORTAL",
+              description,
+            },
+            {
+              cause: data.anonymizeCause as CreateAnonymizationDetails["cause"],
+              reason: data.anonymizeReason!.trim(),
+            }
+          )
         : await arcoApi.create({
             organizationId,
             dataSubjectId,
@@ -387,7 +459,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   function handleSuccessClose() {
     setSuccessOpen(false)
     setSelectedRight(null)
-    reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
+    reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", blockCause: "", blockReason: "", anonymizeCause: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
     onSolicitudCreated()
   }
 
@@ -775,6 +847,31 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                 </ul>
               </div>
 
+              {/* Causal */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Causal de la solicitud
+                </label>
+                <select
+                  {...register("anonymizeCause")}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
+                  style={{ borderColor: "hsl(var(--border))" }}
+                >
+                  <option value="">Selecciona una opción...</option>
+                  {Object.entries(ANONYMIZATION_CAUSE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+                {errors.anonymizeCause && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.anonymizeCause.message}
+                  </p>
+                )}
+              </div>
+
               {/* Motivo */}
               <div>
                 <label
@@ -931,6 +1028,94 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                 )}
               </div>
             </>
+          ) : selectedRight?.id === "portability" ? (
+            <>
+              {/* Info */}
+              <div
+                className="rounded-xl px-4 py-3 border-l-4 text-xs leading-relaxed"
+                style={{
+                  borderColor: "hsl(var(--primary) / 0.4)",
+                  background: "hsl(var(--secondary))",
+                  color: "hsl(var(--primary))",
+                }}
+              >
+                <p className="font-bold">¿En qué consiste?</p>
+                <p>
+                  Puedes recibir tus datos en un formato estructurado para transferirlos a otro responsable o para tu
+                  propio respaldo (Art. 8 bis Ley 21.719).
+                </p>
+              </div>
+
+              {/* Causal */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Motivo de la solicitud
+                </label>
+                <select
+                  {...register("portabilityCause")}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
+                  style={{ borderColor: "hsl(var(--border))" }}
+                >
+                  <option value="">Selecciona una opción...</option>
+                  {Object.entries(PORTABILITY_CAUSE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+                {errors.portabilityCause && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.portabilityCause.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Responsable de destino (solo si aplica) */}
+              {watch("portabilityCause") === "TRANSFER_TO_OTHER_PROVIDER" && (
+                <div>
+                  <label
+                    className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                  >
+                    Responsable al que deseas transferir tus datos
+                  </label>
+                  <input
+                    {...register("portabilityDestination")}
+                    className="w-full rounded-xl border px-3 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2"
+                    style={{ borderColor: "hsl(var(--border))", background: "white" }}
+                    placeholder="Nombre del responsable o empresa de destino..."
+                  />
+                  {errors.portabilityDestination && (
+                    <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                      {errors.portabilityDestination.message}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Motivo */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Detalle de la solicitud
+                </label>
+                <textarea
+                  {...register("portabilityReason")}
+                  rows={3}
+                  className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
+                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
+                  placeholder="Explica qué datos necesitas y para qué los usarás..."
+                />
+                {errors.portabilityReason && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
+                    {errors.portabilityReason.message}
+                  </p>
+                )}
+              </div>
+            </>
           ) : selectedRight?.id === "blocking" ? (
             <>
               {/* Info */}
@@ -950,48 +1135,29 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                 </p>
               </div>
 
-              {/* Tipo de solicitud relacionada */}
+              {/* Causal */}
               <div>
                 <label
                   className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
                   style={{ color: "hsl(var(--muted-foreground))" }}
                 >
-                  ¿A qué se refiere tu solicitud de bloqueo?
+                  Causal del bloqueo
                 </label>
                 <select
-                  {...register("blockRelatedType")}
+                  {...register("blockCause")}
                   className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
                   style={{ borderColor: "hsl(var(--border))" }}
                 >
                   <option value="">Selecciona una opción...</option>
-                  {BLOCKING_RELATED_TYPES.map((t) => (
-                    <option key={t.key} value={t.key}>
-                      {t.label}
-                    </option>
+                  {Object.entries(BLOCKING_CAUSE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
-                {errors.blockRelatedType && (
+                {errors.blockCause && (
                   <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
-                    {errors.blockRelatedType.message}
+                    {errors.blockCause.message}
                   </p>
                 )}
-              </div>
-
-              {/* ID de la solicitud relacionada (opcional) */}
-              <div>
-                <label
-                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
-                  ID de la solicitud relacionada{" "}
-                  <span className="normal-case font-normal tracking-normal">(opcional)</span>
-                </label>
-                <input
-                  {...register("blockRelatedId")}
-                  className="w-full rounded-xl border px-3 py-2.5 text-sm font-mono transition-colors focus:outline-none focus:ring-2"
-                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
-                  placeholder="Ej: 38770771-5ea1-4f49-b338-262689558351"
-                />
               </div>
 
               {/* Motivo */}
@@ -1115,7 +1281,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
               type="button"
               onClick={() => {
                 setSelectedRight(null)
-                reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", blockRelatedType: "", blockRelatedId: "", blockReason: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
+                reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", blockCause: "", blockReason: "", anonymizeCause: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
               }}
               className="px-5 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-muted"
               style={{
