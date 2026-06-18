@@ -27,6 +27,7 @@ const ENTITY_LABELS = [
   "Reclamo ante la Agencia",
   "Consentimiento",
   "Definición de Consentimiento",
+  "Actividad de Tratamiento",
   "Titular",
   "Usuario",
 ]

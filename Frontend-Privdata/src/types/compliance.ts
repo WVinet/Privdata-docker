@@ -80,3 +80,25 @@ export interface TreatmentActivity {
   createdAt: string
   updatedAt: string
 }
+
+interface TreatmentActivityFormFields {
+  name: string
+  description?: string
+  purpose: string
+  legalBasis: LegalBasis
+  dataSubjectCategories?: string
+  retentionPeriodDays?: number
+  thirdPartyRecipients?: string
+  internationalTransfer: boolean
+  dataSystems?: string
+  securityMeasures?: string
+  dataCategoryIds?: string[]
+}
+
+export interface TreatmentActivityCreateRequest extends TreatmentActivityFormFields {
+  organizationId: string
+}
+
+export interface TreatmentActivityUpdateRequest extends TreatmentActivityFormFields {
+  status: TreatmentActivityStatus
+}
