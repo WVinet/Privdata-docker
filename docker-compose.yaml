@@ -112,6 +112,8 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
     ports:
       - "8082:8082"
+    volumes:
+    - ./portability-files:/app/portability-files
 
   compliance-service:
     build: ./compliance-service
@@ -190,3 +192,4 @@ volumes:
   postgres_arco_data:
   postgres_compliance_data:
   postgres_agencia_data:
+  
