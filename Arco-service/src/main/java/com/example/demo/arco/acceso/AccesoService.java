@@ -199,15 +199,7 @@ public class AccesoService {
         request.setStatus(ArcoStatus.RESPONDIDA);
         request.setResolvedAt(LocalDateTime.now());
 
-        if (Boolean.TRUE.equals(accessRequest.getDataFound())) {
-            request.setResolutionSummary(
-                    "Se entregó la información personal disponible del titular."
-            );
-        } else {
-            request.setResolutionSummary(
-                    "No se encontraron datos personales asociados al titular."
-            );
-        }
+        request.setResolutionSummary(accessRequest.getResponseSummary());
 
         accessRequestRepository.save(accessRequest);
 

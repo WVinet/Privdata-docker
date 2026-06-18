@@ -147,6 +147,23 @@ public class PersonController {
                 true, "Rectificación lista", null));
     }
 
+    ///endpoints
+    @PatchMapping("/{personId}/restrict-processing")
+    public ResponseEntity<Void> restrictProcessing(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID personId,
+            @RequestParam(required = false) String purpose
+    ) {
+
+        personService.restrictProcessing(
+                organizationId,
+                personId,
+                purpose
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
 
 
 }

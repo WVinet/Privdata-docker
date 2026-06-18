@@ -1,7 +1,6 @@
 package com.example.demo.dto.response;
 
-import com.example.demo.arco.oposicion.enums.AgencyClaimStatus;
-import com.example.demo.arco.oposicion.model.AgencyClaim;
+import com.example.demo.enums.agency.AgencyClaimStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;

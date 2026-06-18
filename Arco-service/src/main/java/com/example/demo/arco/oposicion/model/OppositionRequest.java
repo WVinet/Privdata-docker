@@ -1,76 +1,72 @@
 package com.example.demo.arco.oposicion.model;
 
-import com.example.demo.arco.oposicion.enums.OppositionCausal;
+import com.example.demo.arco.oposicion.enums.OppositionCause;
+import com.example.demo.arco.oposicion.enums.OppositionDecision;
 import com.example.demo.arco.oposicion.enums.OppositionStatus;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.example.demo.model.ArcoRequest;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "opposition_request")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class OppositionRequest extends OppositionRequestBase {
+@Builder
+public class OppositionRequest {
 
-    @Column(name = "treatment_activity_id")
-    private UUID treatmentActivityId;
+    @Id
+    @GeneratedValue
+    private UUID id;
 
-    @Column(name = "requester_name", nullable = false)
-    private String requesterName;
-
-    @Column(name = "requester_rut", nullable = false)
-    private String requesterRut;
-
-    @Column(name = "requester_email", nullable = false)
-    private String requesterEmail;
-
-    @Column(name = "contact_address")
-    private String contactAddress;
-
-    @Column(name = "representative_name")
-    private String representativeName;
-
-    @Column(name = "representative_rut")
-    private String representativeRut;
+    @OneToOne
+    @JoinColumn(name = "arco_request_id", nullable = false, unique = true)
+    private ArcoRequest arcoRequest;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "causal", nullable = false)
-    private OppositionCausal causal;
+    @Column(nullable = false)
+    private OppositionStatus oppositionStatus;
 
-    // Art. 8° a): obligatorio si causal = INTERES_LEGITIMO
-    @Column(name = "justification", columnDefinition = "TEXT")
-    private String justification;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OppositionCause cause;
 
-    @Column(name = "opposed_treatment", nullable = false, columnDefinition = "TEXT")
+    @Enumerated(EnumType.STRING)
+    private OppositionDecision decision;
+
+    @Column(columnDefinition = "TEXT")
+    private String reason;
+
+    @Column(columnDefinition = "TEXT")
+    private String processingPurpose;
+
+    @Column(columnDefinition = "TEXT")
     private String opposedTreatment;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private OppositionStatus status;
+    private Boolean overridingLegitimateGrounds;
 
-    // Art. 8° b): MARKETING_DIRECTO es irrechazable — el analista no puede rechazarlo
-    @Column(name = "requires_mandatory_acceptance", nullable = false)
-    private boolean requiresMandatoryAcceptance = false;
+    private Boolean legalObligationApplies;
 
-    // Art. 23: flag para futuro régimen de organismos públicos
-    @Column(name = "is_public_entity", nullable = false)
-    private boolean publicEntity = false;
+    private Boolean publicInterestApplies;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "oppositionRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TemporaryBlock> temporaryBlocks = new ArrayList<>();
+    private Boolean exceptionApplies;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "oppositionRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<AgencyClaim> agencyClaims = new ArrayList<>();
+    @Column(columnDefinition = "TEXT")
+    private String rejectionReason;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "oppositionRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ThirdPartyNotification> thirdPartyNotifications = new ArrayList<>();
+    @Column(columnDefinition = "TEXT")
+    private String responseSummary;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }
