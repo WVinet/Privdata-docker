@@ -122,6 +122,7 @@ public class AccesoService {
         if (verified) {
             request.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.VERIFICADA);
             request.setStatus(ArcoStatus.EN_GESTION);
+            request.setManagementStartedAt(LocalDateTime.now());
         } else {
             request.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.RECHAZADA);
             request.setStatus(ArcoStatus.RECHAZADA);

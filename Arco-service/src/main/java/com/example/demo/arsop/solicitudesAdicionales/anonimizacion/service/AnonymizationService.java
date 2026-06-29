@@ -127,6 +127,7 @@ public class AnonymizationService {
             request.setStatus(
                     ArcoStatus.EN_GESTION
             );
+            request.setManagementStartedAt(LocalDateTime.now());
 
             detail.setAnonymizationStatus(
                     AnonymizationStatus.EN_GESTION

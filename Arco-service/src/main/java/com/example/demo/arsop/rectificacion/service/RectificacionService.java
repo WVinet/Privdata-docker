@@ -99,6 +99,7 @@ public class RectificacionService {
         if (dto.getVerified()) {
             request.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.VERIFICADA);
             request.setStatus(ArcoStatus.EN_GESTION);
+            request.setManagementStartedAt(LocalDateTime.now());
             detail.setRectificationStatus(RectificationStatus.EN_GESTION);
         } else {
             request.setIdentityVerificationStatus(ArcoIdentityVerificationStatus.RECHAZADA);

@@ -3,6 +3,8 @@ import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Search, UserPlus, Loader2, X, Copy, Check, UserX } from "lucide-react"
 import { usersApi, personsApi, departmentsApi } from "@/lib/api"
+import { formatRut } from "@/lib/rut"
+// import { validateRut } from "@/lib/rut" // validación de dígito verificador desactivada temporalmente
 import { useAuth } from "@/hooks/use-auth"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -32,7 +34,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const qc = useQueryClient()
   const [form, setForm] = useState<InvitePersonRequest>({
-    firstName: "", lastName: "", email: "",
+    firstName: "", lastName: "", email: "", rut: "",
     position: "", departmentId: "", roleName: "END_USER",
   })
   const [error, setError]           = useState("")
@@ -50,10 +52,17 @@ function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => 
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }))
 
+  const setRut = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, rut: formatRut(e.target.value) }))
+
+  // Validación de dígito verificador desactivada temporalmente — solo se exige que no esté vacío
+  const rutValid = form.rut.trim() !== "" /* && validateRut(form.rut) */
+
   const mutation = useMutation({
     mutationFn: () => {
       const body: InvitePersonRequest = {
         ...form,
+        rut:          form.rut.trim(),
         roleName:     "END_USER",
         departmentId: form.departmentId || undefined,
         position:     form.position     || undefined,
@@ -122,7 +131,14 @@ function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => 
                 <Label>Apellido *</Label>
                 <Input placeholder="Pérez" value={form.lastName} onChange={set("lastName")} />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-1.5">
+                <Label>RUT *</Label>
+                <Input placeholder="12.345.678-9" value={form.rut} onChange={setRut} />
+                {form.rut.trim() !== "" && !rutValid && (
+                  <p className="text-xs text-destructive">RUT inválido</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
                 <Label>Correo electrónico *</Label>
                 <Input type="email" placeholder="juan.perez@empresa.cl" value={form.email} onChange={set("email")} />
               </div>
@@ -154,7 +170,7 @@ function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => 
                 onClick={() => mutation.mutate()}
                 disabled={
                   !form.firstName.trim() || !form.lastName.trim() ||
-                  !form.email.trim() || mutation.isPending
+                  !form.email.trim() || !rutValid || mutation.isPending
                 }
               >
                 {mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

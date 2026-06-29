@@ -27,6 +27,7 @@ public class ArcoRequestResponseDTO {
     private ArcoIdentityVerificationStatus identityVerificationStatus;
     private String description;
     private String resolutionSummary;
+    private LocalDateTime managementStartedAt;
     private LocalDateTime submittedAt;
     private LocalDateTime dueDate;
     private LocalDateTime resolvedAt;
@@ -60,6 +61,7 @@ public class ArcoRequestResponseDTO {
         dto.setIdentityVerificationStatus(e.getIdentityVerificationStatus());
         dto.setDescription(e.getDescription());
         dto.setResolutionSummary(e.getResolutionSummary());
+        dto.setManagementStartedAt(e.getManagementStartedAt());
         dto.setSubmittedAt(e.getSubmittedAt());
         dto.setDueDate(e.getDueDate());
         dto.setResolvedAt(e.getResolvedAt());

@@ -1,9 +1,11 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Toaster, toast } from "sonner"
 import { Loader2, Pencil, X } from "lucide-react"
 import { personsApi, complianceApi } from "@/lib/api"
+import { formatRut } from "@/lib/rut"
+// import { validateRut } from "@/lib/rut" // validación de dígito verificador desactivada temporalmente
 import { useAuth } from "@/hooks/use-auth"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,10 +16,20 @@ import TitularConsentimientos from "@/components/titular/TitularConsentimientos"
 import TitularArco from "@/components/titular/TitularArco"
 import TitularSeguimiento from "@/components/titular/TitularSeguimiento"
 
+const VALID_TABS: TitularTab[] = ["inicio", "consentimientos", "arco", "seguimiento"]
+
 export default function TitularPortalPage() {
   const { getUser, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<TitularTab>("inicio")
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam  = searchParams.get("tab")
+  const activeTab: TitularTab = VALID_TABS.includes(tabParam as TitularTab) ? (tabParam as TitularTab) : "inicio"
+
+  // Mantiene la pestaña activa en la URL para que sobreviva a un recargo de página
+  const setActiveTab = (tab: TitularTab) => {
+    setSearchParams(tab === "inicio" ? {} : { tab }, { replace: true })
+  }
 
   const authUser = getUser()
 
@@ -116,6 +128,9 @@ function TitularPortalContent({
     onError: () => toast.error("Error al actualizar. Intenta nuevamente."),
   })
 
+  // Validación de dígito verificador desactivada temporalmente
+  const editRutValid = true /* editRut.trim() === "" || validateRut(editRut) */
+
   function openEdit() {
     const p = personData?.data
     setEditRut(p?.rut ?? "")
@@ -164,9 +179,12 @@ function TitularPortalContent({
                 <Input
                   placeholder="12.345.678-9"
                   value={editRut}
-                  onChange={(e) => setEditRut(e.target.value)}
+                  onChange={(e) => setEditRut(formatRut(e.target.value))}
                   disabled={updateMutation.isPending}
                 />
+                {!editRutValid && (
+                  <p className="text-xs text-destructive">RUT inválido</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>Teléfono</Label>
@@ -182,7 +200,7 @@ function TitularPortalContent({
               <Button variant="outline" className="flex-1" onClick={() => setEditOpen(false)} disabled={updateMutation.isPending}>
                 Cancelar
               </Button>
-              <Button className="flex-1" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+              <Button className="flex-1" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending || !editRutValid}>
                 {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Guardar
               </Button>
