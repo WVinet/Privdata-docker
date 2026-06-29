@@ -14,32 +14,6 @@ import type { ConsentDefinition } from "@/types/compliance"
 const TOKEN_KEY = "privdata_token"
 const USER_KEY  = "privdata_user"
 
-function formatRut(value: string): string {
-  const clean = value.replace(/[^0-9kK]/g, "").toUpperCase()
-  if (clean.length <= 1) return clean
-  const body = clean.slice(0, -1)
-  const dv   = clean.slice(-1)
-  const formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-  return `${formatted}-${dv}`
-}
-
-function validateRut(rut: string): boolean {
-  const clean = rut.replace(/\./g, "").replace("-", "").toLowerCase()
-  if (clean.length < 2) return false
-  const body = clean.slice(0, -1)
-  const dv   = clean.slice(-1)
-  if (!/^\d+$/.test(body)) return false
-  let sum = 0
-  let mul = 2
-  for (let i = body.length - 1; i >= 0; i--) {
-    sum += parseInt(body[i]) * mul
-    mul = mul === 7 ? 2 : mul + 1
-  }
-  const rem = 11 - (sum % 11)
-  const expected = rem === 11 ? "0" : rem === 10 ? "k" : rem.toString()
-  return dv === expected
-}
-
 const LEGAL_BASIS_LABEL: Record<string, string> = {
   CONSENTIMIENTO:    "Art. 12 Ley 21.719 — Consentimiento",
   CONTRATO:          "Art. 13 — Ejecución de contrato",
@@ -73,8 +47,6 @@ function CompleteProfileForm({
 }: { orgId: string; personId: string; authorities: string[] }) {
   const navigate = useNavigate()
 
-  const [rut, setRut]            = useState("")
-  const [phone, setPhone]        = useState("")
   const [newPwd, setNewPwd]      = useState("")
   const [confirmPwd, setConfirm] = useState("")
   const [showPwd, setShowPwd]    = useState(false)
@@ -111,26 +83,10 @@ function CompleteProfileForm({
     }
   }, [definitions])
 
-  const handleRutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRut(formatRut(e.target.value))
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
-    if (!rut.trim()) {
-      setError("El RUT es obligatorio")
-      return
-    }
-    if (!validateRut(rut)) {
-      setError("El RUT ingresado no es válido")
-      return
-    }
-    if (!phone.trim()) {
-      setError("El teléfono es obligatorio")
-      return
-    }
     if (newPwd.length < 8) {
       setError("La contraseña debe tener al menos 8 caracteres")
       return
@@ -146,24 +102,7 @@ function CompleteProfileForm({
 
     setLoading(true)
     try {
-      // 1. Update person (RUT and phone)
-      const updateRes = await personsApi.update(orgId, personId, {
-        firstName: person.firstName,
-        lastName:  person.lastName,
-        email:     person.email ?? undefined,
-        position:  person.position ?? undefined,
-        rut:       rut.trim(),
-        phone:     phone.trim(),
-      })
-
-      if ((updateRes.data as { success?: boolean })?.success === false) {
-        const msg = (updateRes.data as { message?: string })?.message
-        setError(msg ?? "No se pudo guardar el RUT. Verifica que no esté en uso.")
-        setLoading(false)
-        return
-      }
-
-      // 2. Activate account — returns new token
+      // 1. Activate account — returns new token
       const activateRes = await authApi.activateAccount(newPwd)
       const newToken    = activateRes.data?.data?.token
 
@@ -173,13 +112,13 @@ function CompleteProfileForm({
         return
       }
 
-      // 3. Persist new token and refresh user profile
+      // 2. Persist new token and refresh user profile
       sessionStorage.setItem(TOKEN_KEY, newToken)
       const meRes   = await authApi.me()
       const updated = meRes.data?.data
       if (updated) sessionStorage.setItem(USER_KEY, JSON.stringify(updated))
 
-      // 4. Register consent decisions (non-blocking — errors don't prevent navigation)
+      // 3. Register consent decisions (non-blocking — errors don't prevent navigation)
       if (definitions.length > 0) {
         await Promise.allSettled(
           definitions.map(async (def) => {
@@ -198,7 +137,7 @@ function CompleteProfileForm({
         )
       }
 
-      // 5. Redirect
+      // 4. Redirect
       navigate(authorities.includes("ROLE_END_USER") ? "/portal" : "/dashboard", { replace: true })
     } catch {
       setError("Ocurrió un error al guardar tu perfil. Inténtalo de nuevo.")
@@ -216,17 +155,17 @@ function CompleteProfileForm({
           <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3">
             <Shield className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Completar perfil</h1>
+          <h1 className="text-2xl font-bold text-foreground">Bienvenido a PrivData</h1>
           <p className="text-sm text-muted-foreground mt-1 text-center">
-            Bienvenido a PrivData. Completa tu perfil antes de continuar.
+            Antes de continuar, define tu contraseña personal.
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Configura tu cuenta</CardTitle>
+            <CardTitle className="text-xl">Configura tu contraseña</CardTitle>
             <CardDescription>
-              Establece una contraseña personal e ingresa tus datos de contacto.
+              Reemplaza la contraseña temporal por una personal para activar tu cuenta.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -246,32 +185,6 @@ function CompleteProfileForm({
                     </div>
                   </div>
                 )}
-
-                {/* RUT */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="rut">RUT *</Label>
-                  <Input
-                    id="rut"
-                    placeholder="12.345.678-9"
-                    value={rut}
-                    onChange={handleRutChange}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="phone">Teléfono *</Label>
-                  <Input
-                    id="phone"
-                    placeholder="+56 9 1234 5678"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                </div>
 
                 {/* New password */}
                 <div className="space-y-1.5">

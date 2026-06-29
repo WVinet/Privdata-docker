@@ -104,6 +104,7 @@ public class SupresionService {
             );
 
             request.setStatus(ArcoStatus.EN_GESTION);
+            request.setManagementStartedAt(LocalDateTime.now());
 
             detail.setSuppressionStatus(
                     SuppressionStatus.EN_GESTION

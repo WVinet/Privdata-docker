@@ -25,6 +25,7 @@ export interface InvitePersonRequest {
   firstName: string
   lastName: string
   email: string
+  rut: string
   position?: string
   departmentId?: string
   roleName: string

@@ -64,6 +64,10 @@ public class ArcoRequest {
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    // Momento en que se verificó la identidad y la solicitud pasó a EN_GESTION
+    @Column(name = "management_started_at", nullable = true)
+    private LocalDateTime managementStartedAt;
+
     @Column(name = "resolution_summary", nullable = true, columnDefinition = "TEXT")
     private String resolutionSummary;
 

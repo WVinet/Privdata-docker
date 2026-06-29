@@ -113,6 +113,7 @@ public class OppositionService {
             );
 
             request.setStatus(ArcoStatus.EN_GESTION);
+            request.setManagementStartedAt(LocalDateTime.now());
 
             detail.setOppositionStatus(
                     OppositionStatus.EN_GESTION

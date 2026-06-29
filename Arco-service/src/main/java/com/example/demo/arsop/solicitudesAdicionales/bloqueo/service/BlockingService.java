@@ -127,6 +127,7 @@ public class BlockingService {
             request.setStatus(
                     ArcoStatus.EN_GESTION
             );
+            request.setManagementStartedAt(LocalDateTime.now());
 
             detail.setBlockingStatus(
                     BlockingStatus.EN_GESTION

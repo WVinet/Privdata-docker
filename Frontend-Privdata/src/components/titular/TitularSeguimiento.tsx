@@ -47,6 +47,24 @@ function formatDate(iso: string) {
   })
 }
 
+function formatDateTime(iso: string) {
+  const d = new Date(iso)
+  const date = d.toLocaleDateString("es-CL", { day: "2-digit", month: "short" })
+  const time = d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
+  return `${date} · ${time}`
+}
+
+// "En revisión" no es un estado real en el backend (la verificación de identidad
+// pasa directo de RECIBIDA a EN_GESTION), por eso no tiene timestamp propio.
+function stepTimestamp(step: ArcoStatus, req: ArcoRequest): string | null {
+  switch (step) {
+    case "RECIBIDA":   return req.submittedAt
+    case "EN_GESTION": return req.managementStartedAt
+    case "RESPONDIDA": return req.resolvedAt
+    default:           return null
+  }
+}
+
 function ConformidadSection({ req }: { req: ArcoRequest }) {
   const queryClient = useQueryClient()
   const [showMotivo, setShowMotivo] = useState(false)
@@ -269,6 +287,8 @@ function SolicitudCard({ req }: { req: ArcoRequest }) {
               const done   = currentIdx > i || isTerminal
               const active = currentIdx === i && !isTerminal
               const isLast = i === STATUS_STEPS.length - 1
+              // Se muestra la hora una vez que se alcanzó el paso (done o activo), no solo cuando ya quedó atrás
+              const ts     = (done || active) ? stepTimestamp(step, req) : null
               return (
                 <div key={step} className="flex flex-col items-center" style={{ flex: isLast ? "0 0 auto" : 1 }}>
                   <div className="flex items-center w-full">
@@ -293,6 +313,14 @@ function SolicitudCard({ req }: { req: ArcoRequest }) {
                   >
                     {STATUS_LABEL[step]}
                   </span>
+                  {ts && (
+                    <span
+                      className="text-[10px] text-center leading-tight whitespace-nowrap"
+                      style={{ color: "hsl(var(--muted-foreground))", maxWidth: 88 }}
+                    >
+                      {formatDateTime(ts)}
+                    </span>
+                  )}
                 </div>
               )
             })}

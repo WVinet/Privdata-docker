@@ -139,6 +139,7 @@ public class PortabilityService {
             request.setStatus(
                     ArcoStatus.EN_GESTION
             );
+            request.setManagementStartedAt(LocalDateTime.now());
 
             detail.setPortabilityStatus(
                     PortabilityStatus.EN_GESTION
