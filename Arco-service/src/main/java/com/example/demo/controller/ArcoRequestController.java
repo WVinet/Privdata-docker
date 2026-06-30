@@ -70,6 +70,12 @@ public class ArcoRequestController {
         return ResponseEntity.ok(new ApiResponseDTO<>(true, "Estado actualizado", arcoRequestService.cambiarEstado(id, dto)));
     }
 
+    @PatchMapping("/{id}/iniciar-revision")
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> iniciarRevision(@PathVariable UUID id) {
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Solicitud en revisión",
+                arcoRequestService.iniciarRevision(id)));
+    }
+
     @PatchMapping("/{id}/prorroga")
     public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> prorrogarPlazo(@PathVariable UUID id) {
         return ResponseEntity.ok(new ApiResponseDTO<>(true, "Prórroga otorgada",

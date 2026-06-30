@@ -199,6 +199,9 @@ export const arcoApi = {
   updateStatus: (id: string, body: UpdateArcoStatus) =>
     api.patch<ApiResponse<ArcoRequest>>(`/arco/${id}/status`, body),
 
+  startReview: (id: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/${id}/start-review`),
+
   extendDeadline: (id: string) =>
     api.patch<ApiResponse<ArcoRequest>>(`/arco/${id}/prorroga`),
 

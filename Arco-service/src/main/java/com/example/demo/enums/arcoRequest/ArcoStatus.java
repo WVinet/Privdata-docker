@@ -2,6 +2,7 @@ package com.example.demo.enums.arcoRequest;
 
 public enum ArcoStatus {
     RECIBIDA,
+    EN_REVISION,
     IDENTIDAD_PENDIENTE,
     IDENTIDAD_VERIFICADA,
     IDENTIDAD_RECHAZADA,

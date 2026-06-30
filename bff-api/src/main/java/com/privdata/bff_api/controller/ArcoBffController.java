@@ -44,6 +44,11 @@ public class ArcoBffController {
         return ResponseEntity.ok(service.updateStatus(id, body, authorization));
     }
 
+    @PatchMapping("/{id}/start-review")
+    public ResponseEntity<?> startReview(@PathVariable String id) {
+        return ResponseEntity.ok(service.startReview(id));
+    }
+
     @PatchMapping("/{id}/prorroga")
     public ResponseEntity<?> extendDeadline(
             @PathVariable String id,

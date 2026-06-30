@@ -39,6 +39,7 @@ public class ArcoBffService {
     public Object findAll(String organizationId)          { return arcoClient.findAll(organizationId); }
     public Object findById(String id)                     { return arcoClient.findById(id); }
     public Object findByDataSubject(String dataSubjectId) { return arcoClient.findByDataSubject(dataSubjectId); }
+    public Object startReview(String id)                  { return arcoClient.startReview(id); }
 
     public Object create(Map<String, Object> body, String authorization) {
         Object result = arcoClient.create(body);

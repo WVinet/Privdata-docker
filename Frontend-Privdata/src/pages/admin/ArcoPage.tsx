@@ -133,6 +133,17 @@ function UpdateStatusModal({
   ].includes(request.requestType)
   const [identityComment, setIdentityComment] = useState("")
 
+  const startReviewMutation = useMutation({
+    mutationFn: async () => {
+      const res = await arcoApi.startReview(request.id)
+      if (!res.data.success) throw new Error(res.data.message)
+    },
+    onSuccess: () => {
+      setEffectiveStatus("EN_REVISION")
+      qc.invalidateQueries({ queryKey: ["arco"] })
+    },
+  })
+
   const autoGestionMutation = useMutation({
     mutationFn: async () => {
       const res = await arcoApi.updateStatus(request.id, { status: "EN_GESTION" })
@@ -166,8 +177,12 @@ function UpdateStatusModal({
   })
 
   useEffect(() => {
+    if (request.status === "RECIBIDA") {
+      startReviewMutation.mutate()
+      return
+    }
     if (requiresExplicitIdentity) return
-    if (request.status === "RECIBIDA" || request.status === "EN_REVISION") {
+    if (request.status === "EN_REVISION") {
       autoGestionMutation.mutate()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -381,7 +396,12 @@ function UpdateStatusModal({
         )}
 
         {pendingAction === null && (
-          requiresExplicitIdentity && effectiveStatus === "RECIBIDA" ? (
+          startReviewMutation.isPending ? (
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Iniciando revisión…
+            </div>
+          ) : requiresExplicitIdentity && (effectiveStatus === "RECIBIDA" || effectiveStatus === "EN_REVISION") ? (
             <div className="space-y-3 border-t border-border pt-3">
               <Label>Verificación de identidad del titular</Label>
               <p className="text-xs text-muted-foreground">

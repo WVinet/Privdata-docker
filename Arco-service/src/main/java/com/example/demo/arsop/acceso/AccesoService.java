@@ -139,15 +139,13 @@ public class AccesoService {
         }
 
         ArcoRequest saved = arcoRequestRepository.save(request);
-        String notificationComment = comment;
 
-        if (notificationComment == null || notificationComment.isBlank()) {
-            notificationComment = verified
-                    ? "La identidad del titular ha sido verificada correctamente."
-                    : "No fue posible verificar la identidad del titular.";
+        if (verified) {
+            notificarEnGestion(saved);
+        } else {
+            String msg = (comment != null && !comment.isBlank()) ? comment : "No fue posible verificar la identidad del titular.";
+            notificarCambioEstado(saved, msg);
         }
-
-        notificarCambioEstado(saved, notificationComment);
         return saved;
     }
 
@@ -239,6 +237,22 @@ public class AccesoService {
             );
         } catch (Exception ex) {
             System.out.println("No se pudo enviar correo de cambio de estado: " + ex.getMessage());
+        }
+    }
+
+    private void notificarEnGestion(ArcoRequest request) {
+        try {
+            PersonResponseDTO personResponse = organizationClient.findPersonById(
+                    request.getOrganizationId(),
+                    request.getDataSubjectId()
+            );
+            emailService.sendEnGestionEmail(
+                    personResponse.getData().getEmail(),
+                    request.getId(),
+                    request.getRequestType().name()
+            );
+        } catch (Exception ex) {
+            System.out.println("No se pudo enviar correo de gestión: " + ex.getMessage());
         }
     }
 
