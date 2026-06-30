@@ -173,7 +173,7 @@ services:
       - "8085:8085"
 
   frontend:
-    build: ./frontend-privdata
+    build: ./frontend-Privdata
     container_name: privdata-frontend
     profiles: ["app"]
     ports:
@@ -181,12 +181,36 @@ services:
     depends_on:
       - bff-api
 
+  frontend-agencia:
+    build: ./Frontend-Agencia
+    container_name: privdata-frontend-agencia
+    profiles: ["app"]
+    ports:
+      - "5174:80"
+    depends_on:
+      - api-gateway
+
   mailhog:
     image: mailhog/mailhog
     container_name: privdata-mailhog
     ports:
       - "1025:1025"   # SMTP — Auth-service envía aquí
       - "8025:8025"   # Web UI — ver los emails en http://localhost:8025
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: privdata-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      JWT_SECRET: privdata-secret-key-privdata-secret-key-privdata
+    depends_on:
+      - auth-service
+      - organization-service
+      - arco-service
+      - compliance-service
+      - agencia-service
+    profiles: ["app"]
 
 volumes:
   postgres_auth_data:

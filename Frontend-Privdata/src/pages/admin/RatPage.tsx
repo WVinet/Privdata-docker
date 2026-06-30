@@ -65,7 +65,7 @@ export default function RatPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["rat", orgId],
-    queryFn: () => complianceApi.getRat(orgId).then((r) => r.data ?? []),
+    queryFn: () => complianceApi.getRat(orgId).then((r) => r.data),
     enabled: !!orgId,
   })
 
@@ -257,7 +257,7 @@ function ActivityFormDialog({
 
   const { data: categoriesData } = useQuery({
     queryKey: ["data-categories"],
-    queryFn: () => complianceApi.getDataCategories().then((r) => r.data ?? []),
+    queryFn: () => complianceApi.getDataCategories().then((r) => r.data.data ?? []),
     enabled: open,
   })
   const categories: DataCategory[] = categoriesData ?? []
