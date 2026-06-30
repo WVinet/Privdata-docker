@@ -27,6 +27,7 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
   const [exceptionApplies, setExceptionApplies] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [observations, setObservations] = useState("")
+  const [anonymizeInsteadOfDelete, setAnonymizeInsteadOfDelete] = useState(false)
 
   const { data: personData, isLoading: loadingPerson } = useQuery({
     queryKey: ["person", organizationId, dataSubjectId],
@@ -44,6 +45,7 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
         rejectionReason: !approved ? rejectionReason.trim() || undefined : undefined,
         exceptionApplies: !approved ? exceptionApplies : undefined,
         ...(assessment && !approved ? { [assessment.field]: assessmentChecked } : {}),
+        anonymizeInsteadOfDelete: approved ? anonymizeInsteadOfDelete : undefined,
       })
       if (!res.data.success) throw new Error(res.data.message)
       return { approved, data: res.data.data }
@@ -54,7 +56,7 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
       setMode("idle")
       onApplied(
         approved
-          ? `Informe de Supresión — Art. 11 Ley 21.719\n\nSolicitud aprobada. Los datos del titular fueron marcados para eliminación y su cuenta fue desactivada.` +
+          ? `Informe de Supresión — Art. 11 Ley 21.719\n\nSolicitud aprobada. ${anonymizeInsteadOfDelete ? "Los datos identificativos del titular fueron anonimizados" : "Los datos del titular fueron marcados para eliminación"} y su cuenta fue desactivada.` +
             (observations.trim() ? `\n\n${observations.trim()}` : "")
           : `Informe de Supresión — Art. 11 Ley 21.719\n\nSolicitud rechazada.\n\n${data?.resolutionSummary ?? rejectionReason.trim()}`
       )
@@ -118,6 +120,15 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
             <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
             Esta acción marcará los datos del titular para eliminación y desactivará su cuenta de inmediato. No se puede deshacer fácilmente.
           </p>
+          <label className="flex items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={anonymizeInsteadOfDelete}
+              onChange={(e) => setAnonymizeInsteadOfDelete(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded"
+            />
+            Anonimizar en lugar de eliminar los datos
+          </label>
           <textarea
             rows={2}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
@@ -137,7 +148,7 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
               style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
             >
               {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Sí, aprobar y suprimir
+              {anonymizeInsteadOfDelete ? "Sí, aprobar y anonimizar" : "Sí, aprobar y suprimir"}
             </button>
             <button
               type="button"

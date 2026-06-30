@@ -17,8 +17,6 @@ import type {
   CreateArcoRequest, UpdateArcoStatus, CreateSuppressionDetails, RespondSuppression,
   CreateOppositionDetails, RespondOpposition,
   CreatePortabilityDetails, RespondPortability,
-  CreateBlockingDetails, RespondBlocking,
-  CreateAnonymizationDetails, RespondAnonymization,
 } from "@/types/arco"
 import type {
   Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus,
@@ -268,24 +266,6 @@ export const arcoApi = {
 
   downloadPortability: (id: string) =>
     api.get<Blob>(`/arco/portability/${id}/download`, { responseType: "blob" }),
-
-  createBlocking: (arcoRequest: CreateArcoRequest, details: CreateBlockingDetails) =>
-    api.post<ApiResponse<ArcoRequest>>("/arco/blocking", { arcoRequest, ...details }),
-
-  verifyBlockingIdentity: (id: string, verified: boolean, comment?: string) =>
-    api.patch<ApiResponse<ArcoRequest>>(`/arco/blocking/${id}/verify-identity`, { verified, comment }),
-
-  respondBlocking: (id: string, body: RespondBlocking) =>
-    api.patch<ApiResponse<ArcoRequest>>(`/arco/blocking/${id}/respond`, body),
-
-  createAnonymization: (arcoRequest: CreateArcoRequest, details: CreateAnonymizationDetails) =>
-    api.post<ApiResponse<ArcoRequest>>("/arco/anonymization", { arcoRequest, ...details }),
-
-  verifyAnonymizationIdentity: (id: string, verified: boolean, comment?: string) =>
-    api.patch<ApiResponse<ArcoRequest>>(`/arco/anonymization/${id}/verify-identity`, { verified, comment }),
-
-  respondAnonymization: (id: string, body: RespondAnonymization) =>
-    api.patch<ApiResponse<ArcoRequest>>(`/arco/anonymization/${id}/respond`, body),
 }
 
 // ── Compliance ────────────────────────────────────────────────────────────────

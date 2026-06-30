@@ -8,15 +8,13 @@ import { toast } from "sonner"
 import { arcoApi, personsApi, complianceApi } from "@/lib/api"
 import type {
   ArcoRequestType, CreateSuppressionDetails, CreateOppositionDetails,
-  CreatePortabilityDetails, CreateBlockingDetails, CreateAnonymizationDetails,
+  CreatePortabilityDetails,
 } from "@/types/arco"
 import type { TreatmentActivity } from "@/types/compliance"
 import { RECTIFIABLE_FIELDS, encodeRectification, getPersonFieldValue, type RectifiableField } from "@/lib/rectification"
 import { encodeSuppression } from "@/lib/suppression"
 import { encodeOpposition } from "@/lib/opposition"
 import { PORTABILITY_CAUSE_LABELS, encodePortability } from "@/lib/portability"
-import { BLOCKING_CAUSE_LABELS, encodeBlocking } from "@/lib/blocking"
-import { ANONYMIZATION_CAUSE_LABELS, encodeAnonymization } from "@/lib/anonymization"
 
 type ArcoRight = {
   id: string
@@ -80,27 +78,6 @@ const rights: ArcoRight[] = [
     variant: "primary",
     group: "core",
   },
-  {
-    id: "blocking",
-    icon: "🔒",
-    label: "Bloqueo",
-    deadline: "2 días hábiles",
-    urgent: true,
-    description:
-      "Suspensión temporal del tratamiento de tus datos mientras se resuelve una controversia o verificación de exactitud.",
-    variant: "warning",
-    group: "additional",
-  },
-  {
-    id: "anonymization",
-    icon: "🫥",
-    label: "Anonimización",
-    deadline: "30 días corridos",
-    description:
-      "Solicita que tus datos identificativos sean reemplazados por valores no atribuibles, conservando el registro para fines de trazabilidad.",
-    variant: "danger",
-    group: "additional",
-  },
 ]
 
 const variantStyles = {
@@ -142,7 +119,7 @@ const dataOptions = [
 const formSchema = z
   .object({
     email: z.string().email("Email inválido"),
-    mode: z.enum(["other", "rectification", "suppression", "opposition", "portability", "blocking", "anonymization"]),
+    mode: z.enum(["other", "rectification", "suppression", "opposition", "portability"]),
     dataScope: z.string().optional(),
     description: z.string().optional(),
     rectField: z.string().optional(),
@@ -157,11 +134,6 @@ const formSchema = z
     portabilityCause: z.string().optional(),
     portabilityDestination: z.string().optional(),
     portabilityReason: z.string().optional(),
-    blockCause: z.string().optional(),
-    blockReason: z.string().optional(),
-    anonymizeCause: z.string().optional(),
-    anonymizeReason: z.string().optional(),
-    anonymizeConfirm: z.boolean().optional(),
     declaration: z
       .boolean()
       .refine((v) => v === true, "Debes aceptar la declaración"),
@@ -207,23 +179,6 @@ const formSchema = z
       if (!data.portabilityReason?.trim()) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["portabilityReason"], message: "Indica el motivo de la solicitud de portabilidad" })
       }
-    } else if (data.mode === "blocking") {
-      if (!data.blockCause) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["blockCause"], message: "Selecciona la causal del bloqueo" })
-      }
-      if (!data.blockReason?.trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["blockReason"], message: "Indica el motivo del bloqueo" })
-      }
-    } else if (data.mode === "anonymization") {
-      if (!data.anonymizeCause) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["anonymizeCause"], message: "Selecciona la causal de la solicitud de anonimización" })
-      }
-      if (!data.anonymizeReason?.trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["anonymizeReason"], message: "Indica el motivo de la solicitud de anonimización" })
-      }
-      if (data.anonymizeConfirm !== true) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["anonymizeConfirm"], message: "Debes confirmar que entiendes los efectos de la anonimización" })
-      }
     } else if (!data.dataScope?.trim()) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["dataScope"], message: "Selecciona una opción" })
     }
@@ -237,8 +192,6 @@ const RIGHT_TO_TYPE: Record<string, ArcoRequestType> = {
   suppression:    "SUPRESION",
   opposition:     "OPOSICION",
   portability:    "PORTABILIDAD",
-  blocking:       "BLOQUEO_TEMPORAL",
-  anonymization:  "ANONIMIZACION",
 }
 
 interface Props {
@@ -279,7 +232,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
     reset,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", blockCause: "", blockReason: "", anonymizeCause: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false },
+    defaultValues: { email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", declaration: false },
   })
 
   const rectField = watch("rectField") as RectifiableField | "" | undefined
@@ -291,8 +244,6 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
       selectedRight?.id === "suppression"   ? "suppression" :
       selectedRight?.id === "opposition"    ? "opposition" :
       selectedRight?.id === "portability"   ? "portability" :
-      selectedRight?.id === "blocking"      ? "blocking" :
-      selectedRight?.id === "anonymization" ? "anonymization" :
       "other"
     setValue("mode", mode)
   }, [selectedRight, setValue])
@@ -333,16 +284,6 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
         cause: data.portabilityCause as CreatePortabilityDetails["cause"],
         destinationOrganization: data.portabilityDestination?.trim() || undefined,
         reason: data.portabilityReason!.trim(),
-      })
-    } else if (selectedRight.id === "blocking") {
-      description = encodeBlocking({
-        cause: data.blockCause as CreateBlockingDetails["cause"],
-        reason: data.blockReason!.trim(),
-      })
-    } else if (selectedRight.id === "anonymization") {
-      description = encodeAnonymization({
-        cause: data.anonymizeCause as CreateAnonymizationDetails["cause"],
-        reason: data.anonymizeReason!.trim(),
       })
     } else {
       description = data.description
@@ -410,34 +351,6 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
               reason: data.portabilityReason!.trim(),
             }
           )
-        : selectedRight.id === "blocking"
-        ? await arcoApi.createBlocking(
-            {
-              organizationId,
-              dataSubjectId,
-              requestType: RIGHT_TO_TYPE[selectedRight.id],
-              requestChannel: "WEB_PORTAL",
-              description,
-            },
-            {
-              cause: data.blockCause as CreateBlockingDetails["cause"],
-              reason: data.blockReason!.trim(),
-            }
-          )
-        : selectedRight.id === "anonymization"
-        ? await arcoApi.createAnonymization(
-            {
-              organizationId,
-              dataSubjectId,
-              requestType: RIGHT_TO_TYPE[selectedRight.id],
-              requestChannel: "WEB_PORTAL",
-              description,
-            },
-            {
-              cause: data.anonymizeCause as CreateAnonymizationDetails["cause"],
-              reason: data.anonymizeReason!.trim(),
-            }
-          )
         : await arcoApi.create({
             organizationId,
             dataSubjectId,
@@ -463,7 +376,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   function handleSuccessClose() {
     setSuccessOpen(false)
     setSelectedRight(null)
-    reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", blockCause: "", blockReason: "", anonymizeCause: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
+    reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", declaration: false })
     onSolicitudCreated()
   }
 
@@ -501,46 +414,6 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
             {/* Rights grid — núcleo ARSOP */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
               {rights.filter((r) => r.group === "core").map((right) => {
-                const active = selectedRight?.id === right.id
-                const vs = variantStyles[right.variant]
-                return (
-                  <button
-                    key={right.id}
-                    onClick={() => setSelectedRight(right)}
-                    className="flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-4 transition-all duration-150 focus:outline-none focus-visible:ring-2 hover:-translate-y-0.5"
-                    style={{
-                      borderColor: active ? vs.border : "hsl(var(--border))",
-                      background: active ? vs.bg : "white",
-                    }}
-                  >
-                    <span className="text-3xl">{right.icon}</span>
-                    <span
-                      className="text-xs font-bold"
-                      style={{ color: active ? vs.text : "hsl(var(--foreground))" }}
-                    >
-                      {right.label}
-                    </span>
-                    <span
-                      className="text-xs font-medium"
-                      style={{ color: right.urgent ? "hsl(var(--warning))" : "hsl(var(--muted-foreground))" }}
-                    >
-                      {right.deadline}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            <p
-              className="text-xs font-semibold uppercase tracking-widest pt-1"
-              style={{ color: "hsl(var(--muted-foreground))" }}
-            >
-              Solicitudes adicionales
-            </p>
-
-            {/* Rights grid — solicitudes adicionales */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3">
-              {rights.filter((r) => r.group === "additional").map((right) => {
                 const active = selectedRight?.id === right.id
                 const vs = variantStyles[right.variant]
                 return (
@@ -832,99 +705,6 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                 </p>
               )}
             </>
-          ) : selectedRight?.id === "anonymization" ? (
-            <>
-              {/* Aviso de efectos de la anonimización */}
-              <div
-                className="rounded-xl px-4 py-3 border-l-4 text-xs leading-relaxed space-y-1"
-                style={{
-                  borderColor: "hsl(var(--destructive) / 0.4)",
-                  background: "hsl(var(--destructive) / 0.06)",
-                  color: "hsl(var(--destructive))",
-                }}
-              >
-                <p className="font-bold">Si tu solicitud es aprobada:</p>
-                <ul className="list-disc list-inside space-y-0.5">
-                  <li>Tus datos identificativos (nombre, RUT, correo, teléfono, cargo) serán reemplazados por valores no atribuibles.</li>
-                  <li>Tu cuenta será desactivada y no podrás volver a iniciar sesión.</li>
-                  <li>A diferencia de la Supresión, tu registro no se elimina: la empresa conserva la trazabilidad de tus solicitudes y tratamientos pasados de forma anonimizada.</li>
-                </ul>
-              </div>
-
-              {/* Causal */}
-              <div>
-                <label
-                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
-                  Causal de la solicitud
-                </label>
-                <select
-                  {...register("anonymizeCause")}
-                  className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
-                  style={{ borderColor: "hsl(var(--border))" }}
-                >
-                  <option value="">Selecciona una opción...</option>
-                  {Object.entries(ANONYMIZATION_CAUSE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-                {errors.anonymizeCause && (
-                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
-                    {errors.anonymizeCause.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Motivo */}
-              <div>
-                <label
-                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
-                  Motivo de la solicitud de anonimización
-                </label>
-                <textarea
-                  {...register("anonymizeReason")}
-                  rows={3}
-                  className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
-                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
-                  placeholder="Explica por qué solicitas la anonimización de tus datos personales..."
-                />
-                {errors.anonymizeReason && (
-                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
-                    {errors.anonymizeReason.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Confirmación adicional */}
-              <div
-                className="flex items-start gap-3 rounded-xl p-3"
-                style={{ background: "hsl(var(--destructive) / 0.06)" }}
-              >
-                <input
-                  type="checkbox"
-                  id="anonymizeConfirm"
-                  {...register("anonymizeConfirm")}
-                  className="mt-0.5 h-4 w-4 rounded"
-                  style={{ accentColor: "hsl(var(--destructive))" }}
-                />
-                <label
-                  htmlFor="anonymizeConfirm"
-                  className="text-xs leading-relaxed"
-                  style={{ color: "hsl(var(--destructive))" }}
-                >
-                  Entiendo que, de aprobarse, mis datos identificativos serán reemplazados por valores no atribuibles
-                  y mi cuenta será desactivada, conservándose mi registro para fines de trazabilidad.
-                </label>
-              </div>
-              {errors.anonymizeConfirm && (
-                <p className="text-xs" style={{ color: "hsl(var(--destructive))" }}>
-                  {errors.anonymizeConfirm.message}
-                </p>
-              )}
-            </>
           ) : selectedRight?.id === "opposition" ? (
             <>
               {/* Info */}
@@ -1120,72 +900,6 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                 )}
               </div>
             </>
-          ) : selectedRight?.id === "blocking" ? (
-            <>
-              {/* Info */}
-              <div
-                className="rounded-xl px-4 py-3 border-l-4 text-xs leading-relaxed"
-                style={{
-                  borderColor: "hsl(var(--warning) / 0.4)",
-                  background: "hsl(var(--warning) / 0.06)",
-                  color: "hsl(36 70% 32%)",
-                }}
-              >
-                <p className="font-bold">¿En qué consiste?</p>
-                <p>
-                  El bloqueo (Art. 8 ter Ley 21.719) suspende temporalmente el tratamiento de tus datos mientras se resuelve
-                  otra solicitud (Rectificación, Supresión u Oposición), o como alternativa a la Supresión (Art. 7°). Tus
-                  datos no se eliminan, solo dejan de utilizarse activamente mientras dure el bloqueo.
-                </p>
-              </div>
-
-              {/* Causal */}
-              <div>
-                <label
-                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
-                  Causal del bloqueo
-                </label>
-                <select
-                  {...register("blockCause")}
-                  className="w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white"
-                  style={{ borderColor: "hsl(var(--border))" }}
-                >
-                  <option value="">Selecciona una opción...</option>
-                  {Object.entries(BLOCKING_CAUSE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-                {errors.blockCause && (
-                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
-                    {errors.blockCause.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Motivo */}
-              <div>
-                <label
-                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
-                  Motivo del bloqueo
-                </label>
-                <textarea
-                  {...register("blockReason")}
-                  rows={3}
-                  className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
-                  style={{ borderColor: "hsl(var(--border))", background: "white" }}
-                  placeholder="Explica por qué solicitas la suspensión temporal del tratamiento de tus datos..."
-                />
-                {errors.blockReason && (
-                  <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
-                    {errors.blockReason.message}
-                  </p>
-                )}
-              </div>
-            </>
           ) : (
             <>
               {/* Data scope */}
@@ -1285,7 +999,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
               type="button"
               onClick={() => {
                 setSelectedRight(null)
-                reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", blockCause: "", blockReason: "", anonymizeCause: "", anonymizeReason: "", anonymizeConfirm: false, declaration: false })
+                reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", declaration: false })
               }}
               className="px-5 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-muted"
               style={{

@@ -21,4 +21,6 @@ public class SuppressionResponseDTO {
     private Boolean exceptionApplies;
 
     private LocalDateTime retentionExpiresAt;
+
+    private Boolean anonymizeInsteadOfDelete;
 }

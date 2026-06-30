@@ -22,6 +22,7 @@ export default function ArcoOppositionPanel({ arcoRequestId, dataSubjectId, orga
   const [exceptionApplies, setExceptionApplies] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [observations, setObservations] = useState("")
+  const [blockInsteadOfRestrict, setBlockInsteadOfRestrict] = useState(false)
 
   const { data: personData, isLoading: loadingPerson } = useQuery({
     queryKey: ["person", organizationId, dataSubjectId],
@@ -40,6 +41,7 @@ export default function ArcoOppositionPanel({ arcoRequestId, dataSubjectId, orga
         legalObligationApplies: !approved ? legalObligationApplies : undefined,
         publicInterestApplies: !approved ? publicInterestApplies : undefined,
         exceptionApplies: !approved ? exceptionApplies : undefined,
+        blockInsteadOfRestrict: approved ? blockInsteadOfRestrict : undefined,
       })
       if (!res.data.success) throw new Error(res.data.message)
       return { approved, data: res.data.data }
@@ -50,7 +52,7 @@ export default function ArcoOppositionPanel({ arcoRequestId, dataSubjectId, orga
       setMode("idle")
       onApplied(
         approved
-          ? `Informe de Oposición — Art. 8 Ley 21.719\n\nSolicitud aprobada. Se restringió el tratamiento de los datos del titular para la finalidad indicada.` +
+          ? `Informe de Oposición — Art. 8 Ley 21.719\n\nSolicitud aprobada. Se ${blockInsteadOfRestrict ? "bloqueó al titular" : "restringió el tratamiento de los datos del titular para la finalidad indicada"}.` +
             (observations.trim() ? `\n\n${observations.trim()}` : "")
           : `Informe de Oposición — Art. 8 Ley 21.719\n\nSolicitud rechazada.\n\n${data?.resolutionSummary ?? rejectionReason.trim()}`
       )
@@ -75,7 +77,7 @@ export default function ArcoOppositionPanel({ arcoRequestId, dataSubjectId, orga
     )
   }
 
-  const alreadyApplied = person?.dataStatus === "PROCESSING_RESTRICTED"
+  const alreadyApplied = person?.dataStatus === "PROCESSING_RESTRICTED" || person?.dataStatus === "BLOCKED"
 
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3 text-sm">
@@ -119,6 +121,15 @@ export default function ArcoOppositionPanel({ arcoRequestId, dataSubjectId, orga
             <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
             Esta acción restringirá el tratamiento de los datos del titular para la finalidad indicada. El titular permanece activo.
           </p>
+          <label className="flex items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={blockInsteadOfRestrict}
+              onChange={(e) => setBlockInsteadOfRestrict(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded"
+            />
+            Bloquear al titular en lugar de solo restringir el tratamiento
+          </label>
           <textarea
             rows={2}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
@@ -138,7 +149,7 @@ export default function ArcoOppositionPanel({ arcoRequestId, dataSubjectId, orga
               style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
             >
               {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Sí, aprobar y restringir
+              {blockInsteadOfRestrict ? "Sí, aprobar y bloquear" : "Sí, aprobar y restringir"}
             </button>
             <button
               type="button"

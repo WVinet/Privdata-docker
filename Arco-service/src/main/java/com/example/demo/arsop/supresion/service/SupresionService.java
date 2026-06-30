@@ -214,14 +214,25 @@ public class SupresionService {
             return saved;
         }
 
-        organizationClient.deleteDataSubject(
-                request.getOrganizationId(),
-                request.getDataSubjectId()
-        );
+        boolean anonymizeInsteadOfDelete = Boolean.TRUE.equals(dto.getAnonymizeInsteadOfDelete());
+
+        if (anonymizeInsteadOfDelete) {
+            organizationClient.anonymizeDataSubject(
+                    request.getOrganizationId(),
+                    request.getDataSubjectId()
+            );
+        } else {
+            organizationClient.deleteDataSubject(
+                    request.getOrganizationId(),
+                    request.getDataSubjectId()
+            );
+        }
 
         String summary = dto.getObservations() != null && !dto.getObservations().isBlank()
                 ? dto.getObservations()
-                : "Solicitud aprobada. Los datos del titular fueron suprimidos.";
+                : anonymizeInsteadOfDelete
+                    ? "Solicitud aprobada. Los datos del titular fueron anonimizados."
+                    : "Solicitud aprobada. Los datos del titular fueron suprimidos.";
 
         detail.setDecision(SuppressionDecision.APPROVED);
         detail.setSuppressionStatus(SuppressionStatus.RESPONDIDA);

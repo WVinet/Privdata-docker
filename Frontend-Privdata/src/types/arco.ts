@@ -4,7 +4,7 @@ export type ArcoStatus =
 
 export type ArcoRequestType =
   | "ACCESO" | "RECTIFICACION" | "SUPRESION"
-  | "OPOSICION" | "PORTABILIDAD" | "BLOQUEO_TEMPORAL" | "ANONIMIZACION"
+  | "OPOSICION" | "PORTABILIDAD"
 
 export type ArcoRequestChannel =
   | "WEB_PORTAL" | "EMAIL" | "PHONE" | "IN_PERSON" | "LETTER" | "INTERNAL"
@@ -74,6 +74,7 @@ export interface RespondSuppression {
   retentionPeriodStillValid?: boolean
   exceptionApplies?: boolean
   retentionExpiresAt?: string
+  anonymizeInsteadOfDelete?: boolean
 }
 
 export type OppositionCause = "LEGITIMATE_INTEREST" | "DIRECT_MARKETING" | "PUBLIC_SOURCE"
@@ -94,6 +95,7 @@ export interface RespondOpposition {
   legalObligationApplies?: boolean
   publicInterestApplies?: boolean
   exceptionApplies?: boolean
+  blockInsteadOfRestrict?: boolean
 }
 
 export type PortabilityCause = "USER_REQUEST" | "TRANSFER_TO_OTHER_PROVIDER" | "PERSONAL_BACKUP"
@@ -110,37 +112,3 @@ export interface RespondPortability {
   rejectionReason?: string
 }
 
-export type BlockingCause = "PROCESSING_UNDER_CHALLENGE" | "UNLAWFUL_PROCESSING" | "PENDING_SUPPRESSION_REVIEW"
-
-export interface CreateBlockingDetails {
-  cause: BlockingCause
-  reason: string
-}
-
-export interface RespondBlocking {
-  approved: boolean
-  observations?: string
-  rejectionReason?: string
-  legalObligationApplies?: boolean
-  exceptionApplies?: boolean
-}
-
-export type AnonymizationCause =
-  | "DATA_NO_LONGER_REQUIRES_IDENTIFICATION"
-  | "PRIVACY_PRESERVING_RETENTION"
-  | "STATISTICAL_OR_RESEARCH_PURPOSE"
-
-export interface CreateAnonymizationDetails {
-  cause: AnonymizationCause
-  reason: string
-}
-
-export interface RespondAnonymization {
-  approved: boolean
-  observations?: string
-  rejectionReason?: string
-  legalObligationApplies?: boolean
-  identificationStillRequired?: boolean
-  technicalImpossibility?: boolean
-  exceptionApplies?: boolean
-}
