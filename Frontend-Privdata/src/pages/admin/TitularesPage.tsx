@@ -70,6 +70,10 @@ function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => 
       return personsApi.invite(orgId, body)
     },
     onSuccess: (res) => {
+      if (!res.data.success) {
+        setError(res.data.message ?? "Error al registrar el titular")
+        return
+      }
       qc.invalidateQueries({ queryKey: ["users"] })
       qc.invalidateQueries({ queryKey: ["persons", orgId] })
       const pwd = res.data.data?.user?.data?.temporaryPassword
@@ -104,8 +108,8 @@ function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => 
             <div className="rounded-lg bg-primary/10 border border-primary/20 p-4 space-y-2 text-center">
               <p className="text-sm font-medium text-foreground">¡Titular registrado correctamente!</p>
               <p className="text-xs text-muted-foreground">
-                Comparte esta contraseña temporal con{" "}
-                <span className="font-medium text-foreground">{form.firstName}</span>. La usará en su primer inicio de sesión.
+                Se envió un correo a <span className="font-medium text-foreground">{form.email}</span> con
+                esta contraseña temporal. También puedes compartírsela tú mismo como respaldo.
               </p>
               <div className="flex items-center justify-center gap-2 mt-3">
                 <code className="px-3 py-1.5 rounded-md bg-muted font-mono text-sm tracking-wider">

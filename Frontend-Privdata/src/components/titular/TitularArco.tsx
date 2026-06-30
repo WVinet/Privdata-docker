@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { useQuery } from "@tanstack/react-query"
 import { z } from "zod"
@@ -254,6 +254,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   const [requestId, setRequestId] = useState("")
   const [successOpen, setSuccessOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   const { data: personData } = useQuery({
     queryKey: ["person", organizationId, dataSubjectId],
@@ -297,6 +298,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   }, [selectedRight, setValue])
 
   async function onSubmit(data: FormData) {
+    if (submittingRef.current) return
     if (!selectedRight) {
       toast.error("Selecciona un derecho ARSOP antes de enviar.")
       return
@@ -348,6 +350,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
         : data.dataScope!
     }
 
+    submittingRef.current = true
     setSubmitting(true)
     try {
       const res = selectedRight.id === "rectification"
@@ -452,6 +455,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
     } catch {
       toast.error("No se pudo enviar la solicitud. Intenta nuevamente.")
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }

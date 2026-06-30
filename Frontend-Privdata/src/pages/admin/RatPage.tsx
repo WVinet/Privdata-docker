@@ -257,7 +257,7 @@ function ActivityFormDialog({
 
   const { data: categoriesData } = useQuery({
     queryKey: ["data-categories"],
-    queryFn: () => complianceApi.getDataCategories().then((r) => r.data.data ?? []),
+    queryFn: () => complianceApi.getDataCategories().then((r) => r.data ?? []),
     enabled: open,
   })
   const categories: DataCategory[] = categoriesData ?? []

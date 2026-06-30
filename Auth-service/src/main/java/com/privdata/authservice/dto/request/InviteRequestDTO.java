@@ -22,4 +22,7 @@ public class InviteRequestDTO {
 
     @NotBlank(message = "El rol es obligatorio")
     private String roleName;
+
+    // Opcional — solo se usa para el saludo del correo de invitación
+    private String firstName;
 }
