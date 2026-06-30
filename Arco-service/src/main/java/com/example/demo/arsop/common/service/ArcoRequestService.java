@@ -111,18 +111,15 @@ public class ArcoRequestService {
 
     @Transactional
     public ArcoRequestResponseDTO iniciarRevision(UUID id) {
+        int filasActualizadas = arcoRequestRepository.marcarEnRevisionSiRecibida(id, LocalDateTime.now());
+
         ArcoRequest solicitud = arcoRequestRepository.findById(id)
                 .orElseThrow(() -> new ArcoRequestNotFoundException(id));
 
-        if (solicitud.getStatus() != ArcoStatus.RECIBIDA) {
-            return ArcoRequestResponseDTO.fromEntity(solicitud);
+        if (filasActualizadas > 0) {
+            notificarRevision(solicitud);
         }
-
-        solicitud.setStatus(ArcoStatus.EN_REVISION);
-        solicitud.setReviewStartedAt(LocalDateTime.now());
-        ArcoRequest saved = arcoRequestRepository.save(solicitud);
-        notificarRevision(saved);
-        return ArcoRequestResponseDTO.fromEntity(saved);
+        return ArcoRequestResponseDTO.fromEntity(solicitud);
     }
 
     private void notificarRevision(ArcoRequest solicitud) {

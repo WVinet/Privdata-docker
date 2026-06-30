@@ -22,11 +22,11 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setTo(to);
-        message.setSubject("PrivData - Solicitud ARCO recibida");
+        message.setSubject("PrivData - Solicitud ARSOP recibida");
         message.setText("""
                 Estimado/a:
 
-                Su solicitud ARCO ha sido recibida correctamente.
+                Su solicitud ARSOP ha sido recibida correctamente.
 
                 Detalle de la solicitud:
 
@@ -56,11 +56,11 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setTo(to);
-        message.setSubject("PrivData - Actualización de estado de solicitud ARCO");
+        message.setSubject("PrivData - Actualización de estado de solicitud ARSOP");
         message.setText("""
                 Estimado/a:
 
-                Le informamos que su solicitud ARCO ha cambiado de estado.
+                Le informamos que su solicitud ARSOP ha cambiado de estado.
 
                 ID Solicitud: %s
                 Nuevo estado: %s
@@ -141,11 +141,11 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setTo(to);
-        message.setSubject("PrivData - Resolución de solicitud ARCO");
+        message.setSubject("PrivData - Resolución de solicitud ARSOP");
         message.setText("""
                 Estimado/a:
 
-                Su solicitud ARCO ha sido resuelta.
+                Su solicitud ARSOP ha sido resuelta.
 
                 ID Solicitud: %s
                 Estado final: %s
