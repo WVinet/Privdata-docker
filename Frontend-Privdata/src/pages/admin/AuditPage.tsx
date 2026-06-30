@@ -40,6 +40,12 @@ const ACTOR_ROLE_CONFIG: Record<"TITULAR" | "AUDITOR_AGENCIA" | "RESPONSABLE", {
   RESPONSABLE:     { label: "Responsable",    className: "border-primary/30 bg-primary/10 text-primary" },
 }
 
+function splitDetail(detail: string): { text: string; uuid: string | null } {
+  const uuid = detail.match(UUID_RE)?.[0] ?? null
+  const text = uuid ? detail.replace(uuid, "").trim() : detail
+  return { text, uuid }
+}
+
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("es-CL", {
     day: "2-digit", month: "short", year: "numeric",
@@ -248,8 +254,20 @@ export default function AuditPage() {
                           <TableCell className="text-muted-foreground text-sm">
                             {event.entityType}
                           </TableCell>
-                          <TableCell className="text-sm max-w-xs truncate">
-                            {event.detail}
+                          <TableCell className="text-sm max-w-xs">
+                            {(() => {
+                              const { text, uuid } = splitDetail(event.detail)
+                              return (
+                                <div className="space-y-0.5">
+                                  <p className="truncate" title={text}>{text}</p>
+                                  {uuid && (
+                                    <p className="text-xs text-muted-foreground font-mono truncate" title={uuid}>
+                                      uuid: {uuid}
+                                    </p>
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </TableCell>
                           <TableCell className="text-sm">
                             <div className="flex items-center gap-2">
