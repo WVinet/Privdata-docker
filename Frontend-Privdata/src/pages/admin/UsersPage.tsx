@@ -38,9 +38,14 @@ const ROLES = [
 function InviteUserModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const qc = useQueryClient()
   const [form, setForm] = useState<InvitePersonRequest>({
-    firstName: "", lastName: "", email: "",
-    position: "", departmentId: "", roleName: "ANALYST",
-  })
+    rut: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    position: "",
+    departmentId: "",
+    roleName: ""
+  });
   const [error, setError]           = useState("")
   const [tempPassword, setTempPass] = useState<string | null>(null)
   const [copied, setCopied]         = useState(false)
@@ -118,6 +123,15 @@ function InviteUserModal({ orgId, onClose }: { orgId: string; onClose: () => voi
           </div>
         ) : (
           <>
+            <div className="space-y-2">
+              <Label htmlFor="rut">RUT</Label>
+              <Input
+                id="rut"
+                value={form.rut}
+                onChange={set("rut")}
+                placeholder="12.345.678-9"
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Nombre *</Label>

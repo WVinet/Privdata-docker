@@ -22,10 +22,10 @@ export interface Person {
 }
 
 export interface InvitePersonRequest {
+  rut: string
   firstName: string
   lastName: string
   email: string
-  rut: string
   position?: string
   departmentId?: string
   roleName: string
