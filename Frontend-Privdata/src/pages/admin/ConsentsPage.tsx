@@ -137,7 +137,8 @@ function RegistrosTab({ orgId }: { orgId: string }) {
   })
 
   const personMap   = new Map<string, Person>((personsData?.data ?? []).map((p) => [p.id, p]))
-  const categoryMap = new Map<string, DataCategory>((categoriesData?.data ?? []).map((c) => [c.id, c]))
+  const categoryMap = new Map(
+    (categoriesData ?? []).map((c: DataCategory) => [c.id, c]))
   const defMap      = new Map<string, ConsentDefinition>((definitionsData ?? []).map((d) => [d.id, d]))
 
   const revokeMutation = useMutation({
