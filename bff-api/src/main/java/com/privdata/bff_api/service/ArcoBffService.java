@@ -45,8 +45,9 @@ public class ArcoBffService {
         Object result = arcoClient.create(body);
         String orgId  = body.get("organizationId") != null ? body.get("organizationId").toString() : null;
         String type   = body.get("requestType")    != null ? body.get("requestType").toString()    : "ARSO";
+        String id     = extractDataField(result, "id");
         auditClient.log(orgId, "CREATE", "Solicitud ARSO",
-                "Nueva solicitud " + type + " registrada",
+                "Nueva solicitud " + type + " registrada " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
     }
@@ -106,8 +107,9 @@ public class ArcoBffService {
     public Object createRectification(Map<String, Object> body, String authorization) {
         Object result = arcoClient.createRectification(body);
         String orgId  = extractDataField(result, "organizationId");
+        String id     = extractDataField(result, "id");
         auditClient.log(orgId, "CREATE", "Solicitud ARSO",
-                "Nueva solicitud de rectificación registrada",
+                "Nueva solicitud de rectificación registrada " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
     }
@@ -133,8 +135,9 @@ public class ArcoBffService {
     public Object createSuppression(Map<String, Object> body, String authorization) {
         Object result = arcoClient.createSuppression(body);
         String orgId  = extractDataField(result, "organizationId");
+        String id     = extractDataField(result, "id");
         auditClient.log(orgId, "CREATE", "Solicitud ARSO",
-                "Nueva solicitud de supresión registrada",
+                "Nueva solicitud de supresión registrada " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
     }
@@ -160,8 +163,9 @@ public class ArcoBffService {
     public Object createOpposition(Map<String, Object> body, String authorization) {
         Object result = arcoClient.createOpposition(body);
         String orgId  = extractDataField(result, "organizationId");
+        String id     = extractDataField(result, "id");
         auditClient.log(orgId, "CREATE", "Solicitud ARSO",
-                "Nueva solicitud de oposición registrada",
+                "Nueva solicitud de oposición registrada " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
     }
@@ -196,8 +200,9 @@ public class ArcoBffService {
     public Object createPortability(Map<String, Object> body, String authorization) {
         Object result = arcoClient.createPortability(body);
         String orgId  = extractDataField(result, "organizationId");
+        String id     = extractDataField(result, "id");
         auditClient.log(orgId, "CREATE", "Solicitud ARSO",
-                "Nueva solicitud de portabilidad registrada",
+                "Nueva solicitud de portabilidad registrada " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
     }
@@ -227,8 +232,9 @@ public class ArcoBffService {
     public Object createBlocking(Map<String, Object> body, String authorization) {
         Object result = arcoClient.createBlocking(body);
         String orgId  = extractDataField(result, "organizationId");
+        String id     = extractDataField(result, "id");
         auditClient.log(orgId, "CREATE", "Solicitud ARSO",
-                "Nueva solicitud de bloqueo registrada",
+                "Nueva solicitud de bloqueo registrada " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
     }
@@ -254,8 +260,9 @@ public class ArcoBffService {
     public Object createAnonymization(Map<String, Object> body, String authorization) {
         Object result = arcoClient.createAnonymization(body);
         String orgId  = extractDataField(result, "organizationId");
+        String id     = extractDataField(result, "id");
         auditClient.log(orgId, "CREATE", "Solicitud ARSO",
-                "Nueva solicitud de anonimización registrada",
+                "Nueva solicitud de anonimización registrada " + id,
                 JwtUtil.extractEmail(authorization));
         return result;
     }

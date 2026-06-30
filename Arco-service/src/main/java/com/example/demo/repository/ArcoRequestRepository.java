@@ -4,6 +4,7 @@ import com.example.demo.enums.arcoRequest.ArcoRequestType;
 import com.example.demo.enums.arcoRequest.ArcoStatus;
 import com.example.demo.model.ArcoRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -37,4 +38,16 @@ public interface ArcoRequestRepository extends JpaRepository<ArcoRequest, UUID> 
             ArcoRequestType requestType,
             LocalDateTime fromDate
     );
+
+    // Transición atómica RECIBIDA -> EN_REVISION: evita doble notificación si llegan
+    // dos solicitudes casi simultáneas (p. ej. doble invocación de efectos en React StrictMode).
+    @Modifying
+    @Query("""
+        UPDATE ArcoRequest r
+        SET r.status = com.example.demo.enums.arcoRequest.ArcoStatus.EN_REVISION,
+            r.reviewStartedAt = :now
+        WHERE r.id = :id
+        AND r.status = com.example.demo.enums.arcoRequest.ArcoStatus.RECIBIDA
+    """)
+    int marcarEnRevisionSiRecibida(@Param("id") UUID id, @Param("now") LocalDateTime now);
 }

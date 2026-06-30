@@ -1,4 +1,4 @@
-import { useState, useEffect, type ElementType } from "react"
+import { useState, useEffect, useRef, type ElementType } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Search, Loader2, X, Clock, CheckCircle2, AlertCircle, AlertTriangle, Send, XCircle, Lock, Hourglass } from "lucide-react"
 import { arcoApi, personsApi } from "@/lib/api"
@@ -176,7 +176,12 @@ function UpdateStatusModal({
     },
   })
 
+  const autoTransitionTriggered = useRef(false)
+
   useEffect(() => {
+    if (autoTransitionTriggered.current) return
+    autoTransitionTriggered.current = true
+
     if (request.status === "RECIBIDA") {
       startReviewMutation.mutate()
       return
