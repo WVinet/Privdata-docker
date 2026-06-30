@@ -12,16 +12,23 @@ PrivData is an academic data privacy management system built for Chilean **Ley 2
 
 ```
 Frontend (React/Vite :5173)
-    └── Vite proxy /api → BFF (:8085)
-            ├── Auth-service      (:8080) → postgres-auth      (:5436)
-            ├── Organization-service (:8081) → postgres-organization (:5433)
-            ├── Arco-service      (:8082) → postgres-arco      (:5434)
-            └── Compliance-service (:8083) → postgres-compliance (:5435)
+    └── Vite proxy /api → API Gateway (:8000)
+            ├── /api/auth/**  → Auth-service (:8080) → postgres-auth      (:5436)
+            └── /api/**       → BFF (:8085)
+                    ├── Auth-service      (:8080) → postgres-auth      (:5436)
+                    ├── Organization-service (:8081) → postgres-organization (:5433)
+                    ├── Arco-service      (:8082) → postgres-arco      (:5434)
+                    ├── Compliance-service (:8083) → postgres-compliance (:5435)
+                    └── agencia-service   (:8084) → postgres-agencia   (:5437)
 ```
+
+**API Gateway** (`api-gateway`, Spring Cloud Gateway) sits in front of the BFF and validates the JWT on every `/api/**` request (except `POST /api/auth/login|register|password/forgot|password/reset`, which are public) before routing onward. It does **not** replace the BFF's per-microservice authorization — `@PreAuthorize` checks still happen downstream.
 
 **BFF** (`bff-api`) is a manually-proxied Backend-for-Frontend — it has no auth logic of its own, just forwards requests with the `Authorization` header to the appropriate microservice. Every new microservice endpoint requires adding to: `client/`, `service/`, and `controller/` in the BFF.
 
-**Auth flow:** JWT stored in `sessionStorage` → attached by axios interceptor in `src/lib/api.ts` → BFF forwards to Auth-service → permissions checked via `@PreAuthorize("hasAuthority('PERMISSION_NAME')")`.
+**Auth flow:** JWT stored in `sessionStorage` → attached by axios interceptor in `src/lib/api.ts` → Vite proxy forwards to API Gateway → gateway validates the token signature → routes to BFF → BFF forwards to Auth-service/etc. → permissions checked via `@PreAuthorize("hasAuthority('PERMISSION_NAME')")`.
+
+**JWT secret:** shared via the `JWT_SECRET` env var (root `.env`) across `Auth-service` (signs tokens) and `api-gateway` (validates them) — both must resolve to the same value or every authenticated request will 401 at the gateway.
 
 **Single-tenant design:** The `organizationId` (`a81476a6-7acc-4740-b254-1ce685d17762`) is seeded at startup by each service's `DataInitializer`. The frontend derives `organizationId` from `/auth/me` response — never hardcode it in the frontend.
 
@@ -44,7 +51,10 @@ cd Organization-service && ./mvnw spring-boot:run  # :8081
 cd Arco-service && ./mvnw spring-boot:run          # :8082
 cd Compliance-service && ./mvnw spring-boot:run    # :8083
 cd bff-api && ./mvnw spring-boot:run               # :8085
+cd api-gateway && ./mvnw spring-boot:run           # :8000
 ```
+
+The Vite dev proxy targets the **API Gateway** (`http://localhost:8000`) by default, not the BFF directly — `api-gateway` must be running locally too, or the frontend's `/api` calls will fail to connect. Override with `VITE_API_URL` in `Frontend-Privdata/.env.local` if you need to bypass the gateway and hit `bff-api` directly during development.
 
 Frontend:
 ```bash
@@ -169,6 +179,7 @@ Some compliance endpoints bypass the `ApiResponse<T>` wrapper and return the arr
 - `complianceApi.getConsentsBySubject()` → returns `Consent[]` directly (no wrapper)
 - `complianceApi.getConsentDefinitions()` → returns `ConsentDefinition[]` directly
 - `complianceApi.listConsents()` → returns `ConsentPage` directly
+- `complianceApi.getDataCategories()` → returns `DataCategory[]` directly
 - Everything else → returns `ApiResponse<T>` where actual payload is at `.data.data`
 
 ---

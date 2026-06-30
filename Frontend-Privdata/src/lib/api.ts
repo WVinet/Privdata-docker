@@ -46,10 +46,13 @@ api.interceptors.request.use((config) => {
 })
 
 // Si el backend devuelve 401, limpia sesión y manda al login
+// (excepto en /auth/login: ahí un 401 es simplemente "credenciales incorrectas",
+// no una sesión expirada, y el formulario ya maneja ese error sin necesidad de redirigir)
 api.interceptors.response.use(
   (res) => res,
   (error) => {
-    if (error.response?.status === 401) {
+    const isLoginRequest = error.config?.url?.includes("/auth/login")
+    if (error.response?.status === 401 && !isLoginRequest) {
       sessionStorage.removeItem("privdata_token")
       sessionStorage.removeItem("privdata_user")
       window.location.href = "/login"
@@ -303,7 +306,7 @@ export const complianceApi = {
     api.post<ApiResponse<Consent>>(`/compliance/consents/${consentId}/revoke`),
 
   getDataCategories: () =>
-    api.get<ApiResponse<DataCategory[]>>(`/compliance/data-categories`),
+    api.get<DataCategory[]>(`/compliance/data-categories`),
 
   listConsents: (params?: { status?: ConsentStatus; page?: number; size?: number }) =>
     api.get<ConsentPage>(`/compliance/consents`, { params }),

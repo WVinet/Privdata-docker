@@ -87,6 +87,7 @@ public class OrganizationBffService {
         inviteBody.put("organizationId", orgId);
         inviteBody.put("personId",       personId);
         inviteBody.put("roleName",       roleName);
+        inviteBody.put("firstName",      body.get("firstName"));
 
         Object userResult = authClient.invite(authorization, inviteBody);
 

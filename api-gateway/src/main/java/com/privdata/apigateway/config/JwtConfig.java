@@ -1,5 +1,7 @@
 package com.privdata.apigateway.config;
 
+import java.util.Base64;
+
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -15,10 +17,11 @@ public class JwtConfig {
     public ReactiveJwtDecoder reactiveJwtDecoder(
             @Value("${jwt.secret}") String secret
     ) {
-        SecretKeySpec key = new SecretKeySpec(
-                secret.getBytes(),
-                "HmacSHA256"
-        );
+        // Auth-service firma los tokens decodificando el secret como Base64
+        // (ver JwtService.getSignInKey) — hay que derivar la clave igual acá,
+        // o la verificación de firma nunca va a coincidir.
+        byte[] keyBytes = Base64.getDecoder().decode(secret);
+        SecretKeySpec key = new SecretKeySpec(keyBytes, "HmacSHA256");
 
         return NimbusReactiveJwtDecoder
                 .withSecretKey(key)

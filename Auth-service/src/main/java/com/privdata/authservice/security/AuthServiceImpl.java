@@ -18,6 +18,7 @@ import com.privdata.authservice.model.UserRole;
 import com.privdata.authservice.repository.UserRepository;
 import com.privdata.authservice.repository.UserRoleRepository;
 import com.privdata.authservice.service.AuthService;
+import com.privdata.authservice.service.EmailService;
 import com.privdata.authservice.service.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -41,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final RoleService roleService;
     private final CustomUserDetailsService customUserDetailsService;
+    private final EmailService emailService;
 
     @Override
     public RegisterResponseDTO register(RegisterRequestDTO request) {
@@ -127,6 +129,8 @@ public class AuthServiceImpl implements AuthService {
         userRole.setAssignedBy(savedUser.getId());
         userRole.setExpiresAt(LocalDateTime.now().plusYears(99));
         userRoleRepository.save(userRole);
+
+        emailService.sendInviteEmail(savedUser.getEmail(), request.getFirstName(), tempPassword);
 
         return new InviteResponseDTO(savedUser.getId(), savedUser.getEmail(), tempPassword);
     }

@@ -203,13 +203,16 @@ services:
     ports:
       - "8000:8000"
     environment:
-      JWT_SECRET: privdata-secret-key-privdata-secret-key-privdata
+      JWT_SECRET: ${JWT_SECRET}
+      AUTH_SERVICE_URL: http://auth-service:8080
+      BFF_API_URL: http://bff-api:8085
     depends_on:
       - auth-service
       - organization-service
       - arco-service
       - compliance-service
       - agencia-service
+      - bff-api
     profiles: ["app"]
 
 volumes:
