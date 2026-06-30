@@ -103,6 +103,9 @@ export const permissionsApi = {
 export const usersApi = {
   list: () =>
     api.get<ApiResponse<AuthUser[]>>("/auth/users"),
+
+  resendInvite: (userId: string) =>
+    api.post<ApiResponse<null>>(`/auth/users/${userId}/resend-invite`),
 }
 
 // ── Organizations ─────────────────────────────────────────────────────────────

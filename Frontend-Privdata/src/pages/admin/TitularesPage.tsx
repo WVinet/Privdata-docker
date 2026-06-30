@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Search, UserPlus, Loader2, X, Copy, Check, UserX } from "lucide-react"
+import { Search, UserPlus, Loader2, X, Copy, Check, UserX, Mail } from "lucide-react"
 import { usersApi, personsApi, departmentsApi } from "@/lib/api"
 import { formatRut } from "@/lib/rut"
 // import { validateRut } from "@/lib/rut" // validación de dígito verificador desactivada temporalmente
@@ -196,6 +196,22 @@ export default function TitularesPage() {
   const [search, setSearch]     = useState("")
   const [inviting, setInviting] = useState(false)
 
+  const qc = useQueryClient()
+
+  const resendInviteMutation = useMutation({
+    mutationFn: (userId: string) => usersApi.resendInvite(userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] })
+      alert("Código reenviado correctamente")
+    },
+    onError: (e: unknown) => {
+      alert(
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+          "No se pudo reenviar el código"
+      )
+    },
+  })
+
   const { data: usersRes, isLoading: lu } = useQuery({
     queryKey: ["users"],
     queryFn:  () => usersApi.list().then((r) => r.data),
@@ -283,35 +299,57 @@ export default function TitularesPage() {
                       <TableHead>Correo</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Registrado</TableHead>
+                      <TableHead>Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {titulares.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
                           {search ? "No se encontraron titulares con ese criterio." : "No hay titulares registrados."}
                         </TableCell>
                       </TableRow>
                     ) : titulares.map((u) => {
                       const person = u.personId ? personMap.get(u.personId) : undefined
+
                       return (
                         <TableRow key={u.id}>
                           <TableCell className="font-medium">
                             {person?.fullName ?? "—"}
                           </TableCell>
+
                           <TableCell className="text-muted-foreground text-sm">
                             {person?.rut ?? "—"}
                           </TableCell>
+
                           <TableCell className="text-muted-foreground text-sm">
                             {u.email}
                           </TableCell>
+
                           <TableCell>
                             <Badge variant={STATUS_VARIANT[u.status] ?? "secondary"}>
                               {STATUS_LABEL[u.status] ?? u.status}
                             </Badge>
                           </TableCell>
+
                           <TableCell className="text-muted-foreground text-sm">
                             {new Date(u.createdAt).toLocaleDateString("es-CL")}
+                          </TableCell>
+
+                          <TableCell>
+                            {u.status === "PENDING" ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => resendInviteMutation.mutate(u.id)}
+                                disabled={resendInviteMutation.isPending}
+                              >
+                                <Mail className="w-4 h-4 mr-1.5" />
+                                Reenviar código
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       )

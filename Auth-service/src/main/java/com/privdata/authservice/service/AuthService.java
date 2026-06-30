@@ -32,4 +32,6 @@ public interface AuthService {
 
     UserResponseDTO getUserById(UUID userId);
 
+    void resendInvite(UUID userId);
+
 }

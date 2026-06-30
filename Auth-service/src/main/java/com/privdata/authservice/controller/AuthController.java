@@ -108,4 +108,16 @@ public class AuthController {
                 new ApiResponseDTO<>(true, "Rol asignado correctamente", null)
         );
     }
+
+    @PostMapping("/users/{userId}/resend-invite")
+    @PreAuthorize("hasAuthority('USER_CREATE')")
+    public ResponseEntity<ApiResponseDTO<Void>> resendInvite(
+            @PathVariable UUID userId
+    ) {
+        authService.resendInvite(userId);
+
+        return ResponseEntity.ok(
+                new ApiResponseDTO<>(true, "Invitación reenviada correctamente", null)
+        );
+    }
 }
