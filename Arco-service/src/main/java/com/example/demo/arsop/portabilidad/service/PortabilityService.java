@@ -173,10 +173,11 @@ public class PortabilityService {
         ArcoRequest saved =
                 arcoRequestRepository.save(request);
 
-        notificarCambioEstado(
-                saved,
-                dto.getComment()
-        );
+        if (dto.getVerified()) {
+            notificarEnGestion(saved);
+        } else {
+            notificarCambioEstado(saved, dto.getComment());
+        }
 
         return saved;
     }
@@ -422,6 +423,17 @@ public class PortabilityService {
                     "No se pudo enviar correo de creación: "
                             + ex.getMessage()
             );
+        }
+    }
+
+    private void notificarEnGestion(ArcoRequest request) {
+        try {
+            PersonResponseDTO personResponse = organizationClient.findPersonById(
+                    request.getOrganizationId(), request.getDataSubjectId());
+            emailService.sendEnGestionEmail(
+                    personResponse.getData().getEmail(), request.getId(), request.getRequestType().name());
+        } catch (Exception ex) {
+            System.out.println("No se pudo enviar correo de gestión: " + ex.getMessage());
         }
     }
 

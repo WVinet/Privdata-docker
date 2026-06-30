@@ -54,14 +54,13 @@ function formatDateTime(iso: string) {
   return `${date} · ${time}`
 }
 
-// "En revisión" no es un estado real en el backend (la verificación de identidad
-// pasa directo de RECIBIDA a EN_GESTION), por eso no tiene timestamp propio.
 function stepTimestamp(step: ArcoStatus, req: ArcoRequest): string | null {
   switch (step) {
-    case "RECIBIDA":   return req.submittedAt
-    case "EN_GESTION": return req.managementStartedAt
-    case "RESPONDIDA": return req.resolvedAt
-    default:           return null
+    case "RECIBIDA":    return req.submittedAt
+    case "EN_REVISION": return req.reviewStartedAt
+    case "EN_GESTION":  return req.managementStartedAt
+    case "RESPONDIDA":  return req.resolvedAt
+    default:            return null
   }
 }
 

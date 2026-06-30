@@ -110,6 +110,31 @@ public class ArcoRequestService {
     }
 
     @Transactional
+    public ArcoRequestResponseDTO iniciarRevision(UUID id) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
+
+        if (solicitud.getStatus() != ArcoStatus.RECIBIDA) {
+            return ArcoRequestResponseDTO.fromEntity(solicitud);
+        }
+
+        solicitud.setStatus(ArcoStatus.EN_REVISION);
+        solicitud.setReviewStartedAt(LocalDateTime.now());
+        ArcoRequest saved = arcoRequestRepository.save(solicitud);
+        notificarRevision(saved);
+        return ArcoRequestResponseDTO.fromEntity(saved);
+    }
+
+    private void notificarRevision(ArcoRequest solicitud) {
+        try {
+            PersonResponseDTO personResponse = organizationClient.findPersonById(solicitud.getOrganizationId(), solicitud.getDataSubjectId());
+            emailService.sendRevisionEmail(personResponse.getData().getEmail(), solicitud.getId(), solicitud.getRequestType().name());
+        } catch (Exception ex) {
+            System.out.println("No se pudo enviar correo de revisión: " + ex.getMessage());
+        }
+    }
+
+    @Transactional
     public ArcoRequestResponseDTO cambiarEstado(UUID id, ArcoRequestStatusUpdateDTO dto) {
         ArcoRequest solicitud = arcoRequestRepository.findById(id)
                 .orElseThrow(() -> new ArcoRequestNotFoundException(id));

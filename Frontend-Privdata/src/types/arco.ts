@@ -22,6 +22,7 @@ export interface ArcoRequest {
   dueDate: string
   description: string
   resolutionSummary: string | null
+  reviewStartedAt: string | null
   managementStartedAt: string | null
   resolvedAt: string | null
   denialLegalBasis: string | null

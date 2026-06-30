@@ -111,15 +111,14 @@ public class RectificacionService {
 
         rectificationRequestRepository.save(detail);
         ArcoRequest saved = arcoRequestRepository.save(request);
-        String notificationComment = dto.getComment();
 
-        if (notificationComment == null || notificationComment.isBlank()) {
-            notificationComment = Boolean.TRUE.equals(dto.getVerified())
-                    ? "La identidad del titular ha sido verificada correctamente."
-                    : "No fue posible verificar la identidad del titular.";
+        if (dto.getVerified()) {
+            notificarEnGestion(saved);
+        } else {
+            String msg = (dto.getComment() != null && !dto.getComment().isBlank())
+                    ? dto.getComment() : "No fue posible verificar la identidad del titular.";
+            notificarCambioEstado(saved, msg);
         }
-
-        notificarCambioEstado(saved, notificationComment);
         return saved;
     }
 
@@ -180,6 +179,17 @@ public class RectificacionService {
             );
         } catch (Exception ex) {
             System.out.println("No se pudo enviar correo de creación: " + ex.getMessage());
+        }
+    }
+
+    private void notificarEnGestion(ArcoRequest request) {
+        try {
+            PersonResponseDTO personResponse = organizationClient.findPersonById(
+                    request.getOrganizationId(), request.getDataSubjectId());
+            emailService.sendEnGestionEmail(
+                    personResponse.getData().getEmail(), request.getId(), request.getRequestType().name());
+        } catch (Exception ex) {
+            System.out.println("No se pudo enviar correo de gestión: " + ex.getMessage());
         }
     }
 

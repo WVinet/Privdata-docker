@@ -50,6 +50,10 @@ public class ArcoClient {
         return forward("PATCH", "/api/arco-request/" + id + "/estado", mapped);
     }
 
+    public Object startReview(String id) {
+        return forward("PATCH", "/api/arco-request/" + id + "/iniciar-revision", null);
+    }
+
     public Object extendDeadline(String id) {
         return forward("PATCH", "/api/arco-request/" + id + "/prorroga", null);
     }
