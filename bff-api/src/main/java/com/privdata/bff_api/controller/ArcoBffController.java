@@ -191,49 +191,4 @@ public class ArcoBffController {
         return service.downloadPortability(id);
     }
 
-    @PostMapping("/blocking")
-    public ResponseEntity<?> createBlocking(
-            @RequestBody Map<String, Object> body,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        return ResponseEntity.ok(service.createBlocking(body, authorization));
-    }
-
-    @PatchMapping("/blocking/{id}/verify-identity")
-    public ResponseEntity<?> verifyBlockingIdentity(
-            @PathVariable String id,
-            @RequestBody Map<String, Object> body,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        return ResponseEntity.ok(service.verifyBlockingIdentity(id, body, authorization));
-    }
-
-    @PatchMapping("/blocking/{id}/respond")
-    public ResponseEntity<?> respondBlocking(
-            @PathVariable String id,
-            @RequestBody Map<String, Object> body,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        return ResponseEntity.ok(service.respondBlocking(id, body, authorization));
-    }
-
-    @PostMapping("/anonymization")
-    public ResponseEntity<?> createAnonymization(
-            @RequestBody Map<String, Object> body,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        return ResponseEntity.ok(service.createAnonymization(body, authorization));
-    }
-
-    @PatchMapping("/anonymization/{id}/verify-identity")
-    public ResponseEntity<?> verifyAnonymizationIdentity(
-            @PathVariable String id,
-            @RequestBody Map<String, Object> body,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        return ResponseEntity.ok(service.verifyAnonymizationIdentity(id, body, authorization));
-    }
-
-    @PatchMapping("/anonymization/{id}/respond")
-    public ResponseEntity<?> respondAnonymization(
-            @PathVariable String id,
-            @RequestBody Map<String, Object> body,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        return ResponseEntity.ok(service.respondAnonymization(id, body, authorization));
-    }
 }

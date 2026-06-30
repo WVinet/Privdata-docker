@@ -103,42 +103,4 @@ public class OrganizationClient {
                 .toBodilessEntity();
     }
 
-    ///Bloqueo
-    public void blockPerson(
-            UUID organizationId,
-            UUID personId
-    ) {
-
-        orgClient.post()
-                .uri(
-                        organizationServiceUrl
-                                + "/api/organizations/"
-                                + organizationId
-                                + "/persons/"
-                                + personId
-                                + "/block"
-                )
-                .retrieve()
-                .toBodilessEntity();
-    }
-
-    ///Anonimizacion
-    public void anonymizePerson(
-            UUID organizationId,
-            UUID personId
-    ) {
-
-        orgClient.post()
-                .uri(
-                        organizationServiceUrl
-                                + "/api/organizations/"
-                                + organizationId
-                                + "/persons/"
-                                + personId
-                                + "/anonymize"
-                )
-                .retrieve()
-                .toBodilessEntity();
-    }
-
 }

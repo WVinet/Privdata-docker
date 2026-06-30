@@ -9,8 +9,6 @@ import ArcoRectificationPanel from "@/components/arco/ArcoRectificationPanel"
 import ArcoSuppressionPanel from "@/components/arco/ArcoSuppressionPanel"
 import ArcoPortabilityPanel from "@/components/arco/ArcoPortabilityPanel"
 import ArcoOppositionPanel from "@/components/arco/ArcoOppositionPanel"
-import ArcoBlockingPanel from "@/components/arco/ArcoBlockingPanel"
-import ArcoAnonymizationPanel from "@/components/arco/ArcoAnonymizationPanel"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -25,8 +23,6 @@ const TYPE_LABELS: Record<string, string> = {
   SUPRESION:       "Supresión",
   OPOSICION:       "Oposición",
   PORTABILIDAD:    "Portabilidad",
-  BLOQUEO_TEMPORAL:"Bloqueo temporal",
-  ANONIMIZACION:   "Anonimización",
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -125,11 +121,10 @@ function UpdateStatusModal({
   const canExtend = !request.extensionGranted && NOT_RESOLVED.includes(effectiveStatus)
   const availableActions: ActionKey[] = canExtend ? [...transitions, "PRORROGA"] : transitions
 
-  // Acceso, Rectificación, Supresión, Oposición, Portabilidad, Bloqueo y Anonimización tienen su propio flujo
+  // Acceso, Rectificación, Supresión, Oposición y Portabilidad tienen su propio flujo
   // de verificación de identidad (Xxx Service) en vez del auto-paso a EN_GESTION genérico.
   const requiresExplicitIdentity = [
-    "ACCESO", "RECTIFICACION", "SUPRESION", "OPOSICION",
-    "PORTABILIDAD", "BLOQUEO_TEMPORAL", "ANONIMIZACION",
+    "ACCESO", "RECTIFICACION", "SUPRESION", "OPOSICION", "PORTABILIDAD",
   ].includes(request.requestType)
   const [identityComment, setIdentityComment] = useState("")
 
@@ -163,9 +158,7 @@ function UpdateStatusModal({
         request.requestType === "RECTIFICACION" ? arcoApi.verifyRectificationIdentity :
         request.requestType === "SUPRESION" ? arcoApi.verifySuppressionIdentity :
         request.requestType === "OPOSICION" ? arcoApi.verifyOppositionIdentity :
-        request.requestType === "PORTABILIDAD" ? arcoApi.verifyPortabilityIdentity :
-        request.requestType === "BLOQUEO_TEMPORAL" ? arcoApi.verifyBlockingIdentity :
-        arcoApi.verifyAnonymizationIdentity
+        arcoApi.verifyPortabilityIdentity
       const res = await call(request.id, verified, identityComment.trim() || undefined)
       if (!res.data.success) throw new Error(res.data.message)
       return verified
@@ -363,36 +356,6 @@ function UpdateStatusModal({
             description={request.description}
             onApplied={(text) => {
               // El panel ya llamó a respondOpposition y dejó la solicitud resuelta en el backend.
-              setComment(text)
-              qc.invalidateQueries({ queryKey: ["arco"] })
-              onClose()
-            }}
-          />
-        )}
-
-        {request.requestType === "BLOQUEO_TEMPORAL" && pendingAction === null && (
-          <ArcoBlockingPanel
-            arcoRequestId={request.id}
-            dataSubjectId={request.dataSubjectId}
-            organizationId={request.organizationId}
-            description={request.description}
-            onApplied={(text) => {
-              // El panel ya llamó a respondBlocking y dejó la solicitud resuelta en el backend.
-              setComment(text)
-              qc.invalidateQueries({ queryKey: ["arco"] })
-              onClose()
-            }}
-          />
-        )}
-
-        {request.requestType === "ANONIMIZACION" && pendingAction === null && (
-          <ArcoAnonymizationPanel
-            arcoRequestId={request.id}
-            dataSubjectId={request.dataSubjectId}
-            organizationId={request.organizationId}
-            description={request.description}
-            onApplied={(text) => {
-              // El panel ya llamó a respondAnonymization y dejó la solicitud resuelta en el backend.
               setComment(text)
               qc.invalidateQueries({ queryKey: ["arco"] })
               onClose()
@@ -680,7 +643,7 @@ export default function ArcoPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Solicitudes ARSOP</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Acceso · Rectificación · Supresión · Oposición · Portabilidad · Bloqueo — Art. 11 Ley 21.719
+            Acceso · Rectificación · Supresión · Oposición · Portabilidad — Art. 11 Ley 21.719
           </p>
         </div>
 

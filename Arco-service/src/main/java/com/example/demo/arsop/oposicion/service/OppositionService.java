@@ -273,18 +273,29 @@ public class OppositionService {
             return saved;
         }
 
-        organizationClient.restrictProcessing(
-                request.getOrganizationId(),
-                request.getDataSubjectId(),
-                detail.getTreatmentActivityId(),
-                detail.getProcessingPurpose()
-        );
+        boolean blockInsteadOfRestrict = Boolean.TRUE.equals(dto.getBlockInsteadOfRestrict());
+
+        if (blockInsteadOfRestrict) {
+            organizationClient.blockDataSubject(
+                    request.getOrganizationId(),
+                    request.getDataSubjectId()
+            );
+        } else {
+            organizationClient.restrictProcessing(
+                    request.getOrganizationId(),
+                    request.getDataSubjectId(),
+                    detail.getTreatmentActivityId(),
+                    detail.getProcessingPurpose()
+            );
+        }
 
         String summary =
                 dto.getObservations() != null &&
                         !dto.getObservations().isBlank()
                         ? dto.getObservations()
-                        : "Solicitud aprobada. Se restringió el tratamiento de los datos.";
+                        : blockInsteadOfRestrict
+                            ? "Solicitud aprobada. Se bloqueó al titular."
+                            : "Solicitud aprobada. Se restringió el tratamiento de los datos.";
 
         detail.setDecision(
                 OppositionDecision.APPROVED

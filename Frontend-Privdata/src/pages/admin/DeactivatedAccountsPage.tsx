@@ -29,10 +29,10 @@ const DATA_STATUS_VARIANT: Record<DataStatus, "default" | "secondary" | "destruc
 
 const DATA_STATUS_REQUEST_TYPE: Record<DataStatus, ArcoRequestType | null> = {
   ACTIVE:                null,
-  BLOCKED:               "BLOQUEO_TEMPORAL",
+  BLOCKED:               "OPOSICION",
   DELETION_REQUESTED:    "SUPRESION",
   PROCESSING_RESTRICTED: "OPOSICION",
-  ANONYMIZED:            "ANONIMIZACION",
+  ANONYMIZED:            "SUPRESION",
 }
 
 export default function DeactivatedAccountsPage() {

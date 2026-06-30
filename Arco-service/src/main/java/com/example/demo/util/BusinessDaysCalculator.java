@@ -17,14 +17,12 @@ public class BusinessDaysCalculator {
         switch (tipo) {
 
             case SUPRESION:
-            case BLOQUEO_TEMPORAL:
                 return agregarDiasHabiles(inicio, 2);
 
             case ACCESO:
             case RECTIFICACION:
             case OPOSICION:
             case PORTABILIDAD:
-            case ANONIMIZACION:
             default:
                 return inicio.plusDays(30);
         }

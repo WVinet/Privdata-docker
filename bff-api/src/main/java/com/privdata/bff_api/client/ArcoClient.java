@@ -133,30 +133,6 @@ public class ArcoClient {
                 .toEntity(byte[].class);
     }
 
-    public Object createBlocking(Map<String, Object> body) {
-        return forward("POST", "/api/arso/blocking", body);
-    }
-
-    public Object verifyBlockingIdentity(String id, Map<String, Object> body) {
-        return forward("PATCH", "/api/arso/blocking/" + id + "/verify-identity", body);
-    }
-
-    public Object respondBlocking(String id, Map<String, Object> body) {
-        return forward("PATCH", "/api/arso/blocking/" + id + "/respond", body);
-    }
-
-    public Object createAnonymization(Map<String, Object> body) {
-        return forward("POST", "/api/arso/anonymization", body);
-    }
-
-    public Object verifyAnonymizationIdentity(String id, Map<String, Object> body) {
-        return forward("PATCH", "/api/arso/anonymization/" + id + "/verify-identity", body);
-    }
-
-    public Object respondAnonymization(String id, Map<String, Object> body) {
-        return forward("PATCH", "/api/arso/anonymization/" + id + "/respond", body);
-    }
-
     private Object forward(String method, String uri, Object body) {
         try {
             var spec = arcoRestClient.method(HttpMethod.valueOf(method)).uri(uri);

@@ -11,14 +11,11 @@ const TYPE_LABELS: Record<string, string> = {
   SUPRESION:        "Derecho de Supresión",
   OPOSICION:        "Derecho de Oposición",
   PORTABILIDAD:     "Derecho de Portabilidad",
-  BLOQUEO_TEMPORAL: "Bloqueo Temporal de Datos",
-  ANONIMIZACION:    "Derecho de Anonimización",
 }
 
 const TYPE_ICONS: Record<string, string> = {
   ACCESO: "🔍", RECTIFICACION: "✏️", SUPRESION: "🗑️",
-  OPOSICION: "🚫", PORTABILIDAD: "📦", BLOQUEO_TEMPORAL: "🔒",
-  ANONIMIZACION: "🫥",
+  OPOSICION: "🚫", PORTABILIDAD: "📦",
 }
 
 const STATUS_STEPS: ArcoStatus[] = [

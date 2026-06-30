@@ -126,8 +126,6 @@ public class EmailService {
             case "SUPRESION"       -> "Supresión de datos";
             case "OPOSICION"       -> "Oposición al tratamiento";
             case "PORTABILIDAD"    -> "Portabilidad de datos";
-            case "BLOQUEO_TEMPORAL"-> "Bloqueo temporal de datos";
-            case "ANONIMIZACION"   -> "Anonimización de datos";
             default                -> requestType;
         };
     }
