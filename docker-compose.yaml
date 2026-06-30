@@ -78,6 +78,10 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       TITULAR_EMAIL: ${TITULAR_EMAIL}
       TITULAR_PASSWORD: ${TITULAR_PASSWORD}
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      MAIL_SMTP_AUTH: false
+      MAIL_SMTP_STARTTLS: false
     ports:
       - "8080:8080"
 
