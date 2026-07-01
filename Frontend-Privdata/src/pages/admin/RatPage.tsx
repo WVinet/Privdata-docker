@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Loader2, FileSpreadsheet, Pencil, Search } from "lucide-react"
 import { toast } from "sonner"
 import * as Dialog from "@radix-ui/react-dialog"
-import { complianceApi } from "@/lib/api"
+import { complianceApi, terceroApi } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
 import { RequirePermission } from "@/components/RequirePermission"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,7 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type {
   TreatmentActivity, TreatmentActivityStatus, LegalBasis, DataCategory,
   TreatmentActivityCreateRequest, TreatmentActivityUpdateRequest,
+  Tercero,
 } from "@/types/compliance"
+import { TERCERO_TIPO_LABELS } from "@/types/compliance"
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,7 +71,7 @@ export default function RatPage() {
     enabled: !!orgId,
   })
 
-  const activities = data ?? []
+  const activities = Array.isArray(data) ? data : []
 
   const filtered = activities.filter((a) => {
     if (statusFilter && a.status !== statusFilter) return false
@@ -208,20 +210,19 @@ type FormState = {
   legalBasis: LegalBasis
   dataSubjectCategories: string
   retentionPeriodDays: string
-  thirdPartyRecipients: string
-  internationalTransfer: boolean
   dataSystems: string
   securityMeasures: string
   dataCategoryIds: string[]
+  terceroIds: string[]
   status: TreatmentActivityStatus
 }
 
 function emptyForm(): FormState {
   return {
     name: "", description: "", purpose: "", legalBasis: "CONSENTIMIENTO",
-    dataSubjectCategories: "", retentionPeriodDays: "", thirdPartyRecipients: "",
-    internationalTransfer: false, dataSystems: "", securityMeasures: "",
-    dataCategoryIds: [], status: "ACTIVE",
+    dataSubjectCategories: "", retentionPeriodDays: "",
+    dataSystems: "", securityMeasures: "",
+    dataCategoryIds: [], terceroIds: [], status: "ACTIVE",
   }
 }
 
@@ -233,11 +234,10 @@ function activityToForm(activity: TreatmentActivity): FormState {
     legalBasis: activity.legalBasis,
     dataSubjectCategories: activity.dataSubjectCategories ?? "",
     retentionPeriodDays: activity.retentionPeriodDays?.toString() ?? "",
-    thirdPartyRecipients: activity.thirdPartyRecipients ?? "",
-    internationalTransfer: activity.internationalTransfer,
     dataSystems: activity.dataSystems ?? "",
     securityMeasures: activity.securityMeasures ?? "",
     dataCategoryIds: activity.dataCategories.map((c) => c.id),
+    terceroIds: (activity.terceros ?? []).map((t) => t.id),
     status: activity.status,
   }
 }
@@ -257,10 +257,17 @@ function ActivityFormDialog({
 
   const { data: categoriesData } = useQuery({
     queryKey: ["data-categories"],
-    queryFn: () => complianceApi.getDataCategories().then((r) => r.data ?? []),
+    queryFn: () => complianceApi.getDataCategories().then((r) => Array.isArray(r.data) ? r.data : []),
     enabled: open,
   })
-  const categories: DataCategory[] = categoriesData ?? []
+  const categories: DataCategory[] = Array.isArray(categoriesData) ? categoriesData : []
+
+  const { data: tercerosData } = useQuery({
+    queryKey: ["terceros", orgId],
+    queryFn: () => terceroApi.list(orgId, true).then((r) => Array.isArray(r.data) ? r.data : []),
+    enabled: open && !!orgId,
+  })
+  const tercerosCatalog: Tercero[] = Array.isArray(tercerosData) ? tercerosData : []
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -271,11 +278,10 @@ function ActivityFormDialog({
         legalBasis: form.legalBasis,
         dataSubjectCategories: form.dataSubjectCategories.trim() || undefined,
         retentionPeriodDays: form.retentionPeriodDays ? Number(form.retentionPeriodDays) : undefined,
-        thirdPartyRecipients: form.thirdPartyRecipients.trim() || undefined,
-        internationalTransfer: form.internationalTransfer,
         dataSystems: form.dataSystems.trim() || undefined,
         securityMeasures: form.securityMeasures.trim() || undefined,
         dataCategoryIds: form.dataCategoryIds,
+        terceroIds: form.terceroIds,
       }
       return isEdit
         ? complianceApi.updateRat(activity!.id, { ...base, status: form.status } satisfies TreatmentActivityUpdateRequest)
@@ -295,6 +301,15 @@ function ActivityFormDialog({
       dataCategoryIds: f.dataCategoryIds.includes(id)
         ? f.dataCategoryIds.filter((c) => c !== id)
         : [...f.dataCategoryIds, id],
+    }))
+  }
+
+  function toggleTercero(id: string) {
+    setForm((f) => ({
+      ...f,
+      terceroIds: f.terceroIds.includes(id)
+        ? f.terceroIds.filter((t) => t !== id)
+        : [...f.terceroIds, id],
     }))
   }
 
@@ -399,42 +414,45 @@ function ActivityFormDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="ta-retention">Retención (días)</Label>
-                <Input
-                  id="ta-retention"
-                  type="number"
-                  min="0"
-                  value={form.retentionPeriodDays}
-                  onChange={(e) => setForm((f) => ({ ...f, retentionPeriodDays: e.target.value }))}
-                  disabled={mutation.isPending}
-                  placeholder="Ej: 365"
-                />
-              </div>
-              <label className="flex items-center gap-2 mt-6">
-                <input
-                  type="checkbox"
-                  checked={form.internationalTransfer}
-                  onChange={(e) => setForm((f) => ({ ...f, internationalTransfer: e.target.checked }))}
-                  disabled={mutation.isPending}
-                  className="w-4 h-4 accent-primary"
-                />
-                <span className="text-sm text-foreground">Transferencia internacional</span>
-              </label>
+            <div className="space-y-1.5">
+              <Label htmlFor="ta-retention">Retención (días)</Label>
+              <Input
+                id="ta-retention"
+                type="number"
+                min="0"
+                value={form.retentionPeriodDays}
+                onChange={(e) => setForm((f) => ({ ...f, retentionPeriodDays: e.target.value }))}
+                disabled={mutation.isPending}
+                placeholder="Ej: 365"
+              />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ta-third">Destinatarios / terceros</Label>
-              <textarea
-                id="ta-third"
-                rows={2}
-                value={form.thirdPartyRecipients}
-                onChange={(e) => setForm((f) => ({ ...f, thirdPartyRecipients: e.target.value }))}
-                disabled={mutation.isPending}
-                className="w-full text-sm rounded-md border border-border px-3 py-2 bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                placeholder="A quién se comunican estos datos, si corresponde..."
-              />
+              <Label>Terceros destinatarios</Label>
+              {tercerosCatalog.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No hay terceros en el catálogo. Agrégalos en <strong>Terceros</strong> del menú.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto border border-border rounded-md p-2">
+                  {tercerosCatalog.map((t) => (
+                    <label key={t.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.terceroIds.includes(t.id)}
+                        onChange={() => toggleTercero(t.id)}
+                        disabled={mutation.isPending}
+                        className="w-3.5 h-3.5 accent-primary"
+                      />
+                      <span className="text-foreground font-medium">{t.nombre}</span>
+                      <span className="text-muted-foreground">— {TERCERO_TIPO_LABELS[t.tipo]}</span>
+                      {t.pais !== "Chile" && (
+                        <span className="text-amber-600">({t.pais})</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">

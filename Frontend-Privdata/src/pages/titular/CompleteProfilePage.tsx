@@ -33,18 +33,21 @@ export default function CompleteProfilePage() {
     return null
   }
 
+  const isEndUser = authUser.authorities.includes("ROLE_END_USER")
+
   return (
     <CompleteProfileForm
       orgId={authUser.organizationId}
       personId={authUser.personId}
       authorities={authUser.authorities}
+      isEndUser={isEndUser}
     />
   )
 }
 
 function CompleteProfileForm({
-  orgId, personId, authorities,
-}: { orgId: string; personId: string; authorities: string[] }) {
+  orgId, personId, authorities, isEndUser,
+}: { orgId: string; personId: string; authorities: string[]; isEndUser: boolean }) {
   const navigate = useNavigate()
 
   const [newPwd, setNewPwd]      = useState("")
@@ -64,7 +67,7 @@ function CompleteProfileForm({
   const { data: definitionsData, isLoading: fetchingDefs } = useQuery({
     queryKey: ["consent-definitions", orgId],
     queryFn: () => complianceApi.getConsentDefinitions(orgId).then((r) => r.data ?? []),
-    enabled: !!orgId,
+    enabled: !!orgId && isEndUser,
   })
 
   const definitions: ConsentDefinition[] = definitionsData ?? []
@@ -118,22 +121,18 @@ function CompleteProfileForm({
       const updated = meRes.data?.data
       if (updated) sessionStorage.setItem(USER_KEY, JSON.stringify(updated))
 
-      // 3. Register consent decisions (non-blocking — errors don't prevent navigation)
-      if (definitions.length > 0) {
+      // 3. Register consent decisions — solo para titulares (END_USER)
+      // Solo se crean los consentimientos requeridos o los opcionales que el usuario marcó.
+      if (isEndUser && definitions.length > 0) {
         await Promise.allSettled(
-          definitions.map(async (def) => {
-            const res = await complianceApi.createConsent({
+          definitions
+            .filter((def) => def.required || consentChecks[def.id])
+            .map((def) => complianceApi.createConsent({
               organizationId: orgId,
               dataSubjectId:  personId,
               definitionId:   def.id,
               collectionMethod: "WEB_PORTAL",
-            })
-            // If optional and unchecked, immediately revoke to record the rejection
-            const consentId = (res.data?.data as { id?: string })?.id
-            if (consentId && !consentChecks[def.id] && !def.required) {
-              await complianceApi.revokeConsent(consentId)
-            }
-          })
+            }))
         )
       }
 
@@ -146,7 +145,7 @@ function CompleteProfileForm({
     }
   }
 
-  const isLoading = fetchingPerson || fetchingDefs
+  const isLoading = fetchingPerson || (isEndUser && fetchingDefs)
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
@@ -225,8 +224,8 @@ function CompleteProfileForm({
                   />
                 </div>
 
-                {/* Consent definitions */}
-                {definitions.length > 0 && (
+                {/* Consent definitions — solo para titulares */}
+                {isEndUser && definitions.length > 0 && (
                   <>
                     <Separator />
                     <div className="space-y-3">

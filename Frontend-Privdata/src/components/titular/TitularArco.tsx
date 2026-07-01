@@ -107,14 +107,6 @@ const variantStyles = {
   },
 }
 
-const dataOptions = [
-  "Todos mis datos",
-  "Historial de compras",
-  "Datos de salud",
-  "Datos de contacto",
-  "Programa de fidelización",
-  "Datos financieros",
-]
 
 const formSchema = z
   .object({
@@ -166,7 +158,7 @@ const formSchema = z
       if (!data.oppositionActivityId) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["oppositionActivityId"], message: "Selecciona la finalidad a la que te opones" })
       }
-      if (!data.oppositionReason?.trim()) {
+      if (data.oppositionCause !== "DIRECT_MARKETING" && !data.oppositionReason?.trim()) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["oppositionReason"], message: "Indica el motivo de la oposición" })
       }
     } else if (data.mode === "portability") {
@@ -208,6 +200,8 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   const [successOpen, setSuccessOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
+  const [rectFile, setRectFile] = useState<File | null>(null)
+  const [oppFile, setOppFile] = useState<File | null>(null)
 
   const { data: personData } = useQuery({
     queryKey: ["person", organizationId, dataSubjectId],
@@ -223,6 +217,13 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   })
   const treatmentActivities: TreatmentActivity[] = (ratData ?? []).filter((a) => a.status === "ACTIVE")
 
+  const dataOptions = [
+    "Todos mis datos",
+    ...Array.from(new Set(
+      treatmentActivities.flatMap((a) => a.dataCategories.map((c) => c.name))
+    )).sort(),
+  ]
+
   const {
     register,
     handleSubmit,
@@ -237,6 +238,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
 
   const rectField = watch("rectField") as RectifiableField | "" | undefined
   const rectCurrentValue = person && rectField ? getPersonFieldValue(person, rectField) : ""
+  const selectedOppositionCause = watch("oppositionCause")
 
   useEffect(() => {
     const mode =
@@ -275,7 +277,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
       const oppositionActivity = treatmentActivities.find((a) => a.id === data.oppositionActivityId)
       description = encodeOpposition({
         cause: data.oppositionCause as CreateOppositionDetails["cause"],
-        reason: data.oppositionReason!.trim(),
+        reason: data.oppositionReason?.trim() || undefined,
         opposedTreatment: oppositionActivity?.name,
         processingPurpose: oppositionActivity?.purpose,
       })
@@ -330,7 +332,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
             },
             {
               cause: data.oppositionCause as CreateOppositionDetails["cause"],
-              reason: data.oppositionReason!.trim(),
+              reason: data.oppositionReason?.trim() || "",
               opposedTreatment: treatmentActivities.find((a) => a.id === data.oppositionActivityId)?.name,
               processingPurpose: treatmentActivities.find((a) => a.id === data.oppositionActivityId)?.purpose,
               treatmentActivityId: data.oppositionActivityId,
@@ -363,6 +365,28 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
         return
       }
       const id = res.data.data.id ?? "—"
+      if (selectedRight.id === "rectification" && rectFile && id !== "—") {
+        try {
+          const uploadRes = await arcoApi.uploadRectificationDocument(id, rectFile)
+          if (!uploadRes.data.success) {
+            toast.error(`Documento no adjuntado: ${uploadRes.data.message ?? "error desconocido"}`)
+          }
+        } catch (e) {
+          const msg = (e as { message?: string })?.message ?? ""
+          toast.error(`Documento no adjuntado: ${msg || "error de conexión"}`)
+        }
+      }
+      if (selectedRight.id === "opposition" && oppFile && id !== "—") {
+        try {
+          const uploadRes = await arcoApi.uploadOppositionDocument(id, oppFile)
+          if (!uploadRes.data.success) {
+            toast.error(`Documento no adjuntado: ${uploadRes.data.message ?? "error desconocido"}`)
+          }
+        } catch (e) {
+          const msg = (e as { message?: string })?.message ?? ""
+          toast.error(`Documento no adjuntado: ${msg || "error de conexión"}`)
+        }
+      }
       setRequestId(id)
       setSuccessOpen(true)
     } catch {
@@ -376,6 +400,8 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
   function handleSuccessClose() {
     setSuccessOpen(false)
     setSelectedRight(null)
+    setRectFile(null)
+    setOppFile(null)
     reset({ email, mode: "other", dataScope: "", description: "", rectField: "", rectNewValue: "", rectReason: "", suppressCause: "", suppressReason: "", suppressConfirm: false, oppositionCause: "", oppositionActivityId: "", oppositionReason: "", portabilityCause: "", portabilityDestination: "", portabilityReason: "", declaration: false })
     onSolicitudCreated()
   }
@@ -611,6 +637,31 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                   </p>
                 )}
               </div>
+
+              {/* Documento de respaldo (opcional) */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Documento de respaldo (opcional)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,image/*,application/pdf"
+                  className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-border file:text-xs file:font-medium file:bg-muted file:cursor-pointer cursor-pointer"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                  onChange={(e) => setRectFile(e.target.files?.[0] ?? null)}
+                />
+                {rectFile && (
+                  <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    Archivo: <span style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>{rectFile.name}</span>
+                  </p>
+                )}
+                <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  Puedes adjuntar una imagen o PDF que respalde tu corrección (máx. 10 MB).
+                </p>
+              </div>
             </>
           ) : selectedRight?.id === "suppression" ? (
             <>
@@ -707,20 +758,33 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
             </>
           ) : selectedRight?.id === "opposition" ? (
             <>
-              {/* Info */}
+              {/* Info — diferenciado por causal */}
               <div
                 className="rounded-xl px-4 py-3 border-l-4 text-xs leading-relaxed"
                 style={{
-                  borderColor: "hsl(var(--primary) / 0.4)",
-                  background: "hsl(var(--secondary))",
-                  color: "hsl(var(--primary))",
+                  borderColor: selectedOppositionCause === "DIRECT_MARKETING"
+                    ? "hsl(36 70% 50% / 0.5)"
+                    : "hsl(var(--primary) / 0.4)",
+                  background: selectedOppositionCause === "DIRECT_MARKETING"
+                    ? "hsl(36 70% 96%)"
+                    : "hsl(var(--secondary))",
+                  color: selectedOppositionCause === "DIRECT_MARKETING"
+                    ? "hsl(36 70% 32%)"
+                    : "hsl(var(--primary))",
                 }}
               >
                 <p className="font-bold">¿En qué consiste?</p>
-                <p>
-                  Puedes oponerte a que sigamos tratando tus datos para una finalidad específica (Art. 8 Ley 21.719).
-                  Selecciona la finalidad que te afecta y la causal legal; evaluaremos si corresponde acoger tu oposición.
-                </p>
+                {selectedOppositionCause === "DIRECT_MARKETING" ? (
+                  <p>
+                    La oposición a marketing directo es un <strong>derecho absoluto e incondicional</strong> (Art. 8 Ley 21.719).
+                    No necesitas justificar tu solicitud — el tratamiento debe cesar sin que la organización pueda oponerse.
+                  </p>
+                ) : (
+                  <p>
+                    Puedes oponerte a que sigamos tratando tus datos para una finalidad específica (Art. 8 Ley 21.719).
+                    Selecciona la finalidad que te afecta y la causal legal; evaluaremos si corresponde acoger tu oposición.
+                  </p>
+                )}
               </div>
 
               {/* Causal */}
@@ -748,7 +812,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                 )}
               </div>
 
-              {/* Finalidad / actividad de tratamiento */}
+              {/* Finalidad / actividad de tratamiento — filtrada según causal */}
               <div>
                 <label
                   className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
@@ -756,33 +820,44 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                 >
                   Finalidad a la que te opones
                 </label>
-                {treatmentActivities.length === 0 ? (
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    No hay actividades de tratamiento registradas actualmente.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {treatmentActivities.map((activity) => (
-                      <label
-                        key={activity.id}
-                        className="flex items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors hover:bg-muted/50"
-                        style={{ borderColor: "hsl(var(--border))" }}
-                      >
-                        <input
-                          type="radio"
-                          value={activity.id}
-                          {...register("oppositionActivityId")}
-                          className="mt-0.5 h-4 w-4"
-                          style={{ accentColor: "hsl(var(--primary))" }}
-                        />
-                        <div className="text-xs">
-                          <p className="font-semibold" style={{ color: "hsl(var(--foreground))" }}>{activity.name}</p>
-                          <p style={{ color: "hsl(var(--muted-foreground))" }}>{activity.purpose}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
+                {(() => {
+                  const filtered = treatmentActivities.filter((a) => {
+                    if (a.legalBasis === "CONTRATO" || a.legalBasis === "OBLIGACION_LEGAL") return false
+                    if (selectedOppositionCause === "LEGITIMATE_INTEREST") {
+                      return a.legalBasis === "INTERES_LEGITIMO" || a.legalBasis === "INTERES_VITAL" || a.legalBasis === "FUNCION_PUBLICA"
+                    }
+                    return true
+                  })
+                  return filtered.length === 0 ? (
+                    <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      {treatmentActivities.length === 0
+                        ? "No hay actividades de tratamiento registradas actualmente."
+                        : "No hay finalidades opositables para la causal seleccionada."}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {filtered.map((activity) => (
+                        <label
+                          key={activity.id}
+                          className="flex items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors hover:bg-muted/50"
+                          style={{ borderColor: "hsl(var(--border))" }}
+                        >
+                          <input
+                            type="radio"
+                            value={activity.id}
+                            {...register("oppositionActivityId")}
+                            className="mt-0.5 h-4 w-4"
+                            style={{ accentColor: "hsl(var(--primary))" }}
+                          />
+                          <div className="text-xs">
+                            <p className="font-semibold" style={{ color: "hsl(var(--foreground))" }}>{activity.name}</p>
+                            <p style={{ color: "hsl(var(--muted-foreground))" }}>{activity.purpose}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )
+                })()}
                 {errors.oppositionActivityId && (
                   <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
                     {errors.oppositionActivityId.message}
@@ -790,20 +865,26 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                 )}
               </div>
 
-              {/* Motivo */}
+              {/* Motivo — obligatorio para interés legítimo/fuente pública, opcional para marketing */}
               <div>
                 <label
                   className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
                   style={{ color: "hsl(var(--muted-foreground))" }}
                 >
-                  Motivo de la oposición
+                  {selectedOppositionCause === "DIRECT_MARKETING"
+                    ? "Contexto adicional (opcional)"
+                    : "Motivo de la oposición"}
                 </label>
                 <textarea
                   {...register("oppositionReason")}
                   rows={3}
                   className="w-full rounded-xl border px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2"
                   style={{ borderColor: "hsl(var(--border))", background: "white" }}
-                  placeholder="Explica por qué te opones al tratamiento de tus datos para estas finalidades..."
+                  placeholder={
+                    selectedOppositionCause === "DIRECT_MARKETING"
+                      ? "Puedes añadir contexto si lo deseas, pero no es obligatorio..."
+                      : "Explica por qué te opones al tratamiento de tus datos para estas finalidades..."
+                  }
                 />
                 {errors.oppositionReason && (
                   <p className="text-xs mt-1" style={{ color: "hsl(var(--destructive))" }}>
@@ -811,6 +892,30 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                   </p>
                 )}
               </div>
+
+              {/* Documento de respaldo — solo cuando hay ponderación (no aplica a marketing directo) */}
+              {selectedOppositionCause && selectedOppositionCause !== "DIRECT_MARKETING" && (
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>
+                    Documento de respaldo <span style={{ color: "hsl(var(--muted-foreground))", fontWeight: 400 }}>(opcional)</span>
+                  </label>
+                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    Puedes adjuntar cualquier documento que respalde tu oposición (contrato, comunicación, etc.).
+                  </p>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    className="block w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium cursor-pointer rounded-xl border px-3 py-2"
+                    style={{ color: "hsl(var(--muted-foreground))", borderColor: "hsl(var(--border))" }}
+                    onChange={(e) => setOppFile(e.target.files?.[0] ?? null)}
+                  />
+                  {oppFile && (
+                    <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      Archivo: <span style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>{oppFile.name}</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </>
           ) : selectedRight?.id === "portability" ? (
             <>

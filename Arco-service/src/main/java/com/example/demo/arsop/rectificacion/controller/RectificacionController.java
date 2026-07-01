@@ -9,9 +9,13 @@ import com.example.demo.model.ArcoRequest;
 import com.example.demo.shared.ApiResponseDTO;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.util.UUID;
 
 @RestController
@@ -59,6 +63,29 @@ public class RectificacionController {
                 "Solicitud de rectificación respondida correctamente",
                 rectificacionService.respondRequest(requestId, dto)
         ));
+    }
+
+    @PostMapping("/{requestId}/document")
+    public ResponseEntity<ApiResponseDTO<ArcoRequest>> uploadDocument(
+            @PathVariable UUID requestId,
+            @RequestParam("file") MultipartFile file) {
+
+        ArcoRequest updated = rectificacionService.uploadSupportingDocument(requestId, file);
+        return ResponseEntity.ok(new ApiResponseDTO<>(
+                true, "Documento de respaldo adjuntado correctamente", updated));
+    }
+
+    @GetMapping("/{requestId}/document")
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable UUID requestId) {
+        try (InputStream stream = rectificacionService.downloadSupportingDocument(requestId)) {
+            String contentType = rectificacionService.getSupportingDocumentContentType(requestId);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment")
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .body(stream.readAllBytes());
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @Data

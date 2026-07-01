@@ -10,9 +10,12 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   X,
   Building2,
-  ShieldCheck,
+  Layers,
+  Briefcase,
+  Share2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
@@ -33,10 +36,15 @@ const navItems: NavItem[] = [
   { label: "Auditoría",        path: "/auditoria",       icon: DatabaseZap },
 ]
 
-const adminItems: NavItem[] = [
-  { label: "Mi Organización",  path: "/admin/organizacion",   icon: Building2 },
-  { label: "Usuarios",         path: "/admin/usuarios",       icon: Users },
-  { label: "Roles y permisos", path: "/admin/roles",          icon: ShieldCheck },
+const orgSubItems: NavItem[] = [
+  { label: "Organización",  path: "/admin/organizacion",  icon: Building2 },
+  { label: "Departamentos", path: "/admin/departamentos", icon: Layers },
+  { label: "Cargos",        path: "/admin/cargos",        icon: Briefcase },
+  { label: "Usuarios",      path: "/admin/usuarios",      icon: Users },
+]
+
+const complianceMgmtItems: NavItem[] = [
+  { label: "Terceros", path: "/compliance/terceros", icon: Share2 },
 ]
 
 function NavLink({ item, collapsed, mobile, onMobileClose }: {
@@ -80,7 +88,15 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
   const location = useLocation()
   const { logout, getUser } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
+  const [orgOpen, setOrgOpen] = useState(
+    location.pathname.startsWith("/admin/organizacion") || location.pathname.startsWith("/admin/usuarios")
+  )
   const user = getUser()
+
+  const userRole = user?.authorities?.find((a: string) => a.startsWith("ROLE_"))?.replace("ROLE_", "")
+  const isAdminRole = userRole === "SUPER_ADMIN" || userRole === "ORG_ADMIN"
+
+  const isOrgActive = location.pathname.startsWith("/admin/organizacion") || location.pathname.startsWith("/admin/departamentos") || location.pathname.startsWith("/admin/cargos") || location.pathname.startsWith("/admin/usuarios")
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <aside
@@ -149,8 +165,8 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
           </ul>
         </div>
 
-        {/* Mantenedores */}
-        <div>
+        {/* Mantenedores — solo admins */}
+        {isAdminRole && <div>
           {(!collapsed || mobile) && (
             <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
               Mantenedores
@@ -160,7 +176,8 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
             <div className="mx-2 my-1 border-t border-sidebar-border" />
           )}
           <ul className="space-y-1 px-2">
-            {adminItems.map((item) => (
+            {/* Catálogos de compliance */}
+            {complianceMgmtItems.map((item) => (
               <NavLink
                 key={item.path}
                 item={item}
@@ -169,8 +186,52 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
                 onMobileClose={onMobileClose}
               />
             ))}
+            {/* Trigger colapsable */}
+            <li>
+              <button
+                onClick={() => setOrgOpen((o) => !o)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                  isOrgActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                  collapsed && !mobile && "justify-center px-2"
+                )}
+                title={collapsed && !mobile ? "Mi Organización" : undefined}
+              >
+                <Building2 className="w-4 h-4 shrink-0" />
+                {(!collapsed || mobile) && (
+                  <>
+                    <span className="flex-1 text-left">Mi Organización</span>
+                    <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", orgOpen && "rotate-180")} />
+                  </>
+                )}
+              </button>
+            </li>
+            {/* Sub-ítems */}
+            {(!collapsed || mobile) && orgOpen && orgSubItems.map((item) => {
+              const isActive = location.pathname === item.path
+              const Icon = item.icon
+              return (
+                <li key={item.path}>
+                  <Link
+                    to={item.path}
+                    onClick={mobile ? onMobileClose : undefined}
+                    className={cn(
+                      "flex items-center gap-3 pl-8 pr-3 py-2 rounded-md text-sm transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent/80 text-sidebar-accent-foreground font-medium"
+                        : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
-        </div>
+        </div>}
       </nav>
 
       {/* DEV — Acceso al Portal Titular (solo desarrollo) */}

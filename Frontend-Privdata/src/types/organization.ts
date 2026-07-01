@@ -7,6 +7,7 @@ export interface Organization {
   email: string | null
   phone: string | null
   address: string | null
+  description: string | null
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -20,6 +21,7 @@ export interface OrganizationCreateRequest {
   email?: string
   phone?: string
   address?: string
+  description?: string
 }
 
 export interface OrganizationUpdateRequest extends OrganizationCreateRequest {}

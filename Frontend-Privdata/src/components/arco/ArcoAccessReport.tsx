@@ -47,8 +47,8 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
   })
 
   const person     = personData?.data
-  const consents: Consent[]            = consentsData ?? []
-  const activities: TreatmentActivity[] = ratData ?? []
+  const consents: Consent[]            = Array.isArray(consentsData) ? consentsData : []
+  const activities: TreatmentActivity[] = Array.isArray(ratData) ? ratData : []
 
   const isLoading = loadingPerson || loadingConsents || loadingRat
 
@@ -89,7 +89,10 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
       lines.push(`Actividades de tratamiento activas que pueden incluir sus datos (${activeRat.length}):`)
       activeRat.forEach((a, i) => {
         lines.push(`  ${i + 1}. ${a.name} — Finalidad: ${a.purpose} — Base legal: ${LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis}`)
-        if (a.thirdPartyRecipients) lines.push(`     Destinatarios: ${a.thirdPartyRecipients}`)
+        const dest = a.terceros && a.terceros.length > 0
+          ? a.terceros.map(t => `${t.nombre} (${t.pais})`).join(", ")
+          : a.thirdPartyRecipients
+        if (dest) lines.push(`     Destinatarios: ${dest}`)
         if (a.retentionPeriodDays) lines.push(`     Retención: ${a.retentionPeriodDays} días`)
       })
     } else {
@@ -209,7 +212,12 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
                 <p className="text-xs text-muted-foreground">{a.purpose}</p>
                 <p className="text-xs text-muted-foreground">
                   Base legal: <span className="font-medium text-foreground">{LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis}</span>
-                  {a.thirdPartyRecipients && <> · Destinatarios: <span className="font-medium text-foreground">{a.thirdPartyRecipients}</span></>}
+                  {(() => {
+                    const dest = a.terceros && a.terceros.length > 0
+                      ? a.terceros.map(t => `${t.nombre} (país: ${t.pais})`).join(", ")
+                      : a.thirdPartyRecipients
+                    return dest ? <> · Destinatarios: <span className="font-medium text-foreground">{dest}</span></> : null
+                  })()}
                   {a.retentionPeriodDays && <> · Retención: <span className="font-medium text-foreground">{a.retentionPeriodDays}d</span></>}
                 </p>
                 {a.dataCategories.length > 0 && (

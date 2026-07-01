@@ -5,6 +5,7 @@ import com.example.demo.arsop.rectificacion.dto.RectificationResponseDTO;
 import com.example.demo.arsop.rectificacion.enums.RectificationStatus;
 import com.example.demo.arsop.rectificacion.model.RectificationRequest;
 import com.example.demo.arsop.rectificacion.repository.RectificationRequestRepository;
+import com.example.demo.client.AuthClient;
 import com.example.demo.client.OrganizationClient;
 import com.example.demo.arsop.common.service.EmailService;
 import com.example.demo.dto.response.PersonResponseDTO;
@@ -20,7 +21,10 @@ import com.example.demo.util.BusinessDaysCalculator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -31,8 +35,8 @@ public class RectificacionService {
     private final ArcoRequestRepository arcoRequestRepository;
     private final RectificationRequestRepository rectificationRequestRepository;
     private final OrganizationClient organizationClient;
+    private final AuthClient authClient;
     private final EmailService emailService;
-
     @Transactional
     public ArcoRequest crear(ArcoRequestCreateDTO dto) {
         PersonRectificationRequestDTO emptyRectification = new PersonRectificationRequestDTO();
@@ -107,6 +111,7 @@ public class RectificacionService {
             request.setResolvedAt(LocalDateTime.now());
             request.setResolutionSummary(dto.getComment());
             detail.setRectificationStatus(RectificationStatus.IDENTIDAD_RECHAZADA);
+            autoLiftBlock(request);
         }
 
         rectificationRequestRepository.save(detail);
@@ -148,6 +153,10 @@ public class RectificacionService {
                 rectificationDTO
         );
 
+        if (detail.getEmail() != null && !detail.getEmail().isBlank()) {
+            authClient.updateEmailByPersonId(request.getDataSubjectId(), detail.getEmail());
+        }
+
         detail.setRectificationStatus(RectificationStatus.RESPONDIDA);
         detail.setResponseSummary(
                 dto != null && dto.getObservations() != null && !dto.getObservations().isBlank()
@@ -159,10 +168,44 @@ public class RectificacionService {
         request.setResolvedAt(LocalDateTime.now());
         request.setResolutionSummary(detail.getResponseSummary());
 
+        autoLiftBlock(request);
         rectificationRequestRepository.save(detail);
         ArcoRequest saved = arcoRequestRepository.save(request);
         notificarResolucion(saved);
         return saved;
+    }
+
+    @Transactional
+    public ArcoRequest uploadSupportingDocument(UUID requestId, MultipartFile file) {
+        ArcoRequest request = arcoRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(requestId));
+        try {
+            request.setSupportingDocumentData(file.getBytes());
+            request.setSupportingDocumentKey(file.getOriginalFilename());
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudo guardar el documento: " + e.getMessage(), e);
+        }
+        return arcoRequestRepository.save(request);
+    }
+
+    public InputStream downloadSupportingDocument(UUID requestId) {
+        ArcoRequest request = arcoRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(requestId));
+        if (request.getSupportingDocumentData() == null) {
+            throw new IllegalStateException("Esta solicitud no tiene documento de respaldo adjunto.");
+        }
+        return new ByteArrayInputStream(request.getSupportingDocumentData());
+    }
+
+    public String getSupportingDocumentContentType(UUID requestId) {
+        ArcoRequest request = arcoRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(requestId));
+        String name = request.getSupportingDocumentKey();
+        if (name == null) return "application/octet-stream";
+        if (name.endsWith(".pdf")) return "application/pdf";
+        if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+        if (name.endsWith(".png")) return "image/png";
+        return "application/octet-stream";
     }
 
     private void notificarCreacion(ArcoRequest request) {
@@ -207,6 +250,12 @@ public class RectificacionService {
             );
         } catch (Exception ex) {
             System.out.println("No se pudo enviar correo de cambio de estado: " + ex.getMessage());
+        }
+    }
+
+    private void autoLiftBlock(ArcoRequest request) {
+        if (request.getBlockAppliedAt() != null && request.getBlockLiftedAt() == null) {
+            request.setBlockLiftedAt(LocalDateTime.now());
         }
     }
 

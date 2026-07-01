@@ -96,6 +96,15 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponseDTO<>(true, "Cuenta activada correctamente", response));
     }
 
+    @PatchMapping("/users/by-person/{personId}/email")
+    public ResponseEntity<ApiResponseDTO<Void>> updateEmailByPersonId(
+            @PathVariable UUID personId,
+            @RequestParam String newEmail
+    ) {
+        authService.updateEmailByPersonId(personId, newEmail);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Correo actualizado correctamente", null));
+    }
+
     @PostMapping("/users/{userId}/roles")
     @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ROLE_ASSIGN')")
     public ResponseEntity<ApiResponseDTO<Void>> assignRoleToUser(

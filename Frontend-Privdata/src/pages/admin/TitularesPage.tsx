@@ -34,8 +34,8 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const qc = useQueryClient()
   const [form, setForm] = useState<InvitePersonRequest>({
-    firstName: "", lastName: "", email: "", rut: "",
-    position: "", departmentId: "", roleName: "END_USER",
+    firstName: "", secondName: "", lastName: "", maternalLastName: "",
+    email: "", rut: "", position: "", departmentId: "", roleName: "END_USER",
   })
   const [error, setError]           = useState("")
   const [tempPassword, setTempPass] = useState<string | null>(null)
@@ -128,12 +128,20 @@ function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => 
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Nombre *</Label>
+                <Label>Primer nombre *</Label>
                 <Input placeholder="Juan" value={form.firstName} onChange={set("firstName")} />
               </div>
               <div className="space-y-1.5">
-                <Label>Apellido *</Label>
+                <Label>Segundo nombre</Label>
+                <Input placeholder="Carlos" value={form.secondName ?? ""} onChange={set("secondName")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Apellido paterno *</Label>
                 <Input placeholder="Pérez" value={form.lastName} onChange={set("lastName")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Apellido materno</Label>
+                <Input placeholder="González" value={form.maternalLastName ?? ""} onChange={set("maternalLastName")} />
               </div>
               <div className="space-y-1.5">
                 <Label>RUT *</Label>
@@ -193,7 +201,10 @@ function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => 
 export default function TitularesPage() {
   const { getUser } = useAuth()
   const orgId       = getUser()?.organizationId ?? ""
-  const [search, setSearch]     = useState("")
+  const [filterName,  setFilterName]  = useState("")
+  const [filterRut,   setFilterRut]   = useState("")
+  const [filterEmail, setFilterEmail] = useState("")
+  const [filterDept,  setFilterDept]  = useState("")
   const [inviting, setInviting] = useState(false)
 
   const { data: usersRes, isLoading: lu } = useQuery({
@@ -201,10 +212,19 @@ export default function TitularesPage() {
     queryFn:  () => usersApi.list().then((r) => r.data),
   })
 
-  const { data: personsRes, isLoading: lp } = useQuery({
-    queryKey: ["persons", orgId],
-    queryFn:  () => personsApi.list(orgId).then((r) => r.data),
+  const { data: deptsRes } = useQuery({
+    queryKey: ["departments", orgId],
+    queryFn:  () => departmentsApi.list(orgId).then((r) => r.data),
     enabled:  !!orgId,
+  })
+  const departments = deptsRes?.data?.filter((d) => d.isActive) ?? []
+
+  const hasFilter = !!(filterDept || filterName || filterRut || filterEmail)
+
+  const { data: personsRes, isLoading: lp } = useQuery({
+    queryKey: ["persons", orgId, filterDept],
+    queryFn:  () => personsApi.list(orgId, filterDept || undefined).then((r) => r.data),
+    enabled:  !!orgId && hasFilter,
   })
 
   const allUsers:   AuthUser[] = usersRes?.data   ?? []
@@ -215,14 +235,12 @@ export default function TitularesPage() {
   const titulares = allUsers
     .filter((u) => u.roles?.includes("END_USER"))
     .filter((u) => {
-      if (!search) return true
-      const term   = search.toLowerCase()
       const person = u.personId ? personMap.get(u.personId) : undefined
-      return (
-        u.email.toLowerCase().includes(term) ||
-        (person?.fullName?.toLowerCase() ?? "").includes(term) ||
-        (person?.rut?.toLowerCase()      ?? "").includes(term)
-      )
+      if (filterDept  && !person)                                                                       return false
+      if (filterName  && !(person?.fullName?.toLowerCase() ?? "").includes(filterName.toLowerCase()))  return false
+      if (filterRut   && !(person?.rut?.toLowerCase()      ?? "").includes(filterRut.toLowerCase()))   return false
+      if (filterEmail && !u.email.toLowerCase().includes(filterEmail.toLowerCase()))                   return false
+      return true
     })
 
   const isLoading = lu || lp
@@ -258,18 +276,53 @@ export default function TitularesPage() {
 
         <Card>
           <CardHeader className="pb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre, RUT o correo..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <select
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring text-muted-foreground"
+                value={filterDept}
+                onChange={(e) => setFilterDept(e.target.value)}
+              >
+                <option value="">Todos los departamentos</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nombre..."
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por RUT..."
+                  value={filterRut}
+                  onChange={(e) => setFilterRut(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por correo..."
+                  value={filterEmail}
+                  onChange={(e) => setFilterEmail(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {isLoading ? (
+            {!hasFilter ? (
+              <div className="flex flex-col items-center justify-center py-14 text-center gap-2">
+                <Search className="w-8 h-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">Usa los filtros para buscar titulares.</p>
+              </div>
+            ) : isLoading ? (
               <div className="flex justify-center py-10">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
@@ -278,39 +331,45 @@ export default function TitularesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>RUT</TableHead>
-                      <TableHead>Correo</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Registrado</TableHead>
+                      <TableHead className="w-[28%]">Nombre</TableHead>
+                      <TableHead className="w-[16%]">RUT</TableHead>
+                      <TableHead className="w-[30%]">Correo</TableHead>
+                      <TableHead className="w-[14%]">Estado</TableHead>
+                      <TableHead className="w-[12%]">Registrado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {titulares.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
-                          {search ? "No se encontraron titulares con ese criterio." : "No hay titulares registrados."}
+                          {(filterDept || filterName || filterRut || filterEmail)
+                            ? "No se encontraron titulares con ese criterio."
+                            : "No hay titulares registrados."}
                         </TableCell>
                       </TableRow>
                     ) : titulares.map((u) => {
                       const person = u.personId ? personMap.get(u.personId) : undefined
                       return (
                         <TableRow key={u.id}>
-                          <TableCell className="font-medium">
-                            {person?.fullName ?? "—"}
+                          <TableCell className="font-medium max-w-0">
+                            <p className="truncate" title={person?.fullName ?? "—"}>
+                              {person?.fullName ?? "—"}
+                            </p>
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
+                          <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                             {person?.rut ?? "—"}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {u.email}
+                          <TableCell className="text-muted-foreground text-sm max-w-0">
+                            <p className="truncate" title={u.email}>
+                              {u.email}
+                            </p>
                           </TableCell>
                           <TableCell>
                             <Badge variant={STATUS_VARIANT[u.status] ?? "secondary"}>
                               {STATUS_LABEL[u.status] ?? u.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
+                          <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                             {new Date(u.createdAt).toLocaleDateString("es-CL")}
                           </TableCell>
                         </TableRow>

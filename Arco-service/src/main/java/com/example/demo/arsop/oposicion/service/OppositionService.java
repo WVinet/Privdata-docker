@@ -22,6 +22,10 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -134,6 +138,7 @@ public class OppositionService {
             request.setResolvedAt(LocalDateTime.now());
 
             request.setResolutionSummary(dto.getComment());
+            autoLiftBlock(request);
         }
 
         oppositionRequestRepository.save(detail);
@@ -219,6 +224,7 @@ public class OppositionService {
                     )
             );
 
+            autoLiftBlock(request);
             oppositionRequestRepository.save(detail);
 
             ArcoRequest saved =
@@ -263,6 +269,7 @@ public class OppositionService {
                     )
             );
 
+            autoLiftBlock(request);
             oppositionRequestRepository.save(detail);
 
             ArcoRequest saved =
@@ -273,29 +280,17 @@ public class OppositionService {
             return saved;
         }
 
-        boolean blockInsteadOfRestrict = Boolean.TRUE.equals(dto.getBlockInsteadOfRestrict());
-
-        if (blockInsteadOfRestrict) {
-            organizationClient.blockDataSubject(
-                    request.getOrganizationId(),
-                    request.getDataSubjectId()
-            );
-        } else {
-            organizationClient.restrictProcessing(
-                    request.getOrganizationId(),
-                    request.getDataSubjectId(),
-                    detail.getTreatmentActivityId(),
-                    detail.getProcessingPurpose()
-            );
-        }
+        organizationClient.restrictProcessing(
+                request.getOrganizationId(),
+                request.getDataSubjectId(),
+                detail.getTreatmentActivityId(),
+                detail.getProcessingPurpose()
+        );
 
         String summary =
-                dto.getObservations() != null &&
-                        !dto.getObservations().isBlank()
+                dto.getObservations() != null && !dto.getObservations().isBlank()
                         ? dto.getObservations()
-                        : blockInsteadOfRestrict
-                            ? "Solicitud aprobada. Se bloqueó al titular."
-                            : "Solicitud aprobada. Se restringió el tratamiento de los datos.";
+                        : "Solicitud aprobada. Se restringió el tratamiento de los datos para la finalidad indicada.";
 
         detail.setDecision(
                 OppositionDecision.APPROVED
@@ -324,6 +319,7 @@ public class OppositionService {
                 )
         );
 
+        autoLiftBlock(request);
         oppositionRequestRepository.save(detail);
 
         ArcoRequest saved =
@@ -404,6 +400,45 @@ public class OppositionService {
             );
         } catch (Exception ex) {
             System.out.println("No se pudo enviar correo de gestión: " + ex.getMessage());
+        }
+    }
+
+    @Transactional
+    public ArcoRequest uploadSupportingDocument(UUID requestId, MultipartFile file) {
+        ArcoRequest request = arcoRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(requestId));
+        try {
+            request.setSupportingDocumentData(file.getBytes());
+            request.setSupportingDocumentKey(file.getOriginalFilename());
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudo guardar el documento: " + e.getMessage(), e);
+        }
+        return arcoRequestRepository.save(request);
+    }
+
+    public InputStream downloadSupportingDocument(UUID requestId) {
+        ArcoRequest request = arcoRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(requestId));
+        if (request.getSupportingDocumentData() == null) {
+            throw new IllegalStateException("Esta solicitud no tiene documento adjunto.");
+        }
+        return new ByteArrayInputStream(request.getSupportingDocumentData());
+    }
+
+    public String getSupportingDocumentContentType(UUID requestId) {
+        ArcoRequest request = arcoRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(requestId));
+        String name = request.getSupportingDocumentKey();
+        if (name == null) return "application/octet-stream";
+        if (name.endsWith(".pdf")) return "application/pdf";
+        if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+        if (name.endsWith(".png")) return "image/png";
+        return "application/octet-stream";
+    }
+
+    private void autoLiftBlock(ArcoRequest request) {
+        if (request.getBlockAppliedAt() != null && request.getBlockLiftedAt() == null) {
+            request.setBlockLiftedAt(LocalDateTime.now());
         }
     }
 

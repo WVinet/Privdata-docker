@@ -3,7 +3,7 @@ import type { OppositionCause } from "@/types/arco"
 export interface OppositionDetails {
   type: "OPPOSITION_REQUEST"
   cause: OppositionCause
-  reason: string
+  reason?: string
   processingPurpose?: string
   opposedTreatment?: string
 }

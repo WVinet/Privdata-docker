@@ -37,6 +37,13 @@ export interface ArcoRequest {
   agencyClaimId?: string | null
   agencyResolution?: string | null
   agencyRespondedAt?: string | null
+  resolvedByEmail?: string | null
+  supportingDocumentKey?: string | null
+  responseDocumentKey?: string | null
+  blockAppliedAt?: string | null
+  blockLiftedAt?: string | null
+  blockAppliedByEmail?: string | null
+  blockScope?: string | null
 }
 
 export interface CreateArcoRequest {
@@ -81,7 +88,7 @@ export type OppositionCause = "LEGITIMATE_INTEREST" | "DIRECT_MARKETING" | "PUBL
 
 export interface CreateOppositionDetails {
   cause: OppositionCause
-  reason: string
+  reason?: string
   processingPurpose?: string
   opposedTreatment?: string
   treatmentActivityId?: string
@@ -95,7 +102,6 @@ export interface RespondOpposition {
   legalObligationApplies?: boolean
   publicInterestApplies?: boolean
   exceptionApplies?: boolean
-  blockInsteadOfRestrict?: boolean
 }
 
 export type PortabilityCause = "USER_REQUEST" | "TRANSFER_TO_OTHER_PROVIDER" | "PERSONAL_BACKUP"

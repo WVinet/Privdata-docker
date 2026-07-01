@@ -112,11 +112,14 @@ public class PersonController {
     /// cambiar respuesta de los endpoint
     @PostMapping("/{personId}/block")
     public ResponseEntity<ApiResponseDTO<?>> blockDataSubject(@PathVariable UUID organizationId, @PathVariable UUID personId){
-
         personService.blockDataSubject(organizationId,personId);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Bloqueo aplicado", null));
+    }
 
-        return ResponseEntity.ok(new ApiResponseDTO<>(
-                true, "Blockeo listo", null));
+    @PostMapping("/{personId}/unblock")
+    public ResponseEntity<ApiResponseDTO<?>> unblockDataSubject(@PathVariable UUID organizationId, @PathVariable UUID personId){
+        personService.unblockDataSubject(organizationId, personId);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Bloqueo levantado", null));
     }
 
     @PostMapping("/{personId}/delete")

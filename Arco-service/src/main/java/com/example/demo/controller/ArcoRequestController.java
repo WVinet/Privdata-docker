@@ -127,6 +127,22 @@ public class ArcoRequestController {
                 arcoRequestService.registrarRespuestaAgencia(id, dto.getResponse(), dto.getRespondedAt())));
     }
 
+    @PatchMapping("/{id}/block")
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> aplicarBloqueoProvisional(
+            @PathVariable UUID id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String adminEmail = body != null ? body.get("adminEmail") : null;
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Bloqueo provisional aplicado",
+                arcoRequestService.applyProvisionalBlock(id, adminEmail)));
+    }
+
+    @PatchMapping("/{id}/unblock")
+    public ResponseEntity<ApiResponseDTO<ArcoRequestResponseDTO>> levantarBloqueoProvisional(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Bloqueo provisional levantado",
+                arcoRequestService.liftProvisionalBlock(id)));
+    }
+
     @PostMapping("/cancellation")
     public ResponseEntity<ArcoRequestResponseDTO> crearSolicitudCancelacion(
             @RequestBody ArcoCancellationRequestDTO requestDTO) {

@@ -61,11 +61,11 @@ export default function AuditPage() {
   const [filterEntity, setFilterEntity] = useState("")
   const [filterDate, setFilterDate]     = useState("")
   const [page, setPage]             = useState(0)
-  const PAGE_SIZE = 50
+  const PAGE_SIZE = 10
 
   const { data, isLoading } = useQuery({
-    queryKey: ["audit-logs", orgId, page],
-    queryFn: () => auditApi.list(orgId, page, PAGE_SIZE).then((r) => r.data),
+    queryKey: ["audit-logs", orgId, page, search],
+    queryFn: () => auditApi.list(orgId, page, PAGE_SIZE, search || undefined).then((r) => r.data),
     enabled: !!orgId,
     refetchInterval: 30_000,
   })
@@ -113,22 +113,33 @@ export default function AuditPage() {
     return "RESPONSABLE"
   }
 
-  // Resuelve el solicitante (titular dueño de la solicitud/consentimiento), a partir de entityType + UUID en el detail
+  // Resuelve el solicitante (titular afectado o actor si es titular)
   function resolveSolicitante(event: AuditLog): string | null {
     const uuid = event.detail.match(UUID_RE)?.[0]
-    if (!uuid) return null
 
-    if (event.entityType === "Solicitud ARSO") {
-      const request = arcoById[uuid]
-      return request ? personsById[request.dataSubjectId]?.fullName ?? null : null
+    if (uuid) {
+      if (event.entityType === "Solicitud ARSO") {
+        const request = arcoById[uuid]
+        if (request) return personsById[request.dataSubjectId]?.fullName ?? null
+      }
+      if (event.entityType === "Reclamo ante la Agencia") {
+        const request = arcoByAgencyClaimId[uuid]
+        if (request) return personsById[request.dataSubjectId]?.fullName ?? null
+      }
+      if (event.entityType === "Consentimiento") {
+        const byPerson = personsById[uuid]?.fullName
+        if (byPerson) return byPerson
+      }
     }
-    if (event.entityType === "Reclamo ante la Agencia") {
-      const request = arcoByAgencyClaimId[uuid]
-      return request ? personsById[request.dataSubjectId]?.fullName ?? null : null
+
+    // Si el actor es un titular, él mismo es el solicitante
+    if (event.performedByEmail) {
+      const actorUser = users.find((u) => u.email.toLowerCase() === event.performedByEmail!.toLowerCase())
+      if (actorUser?.roles?.includes("END_USER") && actorUser.personId) {
+        return personsById[actorUser.personId]?.fullName ?? null
+      }
     }
-    if (event.entityType === "Consentimiento" && event.action === "CREATE") {
-      return personsById[uuid]?.fullName ?? null
-    }
+
     return null
   }
 
@@ -143,18 +154,10 @@ export default function AuditPage() {
   }
 
   const filtered = logs.filter((e) => {
-    const term = search.toLowerCase()
-    const matchSearch =
-      !search ||
-      e.action.toLowerCase().includes(term)     ||
-      e.entityType.toLowerCase().includes(term) ||
-      e.detail.toLowerCase().includes(term)     ||
-      (e.performedByEmail?.toLowerCase() ?? "").includes(term) ||
-      (resolveSolicitante(e)?.toLowerCase() ?? "").includes(term)
     const matchAction = !filterAction || e.action === filterAction
     const matchEntity = !filterEntity || e.entityType === filterEntity
     const matchDate   = !filterDate || e.createdAt.slice(0, 10) === filterDate
-    return matchSearch && matchAction && matchEntity && matchDate
+    return matchAction && matchEntity && matchDate
   })
 
   return (
@@ -270,14 +273,18 @@ export default function AuditPage() {
                             })()}
                           </TableCell>
                           <TableCell className="text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground">{event.performedByEmail ?? "—"}</span>
-                              {actorRole && (
-                                <Badge variant="outline" className={ACTOR_ROLE_CONFIG[actorRole].className}>
-                                  {ACTOR_ROLE_CONFIG[actorRole].label}
-                                </Badge>
-                              )}
-                            </div>
+                            {(actorRole === "RESPONSABLE" || actorRole === "AUDITOR_AGENCIA") && event.performedByEmail ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">{event.performedByEmail}</span>
+                                {actorRole && (
+                                  <Badge variant="outline" className={ACTOR_ROLE_CONFIG[actorRole].className}>
+                                    {ACTOR_ROLE_CONFIG[actorRole].label}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-sm">
                             {solicitante ?? <span className="text-muted-foreground">—</span>}
@@ -292,7 +299,7 @@ export default function AuditPage() {
                 </Table>
               </div>
 
-              {totalPages > 1 && (
+              {totalElements > 0 && (
                 <div className="flex items-center justify-between pt-4 border-t border-border">
                   <p className="text-xs text-muted-foreground">
                     {totalElements} evento{totalElements !== 1 ? "s" : ""} registrado{totalElements !== 1 ? "s" : ""}

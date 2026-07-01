@@ -17,7 +17,9 @@ public class PersonResponseDTO {
     private UUID departmentId;
     private String departmentName;
     private String firstName;
+    private String secondName;
     private String lastName;
+    private String maternalLastName;
     private String fullName;
     private String rut;
     private String email;

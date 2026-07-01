@@ -18,7 +18,10 @@ import com.example.demo.util.BusinessDaysCalculator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -30,7 +33,6 @@ public class AccesoService {
     private final ArcoRequestRepository arcoRequestRepository;
     private final OrganizationClient organizationClient;
     private final EmailService emailService;
-
     @Transactional
     public ArcoRequest crear(ArcoRequestCreateDTO dto) {
 
@@ -136,6 +138,7 @@ public class AccesoService {
             request.setAgencyClaimDeadline(
                     BusinessDaysCalculator.calcularFechaLimite(LocalDateTime.now(), request.getRequestType())
             );
+            autoLiftBlock(request);
         }
 
         ArcoRequest saved = arcoRequestRepository.save(request);
@@ -199,11 +202,45 @@ public class AccesoService {
 
         request.setResolutionSummary(accessRequest.getResponseSummary());
 
+        autoLiftBlock(request);
         accessRequestRepository.save(accessRequest);
 
         ArcoRequest saved = arcoRequestRepository.save(request);
         notificarResolucion(saved);
         return saved;
+    }
+
+    @Transactional
+    public ArcoRequest uploadResponseDocument(UUID requestId, MultipartFile file) {
+        ArcoRequest request = arcoRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(requestId));
+        try {
+            request.setResponseDocumentData(file.getBytes());
+            request.setResponseDocumentKey(file.getOriginalFilename());
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudo guardar el documento: " + e.getMessage(), e);
+        }
+        return arcoRequestRepository.save(request);
+    }
+
+    public InputStream downloadResponseDocument(UUID requestId) {
+        ArcoRequest request = arcoRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(requestId));
+        if (request.getResponseDocumentData() == null) {
+            throw new IllegalStateException("Esta solicitud no tiene documento de respuesta adjunto.");
+        }
+        return new ByteArrayInputStream(request.getResponseDocumentData());
+    }
+
+    public String getResponseDocumentContentType(UUID requestId) {
+        ArcoRequest request = arcoRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(requestId));
+        String name = request.getResponseDocumentKey();
+        if (name == null) return "application/octet-stream";
+        if (name.endsWith(".pdf")) return "application/pdf";
+        if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+        if (name.endsWith(".png")) return "image/png";
+        return "application/octet-stream";
     }
 
     private void notificarCreacion(ArcoRequest request) {
@@ -253,6 +290,12 @@ public class AccesoService {
             );
         } catch (Exception ex) {
             System.out.println("No se pudo enviar correo de gestión: " + ex.getMessage());
+        }
+    }
+
+    private void autoLiftBlock(ArcoRequest request) {
+        if (request.getBlockAppliedAt() != null && request.getBlockLiftedAt() == null) {
+            request.setBlockLiftedAt(LocalDateTime.now());
         }
     }
 

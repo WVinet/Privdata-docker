@@ -18,6 +18,4 @@ public class OppositionResponseDTO {
     private Boolean publicInterestApplies;
 
     private Boolean exceptionApplies;
-
-    private Boolean blockInsteadOfRestrict;
 }

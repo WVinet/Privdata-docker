@@ -37,6 +37,9 @@ public class Organization {
     @Column(name = "address", length = 500)
     private String address;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
@@ -75,6 +78,9 @@ public class Organization {
 
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }

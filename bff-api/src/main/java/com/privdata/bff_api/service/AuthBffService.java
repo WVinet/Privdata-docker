@@ -71,8 +71,8 @@ public class AuthBffService {
         return authClient.activateAccount(authorization, body);
     }
 
-    public Object getAuditLogs(String authorization, String organizationId, int page, int size) {
-        return authClient.getAuditLogs(authorization, organizationId, page, size);
+    public Object getAuditLogs(String authorization, String organizationId, int page, int size, String search) {
+        return authClient.getAuditLogs(authorization, organizationId, page, size, search);
     }
 
     public Map<String, Object> forgotPassword(Map<String, Object> body) {

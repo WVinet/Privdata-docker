@@ -83,6 +83,7 @@ public class OrganizationService {
         organization.setEmail(request.getEmail());
         organization.setPhone(request.getPhone());
         organization.setAddress(request.getAddress());
+        organization.setDescription(request.getDescription());
 
         Organization updated = organizationRepository.save(organization);
         return toResponse(updated);
@@ -114,6 +115,7 @@ public class OrganizationService {
                 organization.getEmail(),
                 organization.getPhone(),
                 organization.getAddress(),
+                organization.getDescription(),
                 organization.getIsActive(),
                 organization.getCreatedAt(),
                 organization.getUpdatedAt()

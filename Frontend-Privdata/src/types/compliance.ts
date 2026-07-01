@@ -1,3 +1,40 @@
+export type TerceroTipo = "ENCARGADO" | "CESIONARIO" | "TERCERO_INDEPENDIENTE"
+export type MecanismoTransferencia = "CLAUSULA_CONTRACTUAL" | "DECISION_ADECUACION" | "CONSENTIMIENTO_EXPLICITO"
+
+export interface Tercero {
+  id: string
+  organizationId: string
+  nombre: string
+  tipo: TerceroTipo
+  pais: string
+  finalidadUso: string | null
+  linkContrato: string | null
+  mecanismoTransferencia: MecanismoTransferencia | null
+  activo: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TerceroCreateRequest {
+  organizationId: string
+  nombre: string
+  tipo: TerceroTipo
+  pais: string
+  finalidadUso?: string
+  linkContrato?: string
+  mecanismoTransferencia?: MecanismoTransferencia
+}
+
+export interface TerceroUpdateRequest {
+  nombre: string
+  tipo: TerceroTipo
+  pais: string
+  finalidadUso?: string
+  linkContrato?: string
+  mecanismoTransferencia?: MecanismoTransferencia
+  activo: boolean
+}
+
 export type ConsentStatus = "ACTIVE" | "REVOKED" | "EXPIRED" | "SUSPENDED"
 export type CollectionMethod = "WEB_PORTAL" | "ADMIN_PANEL" | "EMAIL" | "PHONE" | "IN_PERSON"
 export type LegalBasis =
@@ -74,9 +111,12 @@ export interface TreatmentActivity {
   internationalTransfer: boolean
   dataSystems: string | null
   securityMeasures: string | null
+  hasAutomatedDecisions: boolean
+  profilingDescription: string | null
   status: TreatmentActivityStatus
   containsSensitiveData: boolean
   dataCategories: DataCategory[]
+  terceros?: Tercero[]
   createdAt: string
   updatedAt: string
 }
@@ -89,10 +129,12 @@ interface TreatmentActivityFormFields {
   dataSubjectCategories?: string
   retentionPeriodDays?: number
   thirdPartyRecipients?: string
-  internationalTransfer: boolean
   dataSystems?: string
   securityMeasures?: string
+  hasAutomatedDecisions?: boolean
+  profilingDescription?: string
   dataCategoryIds?: string[]
+  terceroIds?: string[]
 }
 
 export interface TreatmentActivityCreateRequest extends TreatmentActivityFormFields {
@@ -101,4 +143,16 @@ export interface TreatmentActivityCreateRequest extends TreatmentActivityFormFie
 
 export interface TreatmentActivityUpdateRequest extends TreatmentActivityFormFields {
   status: TreatmentActivityStatus
+}
+
+export const TERCERO_TIPO_LABELS: Record<TerceroTipo, string> = {
+  ENCARGADO: "Encargado de tratamiento",
+  CESIONARIO: "Cesionario",
+  TERCERO_INDEPENDIENTE: "Tercero independiente",
+}
+
+export const MECANISMO_LABELS: Record<MecanismoTransferencia, string> = {
+  CLAUSULA_CONTRACTUAL: "Cláusulas contractuales tipo",
+  DECISION_ADECUACION: "Decisión de adecuación",
+  CONSENTIMIENTO_EXPLICITO: "Consentimiento explícito del titular",
 }

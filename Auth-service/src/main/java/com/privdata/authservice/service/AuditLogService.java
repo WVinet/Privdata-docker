@@ -27,18 +27,20 @@ public class AuditLogService {
         repository.save(entry);
     }
 
-    public Page<AuditLogResponse> list(String organizationId, int page, int size) {
+    public Page<AuditLogResponse> list(String organizationId, int page, int size, String search) {
         UUID orgId = UUID.fromString(organizationId);
-        return repository
-                .findByOrganizationIdOrderByCreatedAtDesc(orgId, PageRequest.of(page, size))
-                .map(e -> new AuditLogResponse(
-                        e.getId(),
-                        e.getOrganizationId() != null ? e.getOrganizationId().toString() : null,
-                        e.getAction(),
-                        e.getEntityType(),
-                        e.getDetail(),
-                        e.getPerformedByEmail(),
-                        e.getCreatedAt()
-                ));
+        PageRequest pr = PageRequest.of(page, size);
+        Page<AuditLog> results = (search != null && !search.isBlank())
+                ? repository.searchByOrganizationId(orgId, search.trim(), pr)
+                : repository.findByOrganizationIdOrderByCreatedAtDesc(orgId, pr);
+        return results.map(e -> new AuditLogResponse(
+                e.getId(),
+                e.getOrganizationId() != null ? e.getOrganizationId().toString() : null,
+                e.getAction(),
+                e.getEntityType(),
+                e.getDetail(),
+                e.getPerformedByEmail(),
+                e.getCreatedAt()
+        ));
     }
 }

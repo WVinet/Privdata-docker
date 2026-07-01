@@ -93,6 +93,40 @@ public class ComplianceBffController {
         return ResponseEntity.ok(service.createConsentDefinition(body, authorization));
     }
 
+    @GetMapping("/terceros")
+    public ResponseEntity<?> getTerceros(
+            @RequestParam String organizationId,
+            @RequestParam(required = false) Boolean onlyActive) {
+        return ResponseEntity.ok(service.getTerceros(organizationId, onlyActive));
+    }
+
+    @GetMapping("/terceros/{id}")
+    public ResponseEntity<?> getTerceroById(@PathVariable String id) {
+        return ResponseEntity.ok(service.getTerceroById(id));
+    }
+
+    @PostMapping("/terceros")
+    public ResponseEntity<?> createTercero(
+            @RequestBody Object body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.createTercero(body, authorization));
+    }
+
+    @PutMapping("/terceros/{id}")
+    public ResponseEntity<?> updateTercero(
+            @PathVariable String id,
+            @RequestBody Object body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.updateTercero(id, body, authorization));
+    }
+
+    @DeleteMapping("/terceros/{id}")
+    public ResponseEntity<?> deleteTercero(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.deleteTercero(id, authorization));
+    }
+
     @PatchMapping("/consent-definitions/{id}/active")
     public ResponseEntity<?> setConsentDefinitionActive(
             @PathVariable String id,

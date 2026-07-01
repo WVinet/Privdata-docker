@@ -36,8 +36,14 @@ public class Person {
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
+    @Column(name = "second_name", length = 100)
+    private String secondName;
+
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
+
+    @Column(name = "maternal_last_name", length = 100)
+    private String maternalLastName;
 
     @Column(name = "full_name", nullable = false, length = 200)
     private String fullName;

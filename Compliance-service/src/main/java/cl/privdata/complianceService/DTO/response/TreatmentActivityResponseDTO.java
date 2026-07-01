@@ -21,9 +21,12 @@ public class TreatmentActivityResponseDTO {
     private boolean internationalTransfer;
     private String dataSystems;
     private String securityMeasures;
+    private boolean hasAutomatedDecisions;
+    private String profilingDescription;
     private TreatmentActivityStatus status;
     private boolean containsSensitiveData;
     private List<DataCategoryResponseDTO> dataCategories;
+    private List<TerceroResponseDTO> terceros;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -63,6 +66,12 @@ public class TreatmentActivityResponseDTO {
     public String getSecurityMeasures() { return securityMeasures; }
     public void setSecurityMeasures(String securityMeasures) { this.securityMeasures = securityMeasures; }
 
+    public boolean isHasAutomatedDecisions() { return hasAutomatedDecisions; }
+    public void setHasAutomatedDecisions(boolean hasAutomatedDecisions) { this.hasAutomatedDecisions = hasAutomatedDecisions; }
+
+    public String getProfilingDescription() { return profilingDescription; }
+    public void setProfilingDescription(String profilingDescription) { this.profilingDescription = profilingDescription; }
+
     public TreatmentActivityStatus getStatus() { return status; }
     public void setStatus(TreatmentActivityStatus status) { this.status = status; }
 
@@ -71,6 +80,9 @@ public class TreatmentActivityResponseDTO {
 
     public List<DataCategoryResponseDTO> getDataCategories() { return dataCategories; }
     public void setDataCategories(List<DataCategoryResponseDTO> dataCategories) { this.dataCategories = dataCategories; }
+
+    public List<TerceroResponseDTO> getTerceros() { return terceros; }
+    public void setTerceros(List<TerceroResponseDTO> terceros) { this.terceros = terceros; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

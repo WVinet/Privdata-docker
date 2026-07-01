@@ -4,13 +4,18 @@ import com.privdata.bff_api.dtos.request.arco.ArcoCancellationRequestDTO;
 import com.privdata.bff_api.dtos.response.arco.ArcoRequestResponseDTO;
 import com.privdata.bff_api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -131,6 +136,103 @@ public class ArcoClient {
                 .uri("/api/arso/portability/" + id + "/download")
                 .retrieve()
                 .toEntity(byte[].class);
+    }
+
+    public Object uploadRectificationDocument(String id, MultipartFile file) {
+        try {
+            MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
+            ByteArrayResource resource = new ByteArrayResource(file.getBytes()) {
+                @Override public String getFilename() { return file.getOriginalFilename(); }
+            };
+            form.add("file", resource);
+            return arcoRestClient.post()
+                    .uri("/api/arso/rectification/" + id + "/document")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(form)
+                    .retrieve()
+                    .body(Object.class);
+        } catch (Exception e) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "Error al subir documento: " + e.getMessage());
+            err.put("data", null);
+            return err;
+        }
+    }
+
+    public ResponseEntity<byte[]> downloadRectificationDocument(String id) {
+        return arcoRestClient.get()
+                .uri("/api/arso/rectification/" + id + "/document")
+                .retrieve()
+                .toEntity(byte[].class);
+    }
+
+    public Object uploadAccessResponseDocument(String id, MultipartFile file) {
+        try {
+            MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
+            ByteArrayResource resource = new ByteArrayResource(file.getBytes()) {
+                @Override public String getFilename() { return file.getOriginalFilename(); }
+            };
+            form.add("file", resource);
+            return arcoRestClient.post()
+                    .uri("/api/arso/access/" + id + "/response-document")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(form)
+                    .retrieve()
+                    .body(Object.class);
+        } catch (Exception e) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "Error al subir documento: " + e.getMessage());
+            err.put("data", null);
+            return err;
+        }
+    }
+
+    public ResponseEntity<byte[]> downloadAccessResponseDocument(String id) {
+        return arcoRestClient.get()
+                .uri("/api/arso/access/" + id + "/response-document")
+                .retrieve()
+                .toEntity(byte[].class);
+    }
+
+    public Object uploadOppositionDocument(String id, MultipartFile file) {
+        try {
+            MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
+            ByteArrayResource resource = new ByteArrayResource(file.getBytes()) {
+                @Override public String getFilename() { return file.getOriginalFilename(); }
+            };
+            form.add("file", resource);
+            return arcoRestClient.post()
+                    .uri("/api/arso/opposition/" + id + "/document")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(form)
+                    .retrieve()
+                    .body(Object.class);
+        } catch (Exception e) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "Error al subir documento: " + e.getMessage());
+            err.put("data", null);
+            return err;
+        }
+    }
+
+    public ResponseEntity<byte[]> downloadOppositionDocument(String id) {
+        return arcoRestClient.get()
+                .uri("/api/arso/opposition/" + id + "/document")
+                .retrieve()
+                .toEntity(byte[].class);
+    }
+
+    public Object applyBlock(String id, String adminEmail) {
+        Map<String, String> body = new HashMap<>();
+        if (adminEmail != null) body.put("adminEmail", adminEmail);
+        return forward("PATCH", "/api/arco-request/" + id + "/block", body.isEmpty() ? null : body);
+    }
+
+    public Object liftBlock(String id) {
+        return forward("PATCH", "/api/arco-request/" + id + "/unblock", null);
     }
 
     private Object forward(String method, String uri, Object body) {

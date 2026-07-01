@@ -69,7 +69,7 @@ export default function DeactivatedAccountsPage() {
     const requestType = DATA_STATUS_REQUEST_TYPE[dataStatus]
     if (!requestType) return null
     const matches = arcoRequests
-      .filter((r) => r.dataSubjectId === personId && r.requestType === requestType && r.status === "RESPONDIDA")
+      .filter((r) => r.dataSubjectId === personId && r.requestType === requestType && (r.status === "RESPONDIDA" || r.status === "CERRADA"))
       .sort((a, b) => new Date(b.resolvedAt ?? b.submittedAt).getTime() - new Date(a.resolvedAt ?? a.submittedAt).getTime())
     return matches[0] ?? null
   }
@@ -114,12 +114,12 @@ export default function DeactivatedAccountsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>RUT</TableHead>
-                    <TableHead>Correo</TableHead>
-                    <TableHead>Estado de datos</TableHead>
-                    <TableHead>Solicitud ARSOP</TableHead>
-                    <TableHead>Resuelta</TableHead>
+                    <TableHead className="w-[22%]">Nombre</TableHead>
+                    <TableHead className="w-[14%]">RUT</TableHead>
+                    <TableHead className="w-[26%]">Correo</TableHead>
+                    <TableHead className="w-[18%]">Estado de datos</TableHead>
+                    <TableHead className="w-[12%]">Solicitud ARSOP</TableHead>
+                    <TableHead className="w-[8%]">Resuelta</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -138,16 +138,20 @@ export default function DeactivatedAccountsPage() {
                     const request = originatingRequest(p.id, p.dataStatus)
                     return (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.fullName}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{p.rut ?? "—"}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{p.email ?? "—"}</TableCell>
+                        <TableCell className="font-medium max-w-0">
+                            <p className="truncate" title={p.fullName}>{p.fullName}</p>
+                          </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">{p.rut ?? "—"}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm max-w-0">
+                            <p className="truncate" title={p.email ?? ""}>{p.email ?? "—"}</p>
+                          </TableCell>
                         <TableCell>
                           <Badge variant={DATA_STATUS_VARIANT[p.dataStatus]}>
                             {DATA_STATUS_LABEL[p.dataStatus]}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {request ? request.id : "—"}
+                        <TableCell className="font-mono text-xs text-muted-foreground" title={request?.id}>
+                          {request ? request.id.substring(0, 8) + "…" : "—"}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {request?.resolvedAt ? new Date(request.resolvedAt).toLocaleDateString("es-CL") : "—"}

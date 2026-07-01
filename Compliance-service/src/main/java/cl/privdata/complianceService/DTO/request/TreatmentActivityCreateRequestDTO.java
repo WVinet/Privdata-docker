@@ -35,7 +35,11 @@ public class TreatmentActivityCreateRequestDTO {
 
     private String securityMeasures;
 
+    private boolean hasAutomatedDecisions = false;
+    private String profilingDescription;
+
     private List<UUID> dataCategoryIds;
+    private List<UUID> terceroIds;
 
     public UUID getOrganizationId() { return organizationId; }
     public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
@@ -70,6 +74,15 @@ public class TreatmentActivityCreateRequestDTO {
     public String getSecurityMeasures() { return securityMeasures; }
     public void setSecurityMeasures(String securityMeasures) { this.securityMeasures = securityMeasures; }
 
+    public boolean isHasAutomatedDecisions() { return hasAutomatedDecisions; }
+    public void setHasAutomatedDecisions(boolean hasAutomatedDecisions) { this.hasAutomatedDecisions = hasAutomatedDecisions; }
+
+    public String getProfilingDescription() { return profilingDescription; }
+    public void setProfilingDescription(String profilingDescription) { this.profilingDescription = profilingDescription; }
+
     public List<UUID> getDataCategoryIds() { return dataCategoryIds; }
     public void setDataCategoryIds(List<UUID> dataCategoryIds) { this.dataCategoryIds = dataCategoryIds; }
+
+    public List<UUID> getTerceroIds() { return terceroIds; }
+    public void setTerceroIds(List<UUID> terceroIds) { this.terceroIds = terceroIds; }
 }

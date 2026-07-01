@@ -23,6 +23,7 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
   const qc = useQueryClient()
   const details = parseSuppression(description)
   const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle")
+  const [showConfirm, setShowConfirm] = useState(false)
   const [assessmentChecked, setAssessmentChecked] = useState(false)
   const [exceptionApplies, setExceptionApplies] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
@@ -84,6 +85,8 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
   const alreadyApplied = person?.isActive === false
   const assessment = CAUSE_ASSESSMENT[details.cause]
 
+  function resetMode() { setMode("idle"); setShowConfirm(false) }
+
   return (
     <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 space-y-3 text-sm">
       <div className="flex items-center gap-2 font-semibold text-foreground">
@@ -121,12 +124,9 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
             Esta acción marcará los datos del titular para eliminación y desactivará su cuenta de inmediato. No se puede deshacer fácilmente.
           </p>
           <label className="flex items-start gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={anonymizeInsteadOfDelete}
+            <input type="checkbox" checked={anonymizeInsteadOfDelete}
               onChange={(e) => setAnonymizeInsteadOfDelete(e.target.checked)}
-              className="mt-0.5 h-3.5 w-3.5 rounded"
-            />
+              className="mt-0.5 h-3.5 w-3.5 rounded" />
             Anonimizar en lugar de eliminar los datos
           </label>
           <textarea
@@ -139,45 +139,51 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
           {respondMutation.isError && (
             <p className="text-xs text-destructive">{(respondMutation.error as Error).message}</p>
           )}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => respondMutation.mutate(true)}
-              disabled={respondMutation.isPending}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
-              style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
-            >
-              {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {anonymizeInsteadOfDelete ? "Sí, aprobar y anonimizar" : "Sí, aprobar y suprimir"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("idle")}
-              disabled={respondMutation.isPending}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted"
-            >
-              Cancelar
-            </button>
-          </div>
+          {showConfirm ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2">
+              <p className="text-xs font-semibold text-amber-800">¿Está seguro que desea enviar esta resolución?</p>
+              <p className="text-xs text-amber-700">Esta acción no se puede deshacer.</p>
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => { setShowConfirm(false); respondMutation.mutate(true) }}
+                  disabled={respondMutation.isPending}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+                  style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}>
+                  {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Sí, enviar
+                </button>
+                <button type="button" onClick={() => setShowConfirm(false)}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowConfirm(true)}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+                style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}>
+                {anonymizeInsteadOfDelete ? "Aprobar y anonimizar" : "Aprobar y suprimir"}
+              </button>
+              <button type="button" onClick={resetMode}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted">
+                Cancelar
+              </button>
+            </div>
+          )}
         </div>
       ) : mode === "reject" ? (
         <div className="rounded-lg border border-border bg-background p-3 space-y-2">
           <label className="flex items-start gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={assessmentChecked}
+            <input type="checkbox" checked={assessmentChecked}
               onChange={(e) => setAssessmentChecked(e.target.checked)}
-              className="mt-0.5 h-3.5 w-3.5 rounded"
-            />
+              className="mt-0.5 h-3.5 w-3.5 rounded" />
             {assessment.label}
           </label>
           <label className="flex items-start gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={exceptionApplies}
+            <input type="checkbox" checked={exceptionApplies}
               onChange={(e) => setExceptionApplies(e.target.checked)}
-              className="mt-0.5 h-3.5 w-3.5 rounded"
-            />
+              className="mt-0.5 h-3.5 w-3.5 rounded" />
             Aplica una excepción legal que impide la supresión
           </label>
           <textarea
@@ -190,42 +196,48 @@ export default function ArcoSuppressionPanel({ arcoRequestId, dataSubjectId, org
           {respondMutation.isError && (
             <p className="text-xs text-destructive">{(respondMutation.error as Error).message}</p>
           )}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => respondMutation.mutate(false)}
-              disabled={respondMutation.isPending}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
-              style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
-            >
-              {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Confirmar rechazo
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("idle")}
-              disabled={respondMutation.isPending}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted"
-            >
-              Cancelar
-            </button>
-          </div>
+          {showConfirm ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2">
+              <p className="text-xs font-semibold text-amber-800">¿Está seguro que desea enviar esta resolución?</p>
+              <p className="text-xs text-amber-700">Esta acción no se puede deshacer.</p>
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => { setShowConfirm(false); respondMutation.mutate(false) }}
+                  disabled={respondMutation.isPending}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+                  style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}>
+                  {respondMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Sí, rechazar
+                </button>
+                <button type="button" onClick={() => setShowConfirm(false)}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowConfirm(true)}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+                style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}>
+                Confirmar rechazo
+              </button>
+              <button type="button" onClick={resetMode}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted">
+                Cancelar
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setMode("approve")}
+          <button type="button" onClick={() => setMode("approve")}
             className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
-            style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
-          >
+            style={{ background: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}>
             Aprobar y suprimir
           </button>
-          <button
-            type="button"
-            onClick={() => setMode("reject")}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted inline-flex items-center gap-1.5"
-          >
+          <button type="button" onClick={() => setMode("reject")}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border transition-colors hover:bg-muted inline-flex items-center gap-1.5">
             <XCircle className="w-3.5 h-3.5" />
             Rechazar
           </button>
