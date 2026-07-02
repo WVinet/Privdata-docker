@@ -34,12 +34,12 @@ public class AuthClient {
                     .retrieve()
                     .body(Map.class);
 
-        } catch (HttpClientErrorException.Unauthorized ex) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Credenciales inválidas");
-            response.put("data", null);
-            return response;
+        } catch (HttpClientErrorException ex) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", ex.getResponseBodyAsString());
+            err.put("data", null);
+            return err;
         }
     }
 

@@ -77,29 +77,26 @@ public class EmailService {
         }
     }
 
-    public void sendInviteEmail(String to, String firstName, String tempPassword) {
+    public void sendInviteEmail(String email, String temporaryPassword) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
 
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setTo(to);
+            helper.setTo(email);
             helper.setSubject("Te invitamos a PrivData");
-
-            String greeting = (firstName != null && !firstName.isBlank()) ? firstName : to;
 
             String html = """
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px;">
                     <h2 style="color: #111827;">PrivData</h2>
 
                     <p style="font-size: 16px; color: #374151;">
-                        Hola %s, se creó una cuenta para ti en PrivData para que puedas
-                        ejercer tus derechos sobre tus datos personales (Ley 21.719).
+                        Has sido invitado a PrivData para ejercer tus derechos sobre tus datos personales (Ley 21.719).
                     </p>
 
                     <p style="font-size: 14px; color: #374151;">
-                        Inicia sesión con tu correo (<strong>%s</strong>) y la siguiente
-                        contraseña temporal. Se te pedirá cambiarla en tu primer ingreso.
+                        Inicia sesión con tu correo (<strong>%s</strong>) y la siguiente contraseña temporal.
+                        Se te solicitará cambiarla en tu primer ingreso.
                     </p>
 
                     <div style="background: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px; margin: 24px 0;">
@@ -117,7 +114,7 @@ public class EmailService {
                         Equipo PrivData — Ley 21.719
                     </p>
                 </div>
-                """.formatted(greeting, to, tempPassword);
+                """.formatted(email, temporaryPassword);
 
             helper.setText(html, true);
 

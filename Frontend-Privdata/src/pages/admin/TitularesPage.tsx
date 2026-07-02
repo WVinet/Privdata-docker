@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Search, UserPlus, Loader2, X, Copy, Check, UserX } from "lucide-react"
+import { Search, UserPlus, Loader2, X, Copy, Check, UserX, Mail } from "lucide-react"
 import { usersApi, personsApi, departmentsApi } from "@/lib/api"
 import { formatRut } from "@/lib/rut"
 // import { validateRut } from "@/lib/rut" // validación de dígito verificador desactivada temporalmente
@@ -207,6 +207,22 @@ export default function TitularesPage() {
   const [filterDept,  setFilterDept]  = useState("")
   const [inviting, setInviting] = useState(false)
 
+  const qc = useQueryClient()
+
+  const resendInviteMutation = useMutation({
+    mutationFn: (userId: string) => usersApi.resendInvite(userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] })
+      alert("Código reenviado correctamente")
+    },
+    onError: (e: unknown) => {
+      alert(
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+          "No se pudo reenviar el código"
+      )
+    },
+  })
+
   const { data: usersRes, isLoading: lu } = useQuery({
     queryKey: ["users"],
     queryFn:  () => usersApi.list().then((r) => r.data),
@@ -349,6 +365,7 @@ export default function TitularesPage() {
                       </TableRow>
                     ) : titulares.map((u) => {
                       const person = u.personId ? personMap.get(u.personId) : undefined
+
                       return (
                         <TableRow key={u.id}>
                           <TableCell className="font-medium max-w-0">
@@ -364,6 +381,7 @@ export default function TitularesPage() {
                               {u.email}
                             </p>
                           </TableCell>
+
                           <TableCell>
                             <Badge variant={STATUS_VARIANT[u.status] ?? "secondary"}>
                               {STATUS_LABEL[u.status] ?? u.status}
@@ -371,6 +389,22 @@ export default function TitularesPage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                             {new Date(u.createdAt).toLocaleDateString("es-CL")}
+                          </TableCell>
+
+                          <TableCell>
+                            {u.status === "PENDING" ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => resendInviteMutation.mutate(u.id)}
+                                disabled={resendInviteMutation.isPending}
+                              >
+                                <Mail className="w-4 h-4 mr-1.5" />
+                                Reenviar código
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       )

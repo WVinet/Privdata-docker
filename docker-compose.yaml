@@ -10,7 +10,12 @@ services:
       - "5436:5432"
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
-      - ./Auth-service/docker/init:/docker-entrypoint-initdb.d
+      - ./auth-service/docker/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres-organization:
     image: postgres:16
@@ -23,6 +28,11 @@ services:
       - "5433:5432"
     volumes:
       - postgres_organization_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d organization_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres-arco:
     image: postgres:16
@@ -35,6 +45,11 @@ services:
       - "5434:5432"
     volumes:
       - postgres_arco_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d arco_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres-compliance:
     image: postgres:16
@@ -47,6 +62,11 @@ services:
       - "5435:5432"
     volumes:
       - postgres_compliance_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d compliance_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres-agencia:
     image: postgres:16
@@ -59,25 +79,44 @@ services:
       - "5437:5432"
     volumes:
       - postgres_agencia_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agencia_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: privdata-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
   auth-service:
     build: ./auth-service
     container_name: privdata-auth-service
     restart: on-failure
-    profiles: ["app"]
     depends_on:
-      - postgres-auth
+      postgres-auth:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
     environment:
+      SERVER_PORT: 8080
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/auth_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
-      JWT_SECRET: ${JWT_SECRET}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      TITULAR_EMAIL: ${TITULAR_EMAIL}
-      TITULAR_PASSWORD: ${TITULAR_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-privdata-secret-key-local}
+      MAIL_USERNAME: ${MAIL_USERNAME:-test@privdata.cl}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-test}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@privdata.cl}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123456}
+      TITULAR_EMAIL: ${TITULAR_EMAIL:-titular@privdata.cl}
+      TITULAR_PASSWORD: ${TITULAR_PASSWORD:-Titular123456}
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      MAIL_SMTP_AUTH: false
+      MAIL_SMTP_STARTTLS: false
     ports:
       - "8080:8080"
 
@@ -85,9 +124,9 @@ services:
     build: ./organization-service
     container_name: privdata-organization-service
     restart: on-failure
-    profiles: ["app"]
     depends_on:
-      - postgres-organization
+      postgres-organization:
+        condition: service_healthy
     environment:
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-organization:5432/organization_db
@@ -100,7 +139,6 @@ services:
     build: ./arco-service
     container_name: privdata-arco-service
     restart: on-failure
-    profiles: ["app"]
     depends_on:
       - postgres-arco
       - organization-service
@@ -126,9 +164,9 @@ services:
     build: ./compliance-service
     container_name: privdata-compliance-service
     restart: on-failure
-    profiles: ["app"]
     depends_on:
-      - postgres-compliance
+      postgres-compliance:
+        condition: service_healthy
     environment:
       SERVER_PORT: 8083
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-compliance:5432/compliance_db
@@ -141,17 +179,19 @@ services:
     build: ./agenciaService
     container_name: privdata-agencia-service
     restart: on-failure
-    profiles: ["app"]
     depends_on:
-      - postgres-agencia
+      postgres-agencia:
+        condition: service_healthy
+      arco-service:
+        condition: service_started
     environment:
       SERVER_PORT: 8084
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-agencia:5432/agencia_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
-      JWT_SECRET: ${JWT_SECRET}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-privdata-secret-key-local}
+      MAIL_USERNAME: ${MAIL_USERNAME:-test@privdata.cl}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-test}
       SERVICES_ARCO_URL: http://arco-service:8082
     ports:
       - "8084:8084"
@@ -159,13 +199,18 @@ services:
   bff-api:
     build: ./bff-api
     container_name: privdata-bff-api
-    profiles: ["app"]
+    restart: on-failure
     depends_on:
-      - auth-service
-      - organization-service
-      - arco-service
-      - compliance-service
-      - agencia-service
+      auth-service:
+        condition: service_started
+      organization-service:
+        condition: service_started
+      arco-service:
+        condition: service_started
+      compliance-service:
+        condition: service_started
+      agencia-service:
+        condition: service_started
     environment:
       SERVER_PORT: 8085
       SERVICES_AUTH_URL: http://auth-service:8080
@@ -177,48 +222,40 @@ services:
     ports:
       - "8085:8085"
 
+  api-gateway:
+    build: ./api-gateway
+    container_name: privdata-api-gateway
+    restart: on-failure
+    depends_on:
+      auth-service:
+        condition: service_started
+      bff-api:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8000
+      JWT_SECRET: ${JWT_SECRET:-privdata-secret-key-local}
+      AUTH_SERVICE_URL: http://auth-service:8080
+      BFF_API_URL: http://bff-api:8085
+    ports:
+      - "8000:8000"
+
   frontend:
     build: ./frontend-Privdata
     container_name: privdata-frontend
-    profiles: ["app"]
+    depends_on:
+      bff-api:
+        condition: service_started
     ports:
       - "5173:80"
-    depends_on:
-      - bff-api
 
   frontend-agencia:
     build: ./Frontend-Agencia
     container_name: privdata-frontend-agencia
-    profiles: ["app"]
+    depends_on:
+      api-gateway:
+        condition: service_started
     ports:
       - "5174:80"
-    depends_on:
-      - api-gateway
-
-  mailhog:
-    image: mailhog/mailhog
-    container_name: privdata-mailhog
-    ports:
-      - "1025:1025"   # SMTP — Auth-service envía aquí
-      - "8025:8025"   # Web UI — ver los emails en http://localhost:8025
-
-  api-gateway:
-    build: ./api-gateway
-    container_name: privdata-api-gateway
-    ports:
-      - "8000:8000"
-    environment:
-      JWT_SECRET: ${JWT_SECRET}
-      AUTH_SERVICE_URL: http://auth-service:8080
-      BFF_API_URL: http://bff-api:8085
-    depends_on:
-      - auth-service
-      - organization-service
-      - arco-service
-      - compliance-service
-      - agencia-service
-      - bff-api
-    profiles: ["app"]
 
   minio:
     image: minio/minio:latest
