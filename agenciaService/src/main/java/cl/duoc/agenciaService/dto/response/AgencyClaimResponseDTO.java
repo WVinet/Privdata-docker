@@ -12,6 +12,8 @@ public class AgencyClaimResponseDTO {
     private UUID id;
     private UUID arcoRequestId;
     private UUID organizationId;
+    private String organizationName;
+    private String organizationEmail;
     private UUID dataSubjectId;
     private String dataSubjectName;
     private String dataSubjectEmail;
@@ -34,6 +36,8 @@ public class AgencyClaimResponseDTO {
         dto.setId(e.getId());
         dto.setArcoRequestId(e.getArcoRequestId());
         dto.setOrganizationId(e.getOrganizationId());
+        dto.setOrganizationName(e.getOrganizationName());
+        dto.setOrganizationEmail(e.getOrganizationEmail());
         dto.setDataSubjectId(e.getDataSubjectId());
         dto.setDataSubjectName(e.getDataSubjectName());
         dto.setDataSubjectEmail(e.getDataSubjectEmail());

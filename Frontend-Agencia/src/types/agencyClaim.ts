@@ -4,6 +4,8 @@ export interface AgencyClaim {
   id: string
   arcoRequestId: string
   organizationId: string
+  organizationName: string | null
+  organizationEmail: string | null
   dataSubjectId: string
   dataSubjectName: string
   dataSubjectEmail: string

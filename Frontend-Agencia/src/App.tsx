@@ -6,6 +6,7 @@ import { AppLayout } from "@/components/AppLayout"
 import LoginPage from "@/pages/LoginPage"
 import NotFound from "@/pages/NotFound"
 import ReclamosPage from "@/pages/ReclamosPage"
+import SolicitudesPage from "@/pages/SolicitudesPage"
 import HistorialPage from "@/pages/HistorialPage"
 
 const queryClient = new QueryClient()
@@ -15,11 +16,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<Navigate to="/solicitudes" replace />} />
 
           <Route path="/login" element={<LoginPage />} />
 
           <Route element={<AppLayout />}>
+            <Route path="/solicitudes" element={<SolicitudesPage />} />
             <Route path="/reclamos" element={<ReclamosPage />} />
             <Route path="/historial" element={<HistorialPage />} />
           </Route>

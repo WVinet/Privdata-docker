@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { Loader2, ShieldCheck, FileText, AlertTriangle, UserRound } from "lucide-react"
 import { complianceApi, personsApi } from "@/lib/api"
-import type { Consent, TreatmentActivity } from "@/types/compliance"
+import type { Consent, ConsentDefinition, TreatmentActivity } from "@/types/compliance"
 
 const LEGAL_BASIS_LABEL: Record<string, string> = {
   CONSENTIMIENTO:   "Consentimiento (Art. 12)",
@@ -9,7 +9,6 @@ const LEGAL_BASIS_LABEL: Record<string, string> = {
   OBLIGACION_LEGAL: "Obligación legal (Art. 13 b)",
   INTERES_LEGITIMO: "Interés legítimo (Art. 13 d)",
   INTERES_VITAL:    "Interés vital (Art. 13 e)",
-  FUNCION_PUBLICA:  "Función pública (Art. 20)",
 }
 
 const CONSENT_STATUS_LABEL: Record<string, string> = {
@@ -22,6 +21,18 @@ const CONSENT_STATUS_LABEL: Record<string, string> = {
 function formatDate(iso: string | null) {
   if (!iso) return "—"
   return new Date(iso).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" })
+}
+
+function formatRetention(days: number): string {
+  if (days >= 365) {
+    const y = Math.round(days / 365)
+    return y === 1 ? "1 año" : `${y} años`
+  }
+  if (days >= 30) {
+    const m = Math.round(days / 30)
+    return m === 1 ? "1 mes" : `${m} meses`
+  }
+  return days === 1 ? "1 día" : `${days} días`
 }
 
 interface Props {
@@ -46,8 +57,15 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
     queryFn: () => complianceApi.getRat(organizationId).then(r => r.data),
   })
 
+  const { data: definitionsData } = useQuery({
+    queryKey: ["consent-definitions", organizationId],
+    queryFn: () => complianceApi.getConsentDefinitions(organizationId).then(r => Array.isArray(r.data) ? r.data : []),
+  })
+
   const person     = personData?.data
   const consents: Consent[]            = Array.isArray(consentsData) ? consentsData : []
+  const definitions: ConsentDefinition[] = Array.isArray(definitionsData) ? definitionsData : []
+  const defMap = new Map(definitions.map(d => [d.id, d]))
   const activities: TreatmentActivity[] = Array.isArray(ratData) ? ratData : []
 
   const isLoading = loadingPerson || loadingConsents || loadingRat
@@ -76,7 +94,9 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
     if (activeConsents.length > 0) {
       lines.push(`Consentimientos vigentes (${activeConsents.length}):`)
       activeConsents.forEach((c, i) => {
-        lines.push(`  ${i + 1}. Otorgado el ${formatDate(c.grantedAt)} vía ${c.collectionMethod.replace("_", " ").toLowerCase()}${c.expiresAt ? ` · Vence: ${formatDate(c.expiresAt)}` : ""}`)
+        const def   = c.definitionId ? defMap.get(c.definitionId) : undefined
+        const title = def?.title ?? c.collectionMethod.replace(/_/g, " ").toLowerCase()
+        lines.push(`  ${i + 1}. ${title} — otorgado el ${formatDate(c.grantedAt)} vía ${c.collectionMethod.replace(/_/g, " ").toLowerCase()}${c.expiresAt ? ` · vence: ${formatDate(c.expiresAt)}` : ""}`)
       })
       lines.push("")
     } else {
@@ -93,7 +113,7 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
           ? a.terceros.map(t => `${t.nombre} (${t.pais})`).join(", ")
           : a.thirdPartyRecipients
         if (dest) lines.push(`     Destinatarios: ${dest}`)
-        if (a.retentionPeriodDays) lines.push(`     Retención: ${a.retentionPeriodDays} días`)
+        if (a.retentionPeriodDays) lines.push(`     Retención: ${formatRetention(a.retentionPeriodDays)}`)
       })
     } else {
       lines.push("No hay actividades de tratamiento activas registradas.")
@@ -169,10 +189,12 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
           <p className="text-xs text-muted-foreground">Sin consentimientos registrados.</p>
         ) : (
           <div className="space-y-1.5">
-            {consents.map(c => (
+            {consents.map(c => {
+              const def = c.definitionId ? defMap.get(c.definitionId) : undefined
+              return (
               <div key={c.id} className="flex items-center justify-between rounded-lg bg-background border border-border px-3 py-2">
                 <div className="text-xs">
-                  <span className="font-medium">{c.collectionMethod.replace("_", " ").toLowerCase()}</span>
+                  <span className="font-medium">{def?.title ?? c.collectionMethod.replace(/_/g, " ").toLowerCase()}</span>
                   <span className="text-muted-foreground ml-1.5">· otorgado {formatDate(c.grantedAt)}</span>
                   {c.expiresAt && <span className="text-muted-foreground"> · vence {formatDate(c.expiresAt)}</span>}
                 </div>
@@ -186,7 +208,8 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
                   {CONSENT_STATUS_LABEL[c.status] ?? c.status}
                 </span>
               </div>
-            ))}
+            )
+            })}
           </div>
         )}
       </div>
@@ -218,7 +241,7 @@ export default function ArcoAccessReport({ dataSubjectId, organizationId, onGene
                       : a.thirdPartyRecipients
                     return dest ? <> · Destinatarios: <span className="font-medium text-foreground">{dest}</span></> : null
                   })()}
-                  {a.retentionPeriodDays && <> · Retención: <span className="font-medium text-foreground">{a.retentionPeriodDays}d</span></>}
+                  {a.retentionPeriodDays && <> · Retención: <span className="font-medium text-foreground">{formatRetention(a.retentionPeriodDays)}</span></>}
                 </p>
                 {a.dataCategories.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">

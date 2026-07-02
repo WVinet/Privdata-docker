@@ -34,4 +34,6 @@ public interface AuthService {
 
     void updateEmailByPersonId(UUID personId, String newEmail);
 
+    void disableByPersonId(UUID personId);
+
 }

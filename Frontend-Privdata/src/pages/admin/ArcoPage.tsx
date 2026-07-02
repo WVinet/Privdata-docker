@@ -378,6 +378,7 @@ function UpdateStatusModal({
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl space-y-4 p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between">
@@ -632,57 +633,21 @@ function UpdateStatusModal({
               No se pudo iniciar la gestión automáticamente. Cierra y vuelve a abrir la solicitud para reintentar.
             </p>
           ) : effectiveStatus === "EN_GESTION" && request.requestType === "ACCESO" ? (
-            <div className="space-y-3 border-t border-border pt-3">
-              <div className="space-y-1.5">
-                <Label>Respuesta / observaciones internas</Label>
-                <textarea
-                  rows={4}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="Escribe aquí la respuesta para el titular. Puedes guardar el avance y continuar más tarde…"
-                  value={comment}
-                  onChange={(e) => {
-                    setComment(e.target.value)
-                    draftMutation.reset()
-                  }}
-                />
-                {draftMutation.isSuccess && (
-                  <span className="text-xs text-green-600 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Borrador guardado
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => draftMutation.mutate()}
-                  disabled={draftMutation.isPending || !comment.trim()}
-                >
-                  {draftMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Guardar borrador
+            <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+              <Button onClick={() => setPendingAction("RESPONDIDA")}>
+                <Send className="w-4 h-4" />
+                Responder solicitud
+              </Button>
+              <Button variant="destructive" onClick={() => setPendingAction("RECHAZADA")}>
+                <XCircle className="w-4 h-4" />
+                Rechazar solicitud
+              </Button>
+              {canExtend && (
+                <Button variant="outline" onClick={() => setPendingAction("PRORROGA")}>
+                  <Hourglass className="w-4 h-4" />
+                  Solicitar prórroga (+30 días)
                 </Button>
-                <Button
-                  onClick={() => setPendingAction("RESPONDIDA")}
-                  disabled={!comment.trim()}
-                >
-                  <Send className="w-4 h-4" />
-                  Responder solicitud
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                <Button variant="destructive" size="sm" onClick={() => setPendingAction("RECHAZADA")}>
-                  <XCircle className="w-4 h-4" />
-                  Rechazar solicitud
-                </Button>
-                {canExtend && (
-                  <Button variant="outline" size="sm" onClick={() => setPendingAction("PRORROGA")}>
-                    <Hourglass className="w-4 h-4" />
-                    Solicitar prórroga (+30 días)
-                  </Button>
-                )}
-              </div>
+              )}
             </div>
           ) : effectiveStatus === "EN_GESTION" ? null
           : availableActions.length === 0 ? (
@@ -712,113 +677,187 @@ function UpdateStatusModal({
           )
         )}
 
-        {pendingAction !== null && (
-          <div className={`space-y-3 rounded-xl border p-4 ${ACTION_CONFIG[pendingAction].variant === "destructive" ? "border-destructive/40" : "border-border"}`}>
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${ACTION_CONFIG[pendingAction].variant === "destructive" ? "text-destructive" : "text-primary"}`} />
-              <div>
-                <p className="font-semibold text-sm text-foreground">{ACTION_CONFIG[pendingAction].confirmTitle}</p>
-                <p className="text-xs text-muted-foreground mt-1">{ACTION_CONFIG[pendingAction].confirmDescription}</p>
-              </div>
+        {error && pendingAction === null && <p className="text-sm text-destructive">{error}</p>}
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={onClose}>Cerrar</Button>
+        </div>
+      </div>
+    </div>
+
+    {pendingAction !== null && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-xl space-y-5 p-6 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${ACTION_CONFIG[pendingAction].variant === "destructive" ? "text-destructive" : "text-primary"}`} />
+            <div>
+              <p className="font-semibold text-sm text-foreground">{ACTION_CONFIG[pendingAction].confirmTitle}</p>
+              <p className="text-xs text-muted-foreground mt-1">{ACTION_CONFIG[pendingAction].confirmDescription}</p>
             </div>
+          </div>
 
-            {pendingAction === "RESPONDIDA" && (
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>Contenido de la respuesta *</Label>
-                  <textarea
-                    rows={4}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Describe la información o gestión entregada al titular…"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                  />
-                </div>
-                {request.requestType === "ACCESO" && (
-                  <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5">
-                      <Paperclip className="w-3.5 h-3.5" />
-                      Adjuntar PDF de respuesta (opcional)
-                    </Label>
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx,application/pdf"
-                      className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1 file:px-3 file:rounded-md file:border file:border-border file:text-xs file:font-medium file:bg-muted file:text-foreground cursor-pointer"
-                      onChange={(e) => setAccessPdfFile(e.target.files?.[0] ?? null)}
-                    />
-                    {accessPdfFile && (
-                      <p className="text-xs text-muted-foreground">
-                        Archivo seleccionado: <span className="font-medium text-foreground">{accessPdfFile.name}</span>
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {pendingAction === "RECHAZADA" && (
-              <>
-                <div className="space-y-1.5">
-                  <Label>Motivo de la denegación *</Label>
-                  <textarea
-                    rows={3}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Explica por qué se deniega la solicitud…"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Norma legal que fundamenta la denegación *</Label>
-                  <Input
-                    placeholder="Ej.: Art. 19 N°4 de la Constitución, Ley 21.719 art. 5°…"
-                    value={legalBasis}
-                    onChange={(e) => setLegalBasis(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
-            {pendingAction === "CERRADA" && (
+          {pendingAction === "RESPONDIDA" && (
+            <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label>Observaciones internas (opcional)</Label>
+                <Label>Respuesta para el titular *</Label>
                 <textarea
-                  rows={2}
+                  rows={10}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="Notas internas sobre este cambio de estado…"
+                  placeholder="Escribe aquí la respuesta para el titular…"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                 />
               </div>
-            )}
-
-            {error && <p className="text-sm text-destructive">{error}</p>}
-
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" size="sm" onClick={backToActions} disabled={mutation.isPending}>
-                Volver
-              </Button>
-              <Button
-                variant={ACTION_CONFIG[pendingAction].variant === "destructive" ? "destructive" : "default"}
-                size="sm"
-                onClick={() => mutation.mutate()}
-                disabled={mutation.isPending || !isValid}
-              >
-                {mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Confirmar
-              </Button>
+              {request.requestType === "ACCESO" && (
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5" />
+                    Adjuntar PDF de respuesta (opcional)
+                  </Label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf"
+                    className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1 file:px-3 file:rounded-md file:border file:border-border file:text-xs file:font-medium file:bg-muted file:text-foreground cursor-pointer"
+                    onChange={(e) => setAccessPdfFile(e.target.files?.[0] ?? null)}
+                  />
+                  {accessPdfFile && (
+                    <p className="text-xs text-muted-foreground">
+                      Archivo seleccionado: <span className="font-medium text-foreground">{accessPdfFile.name}</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+          )}
+
+          {pendingAction === "RECHAZADA" && (
+            <>
+              <div className="space-y-1.5">
+                <Label>Motivo de la denegación *</Label>
+                <textarea
+                  rows={6}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="Explica por qué se deniega la solicitud…"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Norma legal que fundamenta la denegación *</Label>
+                <Input
+                  placeholder="Ej.: Art. 19 N°4 de la Constitución, Ley 21.719 art. 5°…"
+                  value={legalBasis}
+                  onChange={(e) => setLegalBasis(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          {pendingAction === "CERRADA" && (
+            <div className="space-y-1.5">
+              <Label>Observaciones internas (opcional)</Label>
+              <textarea
+                rows={4}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Notas internas sobre este cambio de estado…"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
+            </div>
+          )}
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={backToActions} disabled={mutation.isPending}>
+              Cancelar
+            </Button>
+            <Button
+              variant={ACTION_CONFIG[pendingAction].variant === "destructive" ? "destructive" : "default"}
+              size="sm"
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending || !isValid}
+            >
+              {mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Confirmar
+            </Button>
           </div>
-        )}
+        </div>
+      </div>
+    )}
+    </>
+  )
+}
 
-        {pendingAction === null && (
-          <>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <div className="flex justify-end">
-              <Button variant="outline" size="sm" onClick={onClose}>Cerrar</Button>
+// ── Preview modal para el panel de auditor ──────────────────────────────────
+function AdminDocPreviewModal({ fetchFn, filename, onClose }: {
+  fetchFn: () => Promise<{ data: unknown }>
+  filename: string
+  onClose: () => void
+}) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const [contentType, setContentType] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let url: string | null = null
+    fetchFn()
+      .then((res) => {
+        const blob = res.data as Blob
+        setContentType(blob.type || "application/octet-stream")
+        url = URL.createObjectURL(blob)
+        setBlobUrl(url)
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+    return () => { if (url) URL.revokeObjectURL(url) }
+  }, [])
+
+  const download = () => {
+    if (!blobUrl) return
+    const a = document.createElement("a"); a.href = blobUrl; a.download = filename; a.click()
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="bg-background rounded-xl shadow-2xl flex flex-col"
+        style={{ width: "min(92vw, 960px)", height: "min(90vh, 780px)" }}
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+          <span className="text-sm font-semibold truncate max-w-[70%]">{filename}</span>
+          <div className="flex items-center gap-2">
+            {blobUrl && (
+              <Button variant="outline" size="sm" onClick={download} className="gap-1.5">
+                <Download className="w-3.5 h-3.5" /> Descargar
+              </Button>
+            )}
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden rounded-b-xl bg-muted/30">
+          {loading && (
+            <div className="flex items-center justify-center h-full gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" /> Cargando…
             </div>
-          </>
-        )}
+          )}
+          {error && <div className="flex items-center justify-center h-full text-sm text-destructive">No se pudo cargar el documento.</div>}
+          {blobUrl && !loading && (
+            contentType.startsWith("image/") ? (
+              <img src={blobUrl} alt={filename} className="w-full h-full object-contain p-4" />
+            ) : contentType === "application/pdf" ? (
+              <iframe src={blobUrl} title={filename} className="w-full h-full border-0 rounded-b-xl" />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-sm text-muted-foreground">
+                <p>Este tipo de archivo no se puede previsualizar.</p>
+                <Button variant="outline" size="sm" onClick={download} className="gap-1.5">
+                  <Download className="w-3.5 h-3.5" /> Descargar archivo
+                </Button>
+              </div>
+            )
+          )}
+        </div>
       </div>
     </div>
   )
@@ -838,8 +877,13 @@ function RequestDetailModal({
   const isRejected = !!(request.denialLegalBasis?.trim())
   const isTerminal = ["RESPONDIDA", "CERRADA"].includes(request.status)
   const currentIdx = STATUS_STEPS.indexOf(request.status as ArcoStatus)
+  const [previewDoc, setPreviewDoc] = useState<{ fetchFn: () => Promise<{ data: unknown }>; filename: string } | null>(null)
+
+  const showPortabilityDownload =
+    request.requestType === "PORTABILIDAD" && isTerminal && !isRejected
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-xl space-y-4 p-6 max-h-[90vh] overflow-y-auto">
 
@@ -967,11 +1011,45 @@ function RequestDetailModal({
           </div>
         )}
 
+        {/* Descarga de archivo de portabilidad */}
+        {showPortabilityDownload && (
+          <div className="rounded-xl border px-4 py-3 space-y-2"
+            style={{ borderColor: "hsl(var(--primary) / 0.3)", background: "hsl(var(--primary) / 0.04)" }}>
+            <p className="text-xs font-semibold" style={{ color: "hsl(var(--primary))" }}>
+              📦 Archivo de portabilidad generado
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Se generó un archivo JSON con los datos del titular disponible para descarga.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setPreviewDoc({
+                fetchFn: () => arcoApi.downloadPortability(request.id) as Promise<{ data: unknown }>,
+                filename: `portabilidad-${request.id}.json`,
+              })}
+            >
+              <Download className="w-3.5 h-3.5" />
+              Descargar / Ver archivo
+            </Button>
+          </div>
+        )}
+
         <div className="flex justify-end pt-1 border-t border-border">
           <Button variant="outline" size="sm" onClick={onClose}>Cerrar</Button>
         </div>
       </div>
     </div>
+
+    {previewDoc && (
+      <AdminDocPreviewModal
+        fetchFn={previewDoc.fetchFn}
+        filename={previewDoc.filename}
+        onClose={() => setPreviewDoc(null)}
+      />
+    )}
+    </>
   )
 }
 

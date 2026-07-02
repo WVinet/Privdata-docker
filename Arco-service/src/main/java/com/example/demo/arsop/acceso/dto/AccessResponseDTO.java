@@ -6,4 +6,5 @@ import lombok.Data;
 public class AccessResponseDTO {
 
     private String observations;
+    private String resolvedByEmail;
 }

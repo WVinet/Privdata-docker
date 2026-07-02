@@ -98,6 +98,7 @@ public class ArcoBffService {
     }
 
     public Object respondAccess(String id, Map<String, Object> body, String authorization) {
+        body.put("resolvedByEmail", JwtUtil.extractEmail(authorization));
         Object result = arcoClient.respondAccess(id, body);
         String orgId  = extractDataField(result, "organizationId");
         auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
@@ -126,6 +127,7 @@ public class ArcoBffService {
     }
 
     public Object respondRectification(String id, Map<String, Object> body, String authorization) {
+        body.put("resolvedByEmail", JwtUtil.extractEmail(authorization));
         Object result = arcoClient.respondRectification(id, body);
         String orgId  = extractDataField(result, "organizationId");
         auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
@@ -154,6 +156,7 @@ public class ArcoBffService {
     }
 
     public Object respondSuppression(String id, Map<String, Object> body, String authorization) {
+        body.put("resolvedByEmail", JwtUtil.extractEmail(authorization));
         Object result = arcoClient.respondSuppression(id, body);
         String orgId  = extractDataField(result, "organizationId");
         auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
@@ -182,6 +185,7 @@ public class ArcoBffService {
     }
 
     public Object respondOpposition(String id, Map<String, Object> body, String authorization) {
+        body.put("resolvedByEmail", JwtUtil.extractEmail(authorization));
         Object result = arcoClient.respondOpposition(id, body);
         String orgId  = extractDataField(result, "organizationId");
         auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
@@ -219,6 +223,7 @@ public class ArcoBffService {
     }
 
     public Object respondPortability(String id, Map<String, Object> body, String authorization) {
+        body.put("resolvedByEmail", JwtUtil.extractEmail(authorization));
         Object result = arcoClient.respondPortability(id, body);
         String orgId  = extractDataField(result, "organizationId");
         auditClient.log(orgId, "UPDATE", "Solicitud ARSO",

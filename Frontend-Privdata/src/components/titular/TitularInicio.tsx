@@ -1,8 +1,16 @@
 import { useQuery } from "@tanstack/react-query"
 import { complianceApi, arcoApi } from "@/lib/api"
 import { type TitularTab } from "./TitularPortalLayout"
-import type { Consent, ConsentDefinition } from "@/types/compliance"
+import type { Consent, ConsentDefinition, TreatmentActivity } from "@/types/compliance"
 import type { ArcoRequest } from "@/types/arco"
+
+const LEGAL_BASIS_SHORT: Record<string, string> = {
+  CONSENTIMIENTO:   "Art. 12 — Consentimiento",
+  CONTRATO:         "Art. 13 — Contrato",
+  OBLIGACION_LEGAL: "Art. 13 — Obligación legal",
+  INTERES_LEGITIMO: "Art. 13 — Interés legítimo",
+  INTERES_VITAL:    "Art. 13 — Interés vital",
+}
 
 interface Props {
   organizationId: string
@@ -42,9 +50,16 @@ export default function TitularInicio({ organizationId, dataSubjectId, name, rut
     enabled:  !!dataSubjectId,
   })
 
-  const consents: Consent[]          = consentsRaw ?? []
+  const { data: ratRaw } = useQuery({
+    queryKey: ["rat", organizationId],
+    queryFn:  () => complianceApi.getRat(organizationId).then((r) => r.data),
+    enabled:  !!organizationId,
+  })
+
+  const consents: Consent[]              = consentsRaw ?? []
   const definitions: ConsentDefinition[] = defsRaw ?? []
-  const arcoList: ArcoRequest[]       = arcoRaw?.data ?? []
+  const arcoList: ArcoRequest[]          = arcoRaw?.data ?? []
+  const ratList: TreatmentActivity[]     = Array.isArray(ratRaw) ? ratRaw.filter((a) => a.status === "ACTIVE") : []
 
   const defMap = new Map<string, ConsentDefinition>(definitions.map((d) => [d.id, d]))
 
@@ -212,22 +227,45 @@ export default function TitularInicio({ organizationId, dataSubjectId, name, rut
           </button>
         </div>
 
-        {/* Finalidades — próximamente */}
+        {/* Finalidades de tratamiento (RAT activo) */}
         <div className="bg-white rounded-2xl border p-5 shadow-sm" style={{ borderColor: "hsl(var(--border))" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: "hsl(var(--muted-foreground))" }}>
-              Finalidades de tratamiento
-            </h3>
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-              style={{ background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>
-              Próximamente
-            </span>
-          </div>
-          <p className="text-xs leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
-            Aquí podrás ver todas las finalidades para las que se tratan tus datos personales,
-            incluyendo las bases legales y los responsables de cada tratamiento.
-          </p>
+          <h3 className="text-xs font-semibold uppercase tracking-widest mb-4"
+            style={{ color: "hsl(var(--muted-foreground))" }}>
+            Finalidades de tratamiento
+          </h3>
+          {ratList.length === 0 ? (
+            <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+              No hay actividades de tratamiento activas registradas.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {ratList.slice(0, 3).map((a) => (
+                <div key={a.id} className="rounded-xl px-3 py-2.5 space-y-0.5"
+                  style={{ background: "hsl(var(--muted) / 0.5)" }}>
+                  <p className="text-xs font-semibold truncate" style={{ color: "hsl(var(--foreground))" }}>
+                    {a.name}
+                    {a.containsSensitiveData && (
+                      <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full align-middle"
+                        style={{ background: "hsl(var(--destructive) / 0.1)", color: "hsl(var(--destructive))" }}>
+                        sensible
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-[11px] truncate" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    {a.purpose}
+                  </p>
+                  <p className="text-[10px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    {LEGAL_BASIS_SHORT[a.legalBasis] ?? a.legalBasis}
+                  </p>
+                </div>
+              ))}
+              {ratList.length > 3 && (
+                <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  +{ratList.length - 3} finalidades más
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Solicitud en trámite */}

@@ -49,10 +49,12 @@ export function RespondModal({ claim, onClose }: { claim: AgencyClaim; onClose: 
           {claim.originalResolutionSummary && (
             <div className="rounded-md bg-muted px-3 py-2 space-y-1">
               <p className="text-xs text-muted-foreground">Resolución original de la organización</p>
-              <p className="text-sm text-foreground whitespace-pre-wrap">{claim.originalResolutionSummary}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Gestionado por: {claim.originalResolvedByEmail ?? "no registrado"}
-              </p>
+              <div className="text-sm text-foreground whitespace-pre-wrap overflow-y-auto" style={{ maxHeight: "220px" }}>{claim.originalResolutionSummary}</div>
+              {claim.originalResolvedByEmail && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Contacto: <span className="font-medium text-foreground">{claim.originalResolvedByEmail}</span>
+                </p>
+              )}
             </div>
           )}
 

@@ -61,15 +61,15 @@ public class AccesoService {
             rejected.setIdentityVerificationStatus(
                     ArcoIdentityVerificationStatus.VERIFICADA);
 
-            rejected.setSubmittedAt(LocalDateTime.now());
-            rejected.setResolvedAt(LocalDateTime.now());
+            LocalDateTime rejectedNow = LocalDateTime.now();
+            rejected.setSubmittedAt(rejectedNow);
+            rejected.setResolvedAt(rejectedNow);
+            rejected.setDueDate(rejectedNow.plusDays(30));
 
             rejected.setResolutionSummary(
                     "Solicitud rechazada por exceso de solicitudes de acceso."
             );
-            rejected.setAgencyClaimDeadline(
-                    LocalDateTime.now().plusDays(30)
-            );
+            rejected.setAgencyClaimDeadline(rejectedNow.plusDays(30));
 
             ArcoRequest savedRejected = arcoRequestRepository.save(rejected);
             notificarResolucion(savedRejected);
@@ -201,6 +201,9 @@ public class AccesoService {
         request.setResolvedAt(LocalDateTime.now());
 
         request.setResolutionSummary(accessRequest.getResponseSummary());
+        if (dto != null && dto.getResolvedByEmail() != null) {
+            request.setResolvedByEmail(dto.getResolvedByEmail());
+        }
 
         autoLiftBlock(request);
         accessRequestRepository.save(accessRequest);

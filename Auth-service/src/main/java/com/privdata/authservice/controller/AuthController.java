@@ -96,6 +96,12 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponseDTO<>(true, "Cuenta activada correctamente", response));
     }
 
+    @PostMapping("/users/by-person/{personId}/disable")
+    public ResponseEntity<ApiResponseDTO<Void>> disableByPersonId(@PathVariable UUID personId) {
+        authService.disableByPersonId(personId);
+        return ResponseEntity.ok(new ApiResponseDTO<>(true, "Cuenta desactivada correctamente", null));
+    }
+
     @PatchMapping("/users/by-person/{personId}/email")
     public ResponseEntity<ApiResponseDTO<Void>> updateEmailByPersonId(
             @PathVariable UUID personId,

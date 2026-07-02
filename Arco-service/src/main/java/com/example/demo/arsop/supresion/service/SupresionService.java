@@ -3,6 +3,7 @@ package com.example.demo.arsop.supresion.service;
 import com.example.demo.arsop.common.dto.VerifyIdentityDTO;
 import com.example.demo.arsop.common.service.EmailService;
 import com.example.demo.arsop.supresion.dto.SuppressionResponseDTO;
+import com.example.demo.client.AuthClient;
 import com.example.demo.arsop.supresion.enums.SuppressionCause;
 import com.example.demo.arsop.supresion.enums.SuppressionDecision;
 import com.example.demo.arsop.supresion.enums.SuppressionStatus;
@@ -32,6 +33,7 @@ public class SupresionService {
     private final ArcoRequestRepository arcoRequestRepository;
     private final SuppressionRequestRepository suppressionRequestRepository;
     private final OrganizationClient organizationClient;
+    private final AuthClient authClient;
     private final EmailService emailService;
 
     @Transactional
@@ -159,6 +161,10 @@ public class SupresionService {
             throw new IllegalArgumentException("Debe indicar si la solicitud fue aprobada o rechazada.");
         }
 
+        if (dto.getResolvedByEmail() != null) {
+            request.setResolvedByEmail(dto.getResolvedByEmail());
+        }
+
         detail.setDataStillNecessary(dto.getDataStillNecessary());
         detail.setAnotherLegalBasisExists(dto.getAnotherLegalBasisExists());
         detail.setRetentionPeriodStillValid(dto.getRetentionPeriodStillValid());
@@ -215,25 +221,20 @@ public class SupresionService {
             return saved;
         }
 
-        boolean anonymizeInsteadOfDelete = Boolean.TRUE.equals(dto.getAnonymizeInsteadOfDelete());
+        organizationClient.anonymizeDataSubject(
+                request.getOrganizationId(),
+                request.getDataSubjectId()
+        );
 
-        if (anonymizeInsteadOfDelete) {
-            organizationClient.anonymizeDataSubject(
-                    request.getOrganizationId(),
-                    request.getDataSubjectId()
-            );
-        } else {
-            organizationClient.deleteDataSubject(
-                    request.getOrganizationId(),
-                    request.getDataSubjectId()
-            );
+        try {
+            authClient.disableByPersonId(request.getDataSubjectId());
+        } catch (Exception ex) {
+            System.out.println("No se pudo deshabilitar la cuenta del titular: " + ex.getMessage());
         }
 
         String summary = dto.getObservations() != null && !dto.getObservations().isBlank()
                 ? dto.getObservations()
-                : anonymizeInsteadOfDelete
-                    ? "Solicitud aprobada. Los datos del titular fueron anonimizados."
-                    : "Solicitud aprobada. Los datos del titular fueron suprimidos.";
+                : "Solicitud de supresión aprobada. Tus datos han sido anonimizados y tu cuenta ha sido desactivada. No podrás volver a iniciar sesión.";
 
         detail.setDecision(SuppressionDecision.APPROVED);
         detail.setSuppressionStatus(SuppressionStatus.RESPONDIDA);

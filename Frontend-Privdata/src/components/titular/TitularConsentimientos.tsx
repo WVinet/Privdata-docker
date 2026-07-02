@@ -26,7 +26,6 @@ const LEGAL_BASIS_LABEL: Record<string, string> = {
   OBLIGACION_LEGAL: "Art. 13 — Obligación legal",
   INTERES_LEGITIMO: "Art. 13 — Interés legítimo",
   INTERES_VITAL:    "Art. 13 — Interés vital",
-  FUNCION_PUBLICA:  "Art. 20 — Función pública",
 }
 
 function formatDate(iso: string | null) {

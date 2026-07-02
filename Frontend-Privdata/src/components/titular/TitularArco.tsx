@@ -824,7 +824,7 @@ export default function TitularArco({ rut, email, organizationId, dataSubjectId,
                   const filtered = treatmentActivities.filter((a) => {
                     if (a.legalBasis === "CONTRATO" || a.legalBasis === "OBLIGACION_LEGAL") return false
                     if (selectedOppositionCause === "LEGITIMATE_INTEREST") {
-                      return a.legalBasis === "INTERES_LEGITIMO" || a.legalBasis === "INTERES_VITAL" || a.legalBasis === "FUNCION_PUBLICA"
+                      return a.legalBasis === "INTERES_LEGITIMO" || a.legalBasis === "INTERES_VITAL"
                     }
                     return true
                   })

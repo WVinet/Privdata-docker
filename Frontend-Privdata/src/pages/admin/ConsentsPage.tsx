@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Search, ShieldCheck, ShieldOff, Clock, AlertCircle, Loader2,
   ChevronLeft, ChevronRight, Plus, Lock, Unlock, FileText,
-  ChevronDown, Send,
+  ChevronDown, Send, Eye,
 } from "lucide-react"
 import { toast } from "sonner"
 import * as Dialog from "@radix-ui/react-dialog"
@@ -32,7 +32,6 @@ const LEGAL_BASIS_OPTIONS: { value: LegalBasis; label: string }[] = [
   { value: "OBLIGACION_LEGAL", label: "Art. 13 — Obligación legal" },
   { value: "INTERES_LEGITIMO", label: "Art. 13 — Interés legítimo" },
   { value: "INTERES_VITAL",    label: "Art. 13 — Interés vital" },
-  { value: "FUNCION_PUBLICA",  label: "Art. 20 — Función pública" },
 ]
 
 const statusCfg: Record<ConsentStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -63,6 +62,8 @@ type Tab = "registros" | "definiciones"
 export default function ConsentsPage() {
   const { getUser }    = useAuth()
   const orgId          = getUser()?.organizationId ?? ""
+  const userRole       = getUser()?.authorities?.find((a: string) => a.startsWith("ROLE_"))?.replace("ROLE_", "")
+  const isAuditor      = userRole === "AUDITOR" || userRole === "AUDITOR_AGENCIA"
   const [tab, setTab]  = useState<Tab>("registros")
 
   return (
@@ -96,15 +97,15 @@ export default function ConsentsPage() {
         ))}
       </div>
 
-      {tab === "registros"    && <RegistrosTab orgId={orgId} />}
-      {tab === "definiciones" && <DefinicionesTab orgId={orgId} />}
+      {tab === "registros"    && <RegistrosTab orgId={orgId} isAuditor={isAuditor} />}
+      {tab === "definiciones" && <DefinicionesTab orgId={orgId} isAuditor={isAuditor} />}
     </div>
   )
 }
 
 // ── tab: registros (accordion agrupado por titular) ───────────────────────────
 
-function RegistrosTab({ orgId }: { orgId: string }) {
+function RegistrosTab({ orgId, isAuditor }: { orgId: string; isAuditor: boolean }) {
   const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<ConsentStatus | "">("")
   const [search,       setSearch]       = useState("")
@@ -369,7 +370,7 @@ function RegistrosTab({ orgId }: { orgId: string }) {
                                         )}
                                       </td>
                                       <td className="px-4 py-2.5 text-right">
-                                        {c.status === "ACTIVE" && (
+                                        {c.status === "ACTIVE" && !isAuditor && (
                                           <button
                                             onClick={() => setPendingRevoke(c)}
                                             className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors"
@@ -450,10 +451,11 @@ function RegistrosTab({ orgId }: { orgId: string }) {
 
 // ── tab: definiciones ─────────────────────────────────────────────────────────
 
-function DefinicionesTab({ orgId }: { orgId: string }) {
+function DefinicionesTab({ orgId, isAuditor }: { orgId: string; isAuditor: boolean }) {
   const queryClient   = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [pendingPublish, setPendingPublish] = useState<ConsentDefinition | null>(null)
+  const [viewingDef, setViewingDef] = useState<ConsentDefinition | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ["consent-definitions", orgId],
@@ -480,10 +482,12 @@ function DefinicionesTab({ orgId }: { orgId: string }) {
         <p className="text-sm text-muted-foreground">
           Define qué consentimientos solicita la organización. Publícalos para que los titulares los vean como pendientes.
         </p>
-        <Button onClick={() => setShowForm(true)} className="gap-2 shrink-0">
-          <Plus className="w-4 h-4" />
-          Nueva definición
-        </Button>
+        {!isAuditor && (
+          <Button onClick={() => setShowForm(true)} className="gap-2 shrink-0">
+            <Plus className="w-4 h-4" />
+            Nueva definición
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -509,6 +513,8 @@ function DefinicionesTab({ orgId }: { orgId: string }) {
                   onPublish={() => setPendingPublish(def)}
                   onDeactivate={() => toggleMutation.mutate({ id: def.id, active: false })}
                   isUpdating={toggleMutation.isPending}
+                  isAuditor={isAuditor}
+                  onViewDetail={() => setViewingDef(def)}
                 />
               ))}
             </div>
@@ -563,17 +569,24 @@ function DefinicionesTab({ orgId }: { orgId: string }) {
         orgId={orgId}
         onCreated={() => queryClient.invalidateQueries({ queryKey: ["consent-definitions", orgId] })}
       />
+
+      <DefinicionDetailDialog
+        definition={viewingDef}
+        onClose={() => setViewingDef(null)}
+      />
     </>
   )
 }
 
 function DefinicionRow({
-  definition, onPublish, onDeactivate, isUpdating,
+  definition, onPublish, onDeactivate, isUpdating, isAuditor, onViewDetail,
 }: {
   definition: ConsentDefinition
   onPublish: () => void
   onDeactivate: () => void
   isUpdating: boolean
+  isAuditor: boolean
+  onViewDetail: () => void
 }) {
   return (
     <div className={`rounded-xl border p-4 flex items-start gap-4 transition-opacity ${!definition.active ? "opacity-70" : ""} border-border`}>
@@ -609,7 +622,15 @@ function DefinicionRow({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        {!definition.active ? (
+        {isAuditor ? (
+          <button
+            onClick={onViewDetail}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors hover:bg-muted border-border text-muted-foreground"
+          >
+            <Eye className="w-3 h-3" />
+            Ver detalle
+          </button>
+        ) : !definition.active ? (
           <button
             onClick={onPublish}
             disabled={isUpdating}
@@ -629,6 +650,73 @@ function DefinicionRow({
         )}
       </div>
     </div>
+  )
+}
+
+function DefinicionDetailDialog({
+  definition, onClose,
+}: { definition: ConsentDefinition | null; onClose: () => void }) {
+  return (
+    <Dialog.Root open={!!definition} onOpenChange={(o) => { if (!o) onClose() }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-border focus:outline-none">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 shrink-0">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <Dialog.Title className="text-sm font-bold text-foreground">Detalle de definición</Dialog.Title>
+              <Dialog.Description className="text-xs text-muted-foreground">Vista de solo lectura</Dialog.Description>
+            </div>
+          </div>
+
+          {definition && (
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Título</p>
+                <p className="text-foreground font-medium">{definition.title}</p>
+              </div>
+              {definition.description && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Descripción</p>
+                  <p className="text-foreground">{definition.description}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Base legal</p>
+                <p className="text-foreground">
+                  {LEGAL_BASIS_OPTIONS.find((o) => o.value === definition.legalBasis)?.label ?? definition.legalBasis}
+                </p>
+              </div>
+              <div className="flex gap-6">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Requerido</p>
+                  <p className="text-foreground">{definition.required ? "Sí" : "No"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Estado</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    definition.active ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
+                  }`}>
+                    {definition.active ? "Publicada" : "Inactiva"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <button
+              onClick={onClose}
+              className="w-full px-4 py-2 text-xs rounded-lg border font-medium hover:bg-muted transition-colors border-border text-muted-foreground"
+            >
+              Cerrar
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }
 
