@@ -23,4 +23,5 @@ public class SuppressionResponseDTO {
     private LocalDateTime retentionExpiresAt;
 
     private Boolean anonymizeInsteadOfDelete;
+    private String resolvedByEmail;
 }

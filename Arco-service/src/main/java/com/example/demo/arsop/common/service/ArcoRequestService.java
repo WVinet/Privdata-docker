@@ -9,6 +9,7 @@ import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
 import com.example.demo.dto.request.arcoRequest.ArcoRequestStatusUpdateDTO;
 import com.example.demo.dto.response.AgencyClaimResponseDTO;
 import com.example.demo.dto.response.ArcoRequestResponseDTO;
+import com.example.demo.dto.response.OrgResponseDTO;
 import com.example.demo.dto.response.PersonResponseDTO;
 import com.example.demo.enums.arcoRequest.ArcoIdentityVerificationStatus;
 import com.example.demo.enums.arcoRequest.ArcoRequestChannel;
@@ -245,26 +246,52 @@ public class ArcoRequestService {
 
         PersonResponseDTO personResponse = organizationClient.findPersonById(solicitud.getOrganizationId(), solicitud.getDataSubjectId());
 
-        AgencyClaimResponseDTO respuesta = agenciaClient.crearReclamo(
-                solicitud.getId(),
-                solicitud.getOrganizationId(),
-                solicitud.getDataSubjectId(),
-                personResponse.getData().getFullName(),
-                personResponse.getData().getEmail(),
-                solicitud.getRequestType().name(),
-                solicitud.getResolutionSummary(),
-                solicitud.getDenialLegalBasis(),
-                solicitud.getResolvedByEmail(),
-                motivo,
-                LocalDateTime.now());
+        String organizationName = null;
+        String organizationEmail = null;
+        try {
+            OrgResponseDTO org = organizationClient.findById(solicitud.getOrganizationId());
+            if (org != null) {
+                organizationName = org.name();
+                organizationEmail = org.email();
+            }
+        } catch (Exception ignored) {}
 
-        solicitud.setAgencyClaimId(respuesta.getId());
+        UUID agencyClaimUuid;
+        String agencyClaimComment;
+        try {
+            AgencyClaimResponseDTO respuesta = agenciaClient.crearReclamo(
+                    solicitud.getId(),
+                    solicitud.getOrganizationId(),
+                    organizationName,
+                    organizationEmail,
+                    solicitud.getDataSubjectId(),
+                    personResponse.getData().getFullName(),
+                    personResponse.getData().getEmail(),
+                    solicitud.getRequestType().name(),
+                    solicitud.getResolutionSummary(),
+                    solicitud.getDenialLegalBasis(),
+                    solicitud.getResolvedByEmail(),
+                    motivo,
+                    LocalDateTime.now());
+            agencyClaimUuid = respuesta.getId();
+            agencyClaimComment = "[RECLAMO_AGENCIA] Reclamo registrado ante la Agencia, ID: " + agencyClaimUuid;
+        } catch (Exception ex) {
+            agencyClaimUuid = UUID.randomUUID();
+            agencyClaimComment = "[RECLAMO_AGENCIA] Reclamo registrado localmente (Agencia-service no disponible), ID local: " + agencyClaimUuid;
+        }
+
+        solicitud.setAgencyClaimId(agencyClaimUuid);
+
+        ArcoStatus estadoAnterior = solicitud.getStatus();
+        solicitud.setStatus(ArcoStatus.CERRADA);
+        solicitud.setClosedAt(LocalDateTime.now());
+        autoLiftBlock(solicitud);
 
         ArcoRequestStatusHistory historial = new ArcoRequestStatusHistory();
         historial.setArcoRequest(solicitud);
-        historial.setPreviousStatus(solicitud.getStatus());
-        historial.setNewStatus(solicitud.getStatus());
-        historial.setComment("[RECLAMO_AGENCIA] Reclamo registrado ante la Agencia, ID: " + respuesta.getId());
+        historial.setPreviousStatus(estadoAnterior);
+        historial.setNewStatus(ArcoStatus.CERRADA);
+        historial.setComment(agencyClaimComment);
         statusHistoryRepository.save(historial);
 
         return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));

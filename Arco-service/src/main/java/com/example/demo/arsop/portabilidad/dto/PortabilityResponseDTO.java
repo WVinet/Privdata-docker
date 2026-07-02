@@ -9,4 +9,5 @@ public class PortabilityResponseDTO {
     private String observations;
 
     private String rejectionReason;
+    private String resolvedByEmail;
 }

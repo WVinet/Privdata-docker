@@ -1,5 +1,5 @@
 import { useLocation, Link } from "react-router-dom"
-import { Inbox, History, LogOut, ChevronLeft, ChevronRight, X, Landmark } from "lucide-react"
+import { Inbox, History, LogOut, ChevronLeft, ChevronRight, X, Landmark, ListChecks } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { useState } from "react"
@@ -11,8 +11,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Reclamos",  path: "/reclamos",  icon: Inbox },
-  { label: "Historial", path: "/historial", icon: History },
+  { label: "Solicitudes ARSOP",   path: "/solicitudes", icon: ListChecks },
+  { label: "Reclamos pendientes", path: "/reclamos",    icon: Inbox },
+  { label: "Historial",           path: "/historial",   icon: History },
 ]
 
 function NavLink({ item, collapsed, mobile, onMobileClose }: {

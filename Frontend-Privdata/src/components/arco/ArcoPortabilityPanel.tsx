@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { Loader2, Download, FileJson, ShieldCheck, AlertTriangle, UserRound, CheckCircle2, XCircle } from "lucide-react"
 import { complianceApi, personsApi, arcoApi } from "@/lib/api"
-import type { Consent, TreatmentActivity } from "@/types/compliance"
+import type { Consent, ConsentDefinition, TreatmentActivity } from "@/types/compliance"
 import { parsePortability, PORTABILITY_CAUSE_LABELS } from "@/lib/portability"
 
 const LEGAL_BASIS_LABEL: Record<string, string> = {
@@ -11,7 +11,6 @@ const LEGAL_BASIS_LABEL: Record<string, string> = {
   OBLIGACION_LEGAL: "Obligación legal (Art. 13 b)",
   INTERES_LEGITIMO: "Interés legítimo (Art. 13 d)",
   INTERES_VITAL:    "Interés vital (Art. 13 e)",
-  FUNCION_PUBLICA:  "Función pública (Art. 20)",
 }
 
 function formatDate(iso: string | null) {
@@ -52,9 +51,16 @@ export default function ArcoPortabilityPanel({ arcoRequestId, dataSubjectId, org
     queryFn: () => complianceApi.getRat(organizationId).then(r => r.data),
   })
 
-  const person     = personData?.data
-  const consents: Consent[]            = Array.isArray(consentsData) ? consentsData : []
-  const activities: TreatmentActivity[] = Array.isArray(ratData) ? ratData : []
+  const { data: definitionsData } = useQuery({
+    queryKey: ["consent-definitions", organizationId],
+    queryFn: () => complianceApi.getConsentDefinitions(organizationId).then(r => Array.isArray(r.data) ? r.data : []),
+  })
+
+  const person       = personData?.data
+  const consents: Consent[]              = Array.isArray(consentsData) ? consentsData : []
+  const activities: TreatmentActivity[]  = Array.isArray(ratData) ? ratData : []
+  const definitions: ConsentDefinition[] = Array.isArray(definitionsData) ? definitionsData : []
+  const defMap = new Map(definitions.map(d => [d.id, d]))
 
   const isLoading = loadingPerson || loadingConsents || loadingRat
 
@@ -76,12 +82,77 @@ export default function ArcoPortabilityPanel({ arcoRequestId, dataSubjectId, org
       if (approved) setJustApproved(true)
       onApplied(
         approved
-          ? `Informe de Portabilidad — Art. 8 bis Ley 21.719\n\nSolicitud aprobada. Se generó un archivo con los datos del titular disponible para descarga.` +
-            (observations.trim() ? `\n\n${observations.trim()}` : "")
+          ? buildPortabilityResolution()
           : `Portabilidad rechazada — Art. 8 bis Ley 21.719\n\n${data?.resolutionSummary ?? rejectionReason.trim()}`
       )
     },
   })
+
+  function formatRetention(days: number): string {
+    if (days >= 365) { const y = Math.round(days / 365); return y === 1 ? "1 año" : `${y} años` }
+    if (days >= 30)  { const m = Math.round(days / 30);  return m === 1 ? "1 mes"  : `${m} meses` }
+    return days === 1 ? "1 día" : `${days} días`
+  }
+
+  function buildPortabilityResolution(): string {
+    const lines: string[] = []
+    lines.push(`Informe de Portabilidad — Art. 8 bis Ley 21.719`)
+    lines.push(`Fecha de emisión: ${new Date().toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" })}`)
+    lines.push("")
+
+    if (person) {
+      lines.push("Datos identificativos registrados:")
+      lines.push(`  Nombre completo: ${person.fullName}`)
+      if (person.rut)            lines.push(`  RUT: ${person.rut}`)
+      if (person.email)          lines.push(`  Correo electrónico: ${person.email}`)
+      if (person.phone)          lines.push(`  Teléfono: ${person.phone}`)
+      if (person.position)       lines.push(`  Cargo: ${person.position}`)
+      if (person.departmentName) lines.push(`  Departamento: ${person.departmentName}`)
+      lines.push(`  Estado: ${person.isActive ? "Activo" : "Inactivo"}`)
+      if (person.createdAt)      lines.push(`  Fecha de registro: ${new Date(person.createdAt).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" })}`)
+      lines.push("")
+    }
+
+    const activeConsents = consents.filter(c => c.status === "ACTIVE")
+    if (activeConsents.length > 0) {
+  lines.push(`Consentimientos vigentes (${activeConsents.length}):`)
+      activeConsents.forEach((c, i) => {
+        const def = c.definitionId ? defMap.get(c.definitionId) : undefined
+        const title = def?.title ?? c.collectionMethod.replace(/_/g, " ").toLowerCase()
+        const date  = c.grantedAt ? new Date(c.grantedAt).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—"
+        const vence = c.expiresAt  ? ` · Vence: ${new Date(c.expiresAt).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" })}` : ""
+        lines.push(`  ${i + 1}. ${title} · Otorgado el ${date} vía ${c.collectionMethod.replace(/_/g, " ").toLowerCase()}${vence}`)
+        if (def?.description) lines.push(`     ${def.description}`)
+      })
+      lines.push("")
+    } else {
+      lines.push("Sin consentimientos vigentes registrados.")
+      lines.push("")
+    }
+
+    if (portableActivities.length > 0) {
+      lines.push(`Actividades de tratamiento a exportar (${portableActivities.length}):`)
+      portableActivities.forEach((a, i) => {
+        lines.push(`  ${i + 1}. ${a.name}`)
+        lines.push(`     Finalidad: ${a.purpose}`)
+        lines.push(`     Base legal: ${LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis}`)
+        const dest = a.terceros && a.terceros.length > 0
+          ? a.terceros.map((t: { nombre: string; pais: string }) => `${t.nombre} (${t.pais})`).join(", ")
+          : a.thirdPartyRecipients
+        if (dest)                  lines.push(`     Destinatarios: ${dest}`)
+        if (a.retentionPeriodDays) lines.push(`     Retención: ${formatRetention(a.retentionPeriodDays)}`)
+        if (a.dataCategories.length > 0) {
+          const cats = a.dataCategories.map(dc => dc.name).join(", ")
+          lines.push(`     Categorías de datos: ${cats}`)
+        }
+      })
+      lines.push("")
+    }
+
+    lines.push("Su archivo de datos en formato JSON ha sido generado y está disponible para descarga en el portal de seguimiento.")
+    if (observations.trim()) lines.push(""), lines.push(observations.trim())
+    return lines.join("\n")
+  }
 
   const downloadMutation = useMutation({
     mutationFn: async () => {
@@ -112,23 +183,36 @@ export default function ArcoPortabilityPanel({ arcoRequestId, dataSubjectId, org
         cargo: person.position,
         departamento: person.departmentName,
       } : null,
-      consentimientos: consents.map(c => ({
-        id: c.id,
-        estado: c.status,
-        otorgadoEl: c.grantedAt,
-        revocadoEl: c.revokedAt,
-        expiraEl: c.expiresAt,
-        metodoRecoleccion: c.collectionMethod,
-        notas: c.notes,
-      })),
-      actividadesTratamiento: portableActivities.map(a => ({
-        nombre: a.name,
-        finalidad: a.purpose,
-        baseLegal: a.legalBasis,
-        categoriasDatos: a.dataCategories.map(dc => dc.name),
-        retencionDias: a.retentionPeriodDays,
-        destinatarios: a.thirdPartyRecipients,
-      })),
+      consentimientos: consents.map(c => {
+        const def = c.definitionId ? defMap.get(c.definitionId) : undefined
+        return {
+          id: c.id,
+          titulo: def?.title ?? null,
+          descripcion: def?.description ?? null,
+          estado: c.status,
+          otorgadoEl: c.grantedAt,
+          revocadoEl: c.revokedAt,
+          expiraEl: c.expiresAt,
+          metodoRecoleccion: c.collectionMethod,
+          notas: c.notes,
+        }
+      }),
+      actividadesTratamiento: portableActivities.map(a => {
+        const destinatarios = a.terceros && a.terceros.length > 0
+          ? a.terceros.map(t => ({ nombre: t.nombre, pais: t.pais }))
+          : a.thirdPartyRecipients
+              ? [{ nombre: a.thirdPartyRecipients, pais: null }]
+              : []
+        return {
+          nombre: a.name,
+          finalidad: a.purpose,
+          baseLegal: a.legalBasis,
+          baseLegalLabel: LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis,
+          categoriasDatos: a.dataCategories.map(dc => ({ nombre: dc.name, sensible: dc.sensitive })),
+          retencionDias: a.retentionPeriodDays,
+          destinatarios,
+        }
+      }),
     }
   }
 
@@ -224,24 +308,31 @@ export default function ArcoPortabilityPanel({ arcoRequestId, dataSubjectId, org
           <p className="text-xs text-muted-foreground">Sin consentimientos registrados.</p>
         ) : (
           <div className="space-y-1.5">
-            {consents.map(c => (
-              <div key={c.id} className="flex items-center justify-between rounded-lg bg-background border border-border px-3 py-2">
-                <div className="text-xs">
-                  <span className="font-medium">{c.collectionMethod.replace("_", " ").toLowerCase()}</span>
-                  <span className="text-muted-foreground ml-1.5">· otorgado {formatDate(c.grantedAt)}</span>
-                  {c.expiresAt && <span className="text-muted-foreground"> · vence {formatDate(c.expiresAt)}</span>}
+            {consents.map(c => {
+              const def = c.definitionId ? defMap.get(c.definitionId) : undefined
+              return (
+              <div key={c.id} className="rounded-lg bg-background border border-border px-3 py-2 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-foreground">
+                    {def?.title ?? c.collectionMethod.replace(/_/g, " ").toLowerCase()}
+                  </span>
+                  <span
+                    className="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full"
+                    style={{
+                      background: c.status === "ACTIVE" ? "hsl(var(--success) / 0.12)" : "hsl(var(--muted))",
+                      color: c.status === "ACTIVE" ? "hsl(var(--success))" : "hsl(var(--muted-foreground))",
+                    }}
+                  >
+                    {c.status === "ACTIVE" ? "Vigente" : c.status}
+                  </span>
                 </div>
-                <span
-                  className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: c.status === "ACTIVE" ? "hsl(var(--success) / 0.12)" : "hsl(var(--muted))",
-                    color: c.status === "ACTIVE" ? "hsl(var(--success))" : "hsl(var(--muted-foreground))",
-                  }}
-                >
-                  {c.status}
-                </span>
+                {def?.description && <p className="text-xs text-muted-foreground">{def.description}</p>}
+                <p className="text-xs text-muted-foreground">
+                  Otorgado el {formatDate(c.grantedAt)} · vía {c.collectionMethod.replace(/_/g, " ").toLowerCase()}
+                  {c.expiresAt && <> · vence {formatDate(c.expiresAt)}</>}
+                </p>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
@@ -256,12 +347,37 @@ export default function ArcoPortabilityPanel({ arcoRequestId, dataSubjectId, org
           <p className="text-xs text-muted-foreground">No hay actividades de tratamiento basadas en consentimiento.</p>
         ) : (
           <div className="space-y-1.5">
-            {portableActivities.map(a => (
-              <div key={a.id} className="rounded-lg bg-background border border-border px-3 py-2 space-y-0.5">
-                <p className="text-xs font-medium text-foreground">{a.name}</p>
+            {portableActivities.map(a => {
+              const dest = a.terceros && a.terceros.length > 0
+                ? a.terceros.map(t => `${t.nombre} (${t.pais})`).join(", ")
+                : a.thirdPartyRecipients
+              return (
+              <div key={a.id} className="rounded-lg bg-background border border-border px-3 py-2 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-medium text-foreground">{a.name}</p>
+                  {a.containsSensitiveData && (
+                    <span className="shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded bg-destructive/10 text-destructive">sensible</span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">{a.purpose}</p>
+                <p className="text-xs text-muted-foreground">
+                  Base legal: <span className="font-medium text-foreground">{LEGAL_BASIS_LABEL[a.legalBasis] ?? a.legalBasis}</span>
+                  {dest && <> · Destinatarios: <span className="font-medium text-foreground">{dest}</span></>}
+                  {a.retentionPeriodDays && <> · Retención: <span className="font-medium text-foreground">{formatRetention(a.retentionPeriodDays)}</span></>}
+                </p>
+                {a.dataCategories.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {a.dataCategories.map(dc => (
+                      <span key={dc.id} className="text-xs px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: dc.sensitive ? "hsl(var(--destructive) / 0.1)" : "hsl(var(--muted))",
+                          color: dc.sensitive ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))",
+                        }}>{dc.name}</span>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>

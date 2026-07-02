@@ -243,6 +243,15 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public void disableByPersonId(UUID personId) {
+        User user = userRepository.findByPersonId(personId).orElse(null);
+        if (user == null) return;
+        user.setActive(false);
+        user.setStatus(UserStatus.BLOCKED);
+        userRepository.save(user);
+    }
+
+    @Override
     public void assignRoleToUser(UUID userId, String roleName) {
 
         User user = userRepository.findById(userId)

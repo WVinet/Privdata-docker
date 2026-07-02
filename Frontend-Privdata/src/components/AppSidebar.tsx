@@ -41,10 +41,7 @@ const orgSubItems: NavItem[] = [
   { label: "Departamentos", path: "/admin/departamentos", icon: Layers },
   { label: "Cargos",        path: "/admin/cargos",        icon: Briefcase },
   { label: "Usuarios",      path: "/admin/usuarios",      icon: Users },
-]
-
-const complianceMgmtItems: NavItem[] = [
-  { label: "Terceros", path: "/compliance/terceros", icon: Share2 },
+  { label: "Terceros",      path: "/compliance/terceros", icon: Share2 },
 ]
 
 function NavLink({ item, collapsed, mobile, onMobileClose }: {
@@ -94,9 +91,11 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
   const user = getUser()
 
   const userRole = user?.authorities?.find((a: string) => a.startsWith("ROLE_"))?.replace("ROLE_", "")
-  const isAdminRole = userRole === "SUPER_ADMIN" || userRole === "ORG_ADMIN"
+  const isAdminRole       = userRole === "SUPER_ADMIN"
+  const isAuditor         = userRole === "AUDITOR_AGENCIA"
+  const isInternalAuditor = userRole === "AUDITOR"
 
-  const isOrgActive = location.pathname.startsWith("/admin/organizacion") || location.pathname.startsWith("/admin/departamentos") || location.pathname.startsWith("/admin/cargos") || location.pathname.startsWith("/admin/usuarios")
+  const isOrgActive = location.pathname.startsWith("/admin/organizacion") || location.pathname.startsWith("/admin/departamentos") || location.pathname.startsWith("/admin/cargos") || location.pathname.startsWith("/admin/usuarios") || location.pathname.startsWith("/compliance/terceros")
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <aside
@@ -165,8 +164,37 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
           </ul>
         </div>
 
-        {/* Mantenedores — solo admins */}
-        {isAdminRole && <div>
+        {/* Organización — solo AUDITOR_AGENCIA (Organización, Departamentos, Cargos) */}
+        {isAuditor && (
+          <div>
+            {(!collapsed || mobile) && (
+              <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                Organización
+              </p>
+            )}
+            {(collapsed && !mobile) && (
+              <div className="mx-2 my-1 border-t border-sidebar-border" />
+            )}
+            <ul className="space-y-1 px-2">
+              {[
+                { label: "Mi Organización", path: "/admin/organizacion",  icon: Building2 },
+                { label: "Departamentos",   path: "/admin/departamentos", icon: Layers },
+                { label: "Cargos",          path: "/admin/cargos",        icon: Briefcase },
+              ].map((item) => (
+                <NavLink
+                  key={item.path}
+                  item={item}
+                  collapsed={collapsed}
+                  mobile={mobile}
+                  onMobileClose={onMobileClose}
+                />
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Mantenedores — admins y AUDITOR interno (sin Usuarios para AUDITOR) */}
+        {(isAdminRole || isInternalAuditor) && <div>
           {(!collapsed || mobile) && (
             <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
               Mantenedores
@@ -176,16 +204,6 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
             <div className="mx-2 my-1 border-t border-sidebar-border" />
           )}
           <ul className="space-y-1 px-2">
-            {/* Catálogos de compliance */}
-            {complianceMgmtItems.map((item) => (
-              <NavLink
-                key={item.path}
-                item={item}
-                collapsed={collapsed}
-                mobile={mobile}
-                onMobileClose={onMobileClose}
-              />
-            ))}
             {/* Trigger colapsable */}
             <li>
               <button
@@ -209,7 +227,7 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
               </button>
             </li>
             {/* Sub-ítems */}
-            {(!collapsed || mobile) && orgOpen && orgSubItems.map((item) => {
+            {(!collapsed || mobile) && orgOpen && orgSubItems.filter((item) => isAdminRole || item.path !== "/admin/usuarios").map((item) => {
               const isActive = location.pathname === item.path
               const Icon = item.icon
               return (

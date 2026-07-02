@@ -9,6 +9,8 @@ import java.util.UUID;
 public class AgencyClaimCreateRequest {
     private UUID arcoRequestId;
     private UUID organizationId;
+    private String organizationName;
+    private String organizationEmail;
     private UUID dataSubjectId;
     private String dataSubjectName;
     private String dataSubjectEmail;

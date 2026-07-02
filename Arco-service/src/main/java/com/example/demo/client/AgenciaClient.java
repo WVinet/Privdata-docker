@@ -22,6 +22,8 @@ public class AgenciaClient {
 
     public AgencyClaimResponseDTO crearReclamo(UUID arcoRequestId,
                                                 UUID organizationId,
+                                                String organizationName,
+                                                String organizationEmail,
                                                 UUID dataSubjectId,
                                                 String dataSubjectName,
                                                 String dataSubjectEmail,
@@ -34,6 +36,8 @@ public class AgenciaClient {
         Map<String, Object> body = new HashMap<>();
         body.put("arcoRequestId", arcoRequestId);
         body.put("organizationId", organizationId);
+        body.put("organizationName", organizationName);
+        body.put("organizationEmail", organizationEmail);
         body.put("dataSubjectId", dataSubjectId);
         body.put("dataSubjectName", dataSubjectName);
         body.put("dataSubjectEmail", dataSubjectEmail);

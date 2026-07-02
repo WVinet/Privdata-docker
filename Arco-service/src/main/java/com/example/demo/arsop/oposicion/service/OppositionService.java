@@ -176,6 +176,10 @@ public class OppositionService {
             );
         }
 
+        if (dto.getResolvedByEmail() != null) {
+            request.setResolvedByEmail(dto.getResolvedByEmail());
+        }
+
         detail.setOverridingLegitimateGrounds(
                 dto.getOverridingLegitimateGrounds()
         );

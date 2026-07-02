@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Search, UserPlus, Loader2, X, Copy, Check, UserX } from "lucide-react"
-import { usersApi, personsApi, departmentsApi } from "@/lib/api"
+import { usersApi, personsApi, departmentsApi, jobPositionsApi } from "@/lib/api"
 import { formatRut } from "@/lib/rut"
 // import { validateRut } from "@/lib/rut" // validación de dígito verificador desactivada temporalmente
 import { useAuth } from "@/hooks/use-auth"
@@ -47,6 +47,13 @@ function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => 
     enabled:  !!orgId,
   })
   const departments = deptRes?.data ?? []
+
+  const { data: jobPosRes } = useQuery({
+    queryKey: ["job-positions", orgId],
+    queryFn:  () => jobPositionsApi.list(orgId).then((r) => r.data),
+    enabled:  !!orgId,
+  })
+  const jobPositions = (jobPosRes?.data ?? []).filter((p) => p.isActive)
 
   const set = (k: keyof InvitePersonRequest) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -156,7 +163,16 @@ function InviteTitularModal({ orgId, onClose }: { orgId: string; onClose: () => 
               </div>
               <div className="space-y-1.5">
                 <Label>Cargo</Label>
-                <Input placeholder="ej. Cliente" value={form.position ?? ""} onChange={set("position")} />
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={form.position ?? ""}
+                  onChange={set("position")}
+                >
+                  <option value="">Sin cargo</option>
+                  {jobPositions.map((p) => (
+                    <option key={p.id} value={p.name}>{p.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1.5">
                 <Label>Departamento</Label>

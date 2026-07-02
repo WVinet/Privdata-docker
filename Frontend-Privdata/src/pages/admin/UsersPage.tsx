@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Search, UserPlus, Pencil, Loader2, X, Copy, Check } from "lucide-react"
-import { usersApi, authApi, departmentsApi, personsApi } from "@/lib/api"
+import { usersApi, authApi, departmentsApi, personsApi, jobPositionsApi } from "@/lib/api"
 import type { InvitePersonRequest, UpdatePersonRequest } from "@/types/person"
 import type { Person } from "@/types/person"
 import { useAuth } from "@/hooks/use-auth"
@@ -30,9 +30,8 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 }
 
 const ROLES = [
-  { value: "ANALYST",   label: "Analista" },
-  { value: "AUDITOR",   label: "Auditor" },
-  { value: "ORG_ADMIN", label: "Administrador" },
+  { value: "AUDITOR",         label: "Auditor" },
+  { value: "AUDITOR_AGENCIA", label: "Auditor Agencia" },
 ]
 const ROLE_LABEL: Record<string, string> = Object.fromEntries(ROLES.map((r) => [r.value, r.label]))
 
@@ -41,7 +40,7 @@ function InviteUserModal({ orgId, onClose }: { orgId: string; onClose: () => voi
   const qc = useQueryClient()
   const [form, setForm] = useState<InvitePersonRequest>({
     rut: "", firstName: "", secondName: "", lastName: "", maternalLastName: "",
-    email: "", position: "", departmentId: "", roleName: "ANALYST",
+    email: "", position: "", departmentId: "", roleName: "AUDITOR",
   })
   const [error, setError]           = useState("")
   const [tempPassword, setTempPass] = useState<string | null>(null)
@@ -53,6 +52,13 @@ function InviteUserModal({ orgId, onClose }: { orgId: string; onClose: () => voi
     enabled:  !!orgId,
   })
   const departments = deptRes?.data ?? []
+
+  const { data: posRes } = useQuery({
+    queryKey: ["jobPositions", orgId],
+    queryFn:  () => jobPositionsApi.list(orgId).then((r) => r.data),
+    enabled:  !!orgId,
+  })
+  const jobPositions = posRes?.data ?? []
 
   const set = (k: keyof InvitePersonRequest) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -138,7 +144,15 @@ function InviteUserModal({ orgId, onClose }: { orgId: string; onClose: () => voi
               </div>
               <div className="space-y-1.5">
                 <Label>Cargo</Label>
-                <Input placeholder="ej. Analista de datos" value={form.position ?? ""} onChange={set("position")} />
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={form.position ?? ""} onChange={set("position")}
+                >
+                  <option value="">Sin cargo</option>
+                  {jobPositions.filter((p) => p.isActive).map((p) => (
+                    <option key={p.id} value={p.name}>{p.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1.5">
                 <Label>Departamento</Label>
@@ -208,6 +222,13 @@ function EditUserModal({
     enabled:  !!orgId,
   })
   const departments = deptRes?.data ?? []
+
+  const { data: posRes } = useQuery({
+    queryKey: ["jobPositions", orgId],
+    queryFn:  () => jobPositionsApi.list(orgId).then((r) => r.data),
+    enabled:  !!orgId,
+  })
+  const jobPositions = posRes?.data ?? []
 
   const set = (k: keyof UpdatePersonRequest) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -280,7 +301,15 @@ function EditUserModal({
           </div>
           <div className="space-y-1.5">
             <Label>Cargo</Label>
-            <Input placeholder="ej. Analista de datos" value={form.position ?? ""} onChange={set("position")} />
+            <select
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              value={form.position ?? ""} onChange={set("position")}
+            >
+              <option value="">Sin cargo</option>
+              {jobPositions.filter((p) => p.isActive).map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1.5">
             <Label>Departamento</Label>

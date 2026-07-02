@@ -167,6 +167,9 @@ public class RectificacionService {
         request.setStatus(ArcoStatus.RESPONDIDA);
         request.setResolvedAt(LocalDateTime.now());
         request.setResolutionSummary(detail.getResponseSummary());
+        if (dto != null && dto.getResolvedByEmail() != null) {
+            request.setResolvedByEmail(dto.getResolvedByEmail());
+        }
 
         autoLiftBlock(request);
         rectificationRequestRepository.save(detail);

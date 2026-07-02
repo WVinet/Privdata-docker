@@ -36,6 +36,12 @@ public class AgencyClaim {
     @Column(name = "organization_id", nullable = false)
     private UUID organizationId;
 
+    @Column(name = "organization_name")
+    private String organizationName;
+
+    @Column(name = "organization_email")
+    private String organizationEmail;
+
     @Column(name = "data_subject_id", nullable = false)
     private UUID dataSubjectId;
 

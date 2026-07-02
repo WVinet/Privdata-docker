@@ -5,4 +5,5 @@ import lombok.Data;
 @Data
 public class RectificationResponseDTO {
     private String observations;
+    private String resolvedByEmail;
 }

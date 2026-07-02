@@ -33,6 +33,8 @@ public class AgencyClaimService {
         AgencyClaim claim = new AgencyClaim();
         claim.setArcoRequestId(dto.getArcoRequestId());
         claim.setOrganizationId(dto.getOrganizationId());
+        claim.setOrganizationName(dto.getOrganizationName());
+        claim.setOrganizationEmail(dto.getOrganizationEmail());
         claim.setDataSubjectId(dto.getDataSubjectId());
         claim.setDataSubjectName(dto.getDataSubjectName());
         claim.setDataSubjectEmail(dto.getDataSubjectEmail());

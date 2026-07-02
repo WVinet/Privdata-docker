@@ -25,6 +25,7 @@ public class DataInitializer implements CommandLineRunner {
     private final AdminProperties adminProperties;
     private final TitularProperties titularProperties;
     private final AgencyAuditorProperties agencyAuditorProperties;
+    private final OrgAuditorProperties orgAuditorProperties;
 
     @Override
     public void run(String... args){
@@ -34,14 +35,14 @@ public class DataInitializer implements CommandLineRunner {
         seedSuperAdmin();
         seedTestTitular();
         seedTestAgencyAuditor();
+        seedTestOrgAuditor();
     }
 
     private void seedRoles(){
         List<String> roleNames = List.of(
                 "SUPER_ADMIN",
-                "ORG_ADMIN",
-                "ANALYST",
                 "AUDITOR",
+                "AUDITOR_AGENCIA",
                 "END_USER",
                 // Rol del "tercero simulado" (Agencia de Protección de Datos) — sin permisos finos,
                 // el rol mismo es el gate de acceso al panel de Agencia-service.
@@ -107,41 +108,24 @@ public class DataInitializer implements CommandLineRunner {
         // SUPER_ADMIN tendrá todos los permisos
         assignAllPermissionsToRole("SUPER_ADMIN");
 
-        // ORG_ADMIN tendrá permisos de administración operativa
-        assignPermissionToRole("ORG_ADMIN", "USER", "VIEW");
-        assignPermissionToRole("ORG_ADMIN", "USER", "CREATE");
-        assignPermissionToRole("ORG_ADMIN", "USER", "UPDATE");
-        assignPermissionToRole("ORG_ADMIN", "ROLE", "VIEW");
-        assignPermissionToRole("ORG_ADMIN", "ROLE", "ASSIGN");
-        assignPermissionToRole("ORG_ADMIN", "ARCO", "VIEW");
-        assignPermissionToRole("ORG_ADMIN", "ARCO", "CREATE");
-        assignPermissionToRole("ORG_ADMIN", "ARCO", "RESOLVE");
-        assignPermissionToRole("ORG_ADMIN", "RAT", "VIEW");
-        assignPermissionToRole("ORG_ADMIN", "RAT", "CREATE");
-        assignPermissionToRole("ORG_ADMIN", "RAT", "UPDATE");
-        assignPermissionToRole("ORG_ADMIN", "RAT", "EXPORT");
-        assignPermissionToRole("ORG_ADMIN", "AUDIT", "VIEW");
-
-        // ANALYST tendrá permisos funcionales, no tan administrativos
-        assignPermissionToRole("ANALYST", "ARCO", "VIEW");
-        assignPermissionToRole("ANALYST", "ARCO", "CREATE");
-        assignPermissionToRole("ANALYST", "ARCO", "RESOLVE");
-        assignPermissionToRole("ANALYST", "RAT", "VIEW");
-        assignPermissionToRole("ANALYST", "RAT", "CREATE");
-        assignPermissionToRole("ANALYST", "RAT", "UPDATE");
-
-        // AUDITOR tendrá permisos de solo lectura
-        assignPermissionToRole("AUDITOR", "AUDIT", "VIEW");
+        // AUDITOR: gestión operativa de ARCO y RAT (solo lectura/export para RAT, puede invitar titulares)
         assignPermissionToRole("AUDITOR", "ARCO", "VIEW");
+        assignPermissionToRole("AUDITOR", "ARCO", "CREATE");
+        assignPermissionToRole("AUDITOR", "ARCO", "RESOLVE");
         assignPermissionToRole("AUDITOR", "RAT", "VIEW");
+        assignPermissionToRole("AUDITOR", "RAT", "EXPORT");
+        assignPermissionToRole("AUDITOR", "AUDIT", "VIEW");
         assignPermissionToRole("AUDITOR", "USER", "VIEW");
-        assignPermissionToRole("AUDITOR", "ROLE", "VIEW");
-        assignPermissionToRole("AUDITOR", "PERMISSION", "VIEW");
+        assignPermissionToRole("AUDITOR", "USER", "CREATE");
 
-        //END_USER tendra permisos ARCO y RAT de lectura y ARCO creacion
+        // AUDITOR_AGENCIA: lectura de auditoría, ARCO y RAT
+        assignPermissionToRole("AUDITOR_AGENCIA", "AUDIT", "VIEW");
+        assignPermissionToRole("AUDITOR_AGENCIA", "ARCO", "VIEW");
+        assignPermissionToRole("AUDITOR_AGENCIA", "RAT", "VIEW");
+
+        // END_USER (titular): solo puede ver y crear sus propias solicitudes ARCO
         assignPermissionToRole("END_USER", "ARCO", "VIEW");
         assignPermissionToRole("END_USER", "ARCO", "CREATE");
-        assignPermissionToRole("END_USER", "RAT", "VIEW");
     }
 
     private void seedSuperAdmin() {
@@ -274,6 +258,35 @@ public class DataInitializer implements CommandLineRunner {
         userRole.setAssignedBy(savedAuditor.getId());
         userRole.setExpiresAt(LocalDateTime.now().plusYears(99));
 
+        userRoleRepository.save(userRole);
+    }
+
+    private void seedTestOrgAuditor() {
+        UUID auditorPersonId = UUID.fromString(orgAuditorProperties.getPersonId());
+        if (userRepository.existsByEmail(orgAuditorProperties.getEmail())) return;
+
+        Role auditorRole = roleRepository.findByName("AUDITOR")
+                .orElseThrow(() -> new RuntimeException("Rol AUDITOR no encontrado"));
+
+        User auditor = new User();
+        auditor.setEmail(orgAuditorProperties.getEmail());
+        auditor.setPasswordHash(passwordEncoder.encode(orgAuditorProperties.getPassword()));
+        auditor.setOrganizationId(UUID.fromString(adminProperties.getOrganizationId()));
+        auditor.setPersonId(auditorPersonId);
+        auditor.setStatus(UserStatus.ACTIVE);
+        auditor.setActive(true);
+        auditor.setFailedLoginAttempts(0);
+        auditor.setLockedUntil(LocalDateTime.now());
+        auditor.setPasswordChangedAt(LocalDateTime.now());
+
+        User saved = userRepository.save(auditor);
+
+        UserRole userRole = new UserRole();
+        userRole.setUser(saved);
+        userRole.setRole(auditorRole);
+        userRole.setActive(true);
+        userRole.setAssignedBy(saved.getId());
+        userRole.setExpiresAt(LocalDateTime.now().plusYears(99));
         userRoleRepository.save(userRole);
     }
 

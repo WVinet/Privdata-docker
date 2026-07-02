@@ -22,4 +22,11 @@ public class AuthClient {
                 .retrieve()
                 .toBodilessEntity();
     }
+
+    public void disableByPersonId(UUID personId) {
+        restClient.post()
+                .uri(authServiceUrl + "/api/auth/users/by-person/" + personId + "/disable")
+                .retrieve()
+                .toBodilessEntity();
+    }
 }

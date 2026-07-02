@@ -39,7 +39,7 @@ export type ConsentStatus = "ACTIVE" | "REVOKED" | "EXPIRED" | "SUSPENDED"
 export type CollectionMethod = "WEB_PORTAL" | "ADMIN_PANEL" | "EMAIL" | "PHONE" | "IN_PERSON"
 export type LegalBasis =
   | "CONSENTIMIENTO" | "CONTRATO" | "OBLIGACION_LEGAL"
-  | "INTERES_LEGITIMO" | "INTERES_VITAL" | "FUNCION_PUBLICA"
+  | "INTERES_LEGITIMO" | "INTERES_VITAL"
 export type TreatmentActivityStatus = "ACTIVE" | "INACTIVE" | "UNDER_REVIEW"
 
 export interface DataCategory {

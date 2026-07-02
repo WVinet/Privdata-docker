@@ -199,6 +199,10 @@ public class PortabilityService {
         ArcoRequest request =
                 detail.getArcoRequest();
 
+        if (dto.getResolvedByEmail() != null) {
+            request.setResolvedByEmail(dto.getResolvedByEmail());
+        }
+
         if (!dto.getApproved()) {
 
             detail.setDecision(
@@ -286,9 +290,21 @@ public class PortabilityService {
         ArcoRequest saved =
                 arcoRequestRepository.save(request);
 
-        notificarResolucion(saved);
+        notificarPortabilidadLista(saved);
 
         return saved;
+    }
+
+    private void notificarPortabilidadLista(ArcoRequest request) {
+        try {
+            PersonResponseDTO personResponse = organizationClient.findPersonById(
+                    request.getOrganizationId(), request.getDataSubjectId());
+            emailService.sendPortabilityReadyEmail(
+                    personResponse.getData().getEmail(),
+                    request.getId());
+        } catch (Exception ex) {
+            System.out.println("No se pudo enviar correo de portabilidad lista: " + ex.getMessage());
+        }
     }
 
     private String generatePortableJson(

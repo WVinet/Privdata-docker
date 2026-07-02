@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Loader2, FileSpreadsheet, Pencil, Search } from "lucide-react"
+import { Plus, Loader2, FileSpreadsheet, Pencil, Search, Eye } from "lucide-react"
 import { toast } from "sonner"
 import * as Dialog from "@radix-ui/react-dialog"
 import { complianceApi, terceroApi } from "@/lib/api"
@@ -27,7 +27,6 @@ const LEGAL_BASIS_OPTIONS: { value: LegalBasis; label: string }[] = [
   { value: "OBLIGACION_LEGAL", label: "Art. 13 — Obligación legal" },
   { value: "INTERES_LEGITIMO", label: "Art. 13 — Interés legítimo" },
   { value: "INTERES_VITAL",    label: "Art. 13 — Interés vital" },
-  { value: "FUNCION_PUBLICA",  label: "Art. 20 — Función pública" },
 ]
 
 const STATUS_FILTER_OPTIONS: { value: TreatmentActivityStatus | ""; label: string }[] = [
@@ -60,10 +59,13 @@ export default function RatPage() {
   const orgId = getUser()?.organizationId ?? ""
   const queryClient = useQueryClient()
 
+  const userRole = getUser()?.authorities?.find((a: string) => a.startsWith("ROLE_"))?.replace("ROLE_", "")
+  const isAuditor = userRole === "AUDITOR" || userRole === "AUDITOR_AGENCIA"
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<TreatmentActivityStatus | "">("")
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<TreatmentActivity | null>(null)
+  const [viewing, setViewing] = useState<TreatmentActivity | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ["rat", orgId],
@@ -170,15 +172,26 @@ export default function RatPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{fmt(activity.updatedAt)}</TableCell>
                       <TableCell className="text-right">
-                        <RequirePermission permission="RAT_UPDATE">
-                          <button
-                            onClick={() => setEditing(activity)}
-                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border font-medium hover:bg-muted transition-colors border-border text-muted-foreground"
-                          >
-                            <Pencil className="w-3 h-3" />
-                            Editar
-                          </button>
-                        </RequirePermission>
+                        <div className="flex items-center justify-end gap-2">
+                          {isAuditor && (
+                            <button
+                              onClick={() => setViewing(activity)}
+                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border font-medium hover:bg-muted transition-colors border-border text-muted-foreground"
+                            >
+                              <Eye className="w-3 h-3" />
+                              Ver detalle
+                            </button>
+                          )}
+                          <RequirePermission permission="RAT_UPDATE">
+                            <button
+                              onClick={() => setEditing(activity)}
+                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border font-medium hover:bg-muted transition-colors border-border text-muted-foreground"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Editar
+                            </button>
+                          </RequirePermission>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -196,6 +209,11 @@ export default function RatPage() {
         activity={editing}
         onClose={() => { setShowForm(false); setEditing(null) }}
         onSaved={invalidate}
+      />
+
+      <ActivityDetailDialog
+        activity={viewing}
+        onClose={() => setViewing(null)}
       />
     </div>
   )
@@ -517,6 +535,134 @@ function ActivityFormDialog({
               </button>
             </div>
           </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
+
+// ── read-only detail dialog (AUDITOR) ────────────────────────────────────────
+
+function ActivityDetailDialog({
+  activity, onClose,
+}: { activity: TreatmentActivity | null; onClose: () => void }) {
+  function formatRetention(days?: number | null): string {
+    if (!days) return "—"
+    if (days >= 365) { const y = Math.round(days / 365); return y === 1 ? "1 año" : `${y} años` }
+    if (days >= 30)  { const m = Math.round(days / 30);  return m === 1 ? "1 mes" : `${m} meses` }
+    return days === 1 ? "1 día" : `${days} días`
+  }
+
+  return (
+    <Dialog.Root open={!!activity} onOpenChange={(o) => { if (!o) onClose() }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg border border-border focus:outline-none max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 shrink-0">
+              <FileSpreadsheet className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <Dialog.Title className="text-base font-bold text-foreground">Detalle de actividad</Dialog.Title>
+              <Dialog.Description className="text-xs text-muted-foreground">Vista de solo lectura</Dialog.Description>
+            </div>
+          </div>
+
+          {activity && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                <div className="col-span-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Nombre</p>
+                  <p className="text-foreground font-medium">{activity.name}</p>
+                </div>
+                {activity.description && (
+                  <div className="col-span-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Descripción</p>
+                    <p className="text-foreground">{activity.description}</p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Finalidad</p>
+                  <p className="text-foreground">{activity.purpose}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Base legal</p>
+                  <p className="text-foreground text-xs">
+                    {LEGAL_BASIS_OPTIONS.find((o) => o.value === activity.legalBasis)?.label ?? activity.legalBasis}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Estado</p>
+                  <Badge variant={STATUS_VARIANT[activity.status]}>{STATUS_LABEL[activity.status]}</Badge>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Retención</p>
+                  <p className="text-foreground">{formatRetention(activity.retentionPeriodDays)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Datos sensibles</p>
+                  <p className="text-foreground">{activity.containsSensitiveData ? "Sí" : "No"}</p>
+                </div>
+                {activity.dataSubjectCategories && (
+                  <div className="col-span-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Categorías de titulares</p>
+                    <p className="text-foreground">{activity.dataSubjectCategories}</p>
+                  </div>
+                )}
+                {activity.securityMeasures && (
+                  <div className="col-span-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Medidas de seguridad</p>
+                    <p className="text-foreground">{activity.securityMeasures}</p>
+                  </div>
+                )}
+              </div>
+
+              {activity.dataCategories.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Categorías de datos</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {activity.dataCategories.map((cat) => (
+                      <span key={cat.id} className="text-xs px-2 py-0.5 rounded-full"
+                        style={cat.sensitive
+                          ? { background: "hsl(var(--destructive) / 0.08)", color: "hsl(var(--destructive))" }
+                          : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
+                        }
+                      >
+                        {cat.sensitive ? "⚠ " : ""}{cat.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(activity.terceros ?? []).length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Terceros destinatarios</p>
+                  <div className="space-y-1.5">
+                    {(activity.terceros ?? []).map((t) => (
+                      <div key={t.id} className="flex items-center gap-2 text-xs p-2.5 rounded-lg border border-border bg-muted/20">
+                        <span className="font-medium text-foreground">{t.nombre}</span>
+                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">{TERCERO_TIPO_LABELS[t.tipo]}</span>
+                        {t.pais !== "Chile" && (
+                          <span className="ml-auto text-amber-600 font-medium">{t.pais}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-5">
+            <button
+              onClick={onClose}
+              className="w-full px-4 py-2 text-xs rounded-lg border font-medium hover:bg-muted transition-colors border-border text-muted-foreground"
+            >
+              Cerrar
+            </button>
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
