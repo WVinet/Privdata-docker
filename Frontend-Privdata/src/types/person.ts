@@ -6,7 +6,9 @@ export interface Person {
   departmentId: string | null
   departmentName: string | null
   firstName: string
+  secondName: string | null
   lastName: string
+  maternalLastName: string | null
   fullName: string
   rut: string | null
   email: string | null
@@ -24,7 +26,9 @@ export interface Person {
 export interface InvitePersonRequest {
   rut: string
   firstName: string
+  secondName?: string
   lastName: string
+  maternalLastName?: string
   email: string
   position?: string
   departmentId?: string
@@ -33,7 +37,9 @@ export interface InvitePersonRequest {
 
 export interface UpdatePersonRequest {
   firstName: string
+  secondName?: string
   lastName: string
+  maternalLastName?: string
   email?: string
   rut?: string
   phone?: string

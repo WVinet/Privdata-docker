@@ -60,8 +60,10 @@ public class PersonService {
         person.setOrganization(organization);
         person.setDepartment(department);
         person.setFirstName(request.getFirstName());
+        person.setSecondName(request.getSecondName());
         person.setLastName(request.getLastName());
-        person.setFullName(buildFullName(request.getFirstName(), request.getLastName()));
+        person.setMaternalLastName(request.getMaternalLastName());
+        person.setFullName(buildFullName(request.getFirstName(), request.getSecondName(), request.getLastName(), request.getMaternalLastName()));
         person.setRut(request.getRut());
         person.setEmail(request.getEmail());
         person.setPhone(request.getPhone());
@@ -119,8 +121,10 @@ public class PersonService {
 
         person.setDepartment(department);
         person.setFirstName(request.getFirstName());
+        person.setSecondName(request.getSecondName());
         person.setLastName(request.getLastName());
-        person.setFullName(buildFullName(request.getFirstName(), request.getLastName()));
+        person.setMaternalLastName(request.getMaternalLastName());
+        person.setFullName(buildFullName(request.getFirstName(), request.getSecondName(), request.getLastName(), request.getMaternalLastName()));
         person.setRut(request.getRut());
         person.setEmail(request.getEmail());
         person.setPhone(request.getPhone());
@@ -203,8 +207,13 @@ public class PersonService {
         }
     }
 
-    private String buildFullName(String firstName, String lastName) {
-        return (firstName.trim() + " " + lastName.trim()).trim();
+    private String buildFullName(String firstName, String secondName, String lastName, String maternalLastName) {
+        List<String> parts = new java.util.ArrayList<>();
+        if (firstName != null && !firstName.isBlank())         parts.add(firstName.trim());
+        if (secondName != null && !secondName.isBlank())       parts.add(secondName.trim());
+        if (lastName != null && !lastName.isBlank())           parts.add(lastName.trim());
+        if (maternalLastName != null && !maternalLastName.isBlank()) parts.add(maternalLastName.trim());
+        return String.join(" ", parts);
     }
 
     private PersonResponseDTO toResponse(Person person) {
@@ -217,7 +226,9 @@ public class PersonService {
                 departmentId,
                 departmentName,
                 person.getFirstName(),
+                person.getSecondName(),
                 person.getLastName(),
+                person.getMaternalLastName(),
                 person.getFullName(),
                 person.getRut(),
                 person.getEmail(),
@@ -257,6 +268,16 @@ public class PersonService {
         personRepository.save(person);
     }
 
+    public void unblockDataSubject(UUID organizationId, UUID personId) {
+        Person person = getPersonOrThrow(organizationId, personId);
+        if (person.getDataStatus() != DataStatus.BLOCKED) {
+            return;
+        }
+        person.setBlocked(false);
+        person.setDataStatus(DataStatus.ACTIVE);
+        personRepository.save(person);
+    }
+
     public void deleteDataSubject(UUID organizationId, UUID personId){
 
         Person person = getPersonOrThrow(organizationId,personId);
@@ -288,7 +309,9 @@ public class PersonService {
         UUID personUuid = person.getId();
 
         person.setFirstName("ANONYMIZED");
+        person.setSecondName(null);
         person.setLastName("ANONYMIZED");
+        person.setMaternalLastName(null);
         person.setFullName("ANONYMIZED USER");
         person.setRut(null);
         person.setEmail("anon-" + personUuid + "@privdata.local");
@@ -326,31 +349,32 @@ public class PersonService {
                 requestDTO.getEmail()
         );
 
-        boolean firstNameChanged = false;
-        boolean lastNameChanged = false;
+        boolean nameChanged = false;
 
-        if (requestDTO.getFirstName() != null &&
-                !requestDTO.getFirstName().isBlank()) {
-
+        if (requestDTO.getFirstName() != null && !requestDTO.getFirstName().isBlank()) {
             person.setFirstName(requestDTO.getFirstName());
-            firstNameChanged = true;
+            nameChanged = true;
         }
-
-        if (requestDTO.getLastName() != null &&
-                !requestDTO.getLastName().isBlank()) {
-
+        if (requestDTO.getSecondName() != null) {
+            person.setSecondName(requestDTO.getSecondName().isBlank() ? null : requestDTO.getSecondName());
+            nameChanged = true;
+        }
+        if (requestDTO.getLastName() != null && !requestDTO.getLastName().isBlank()) {
             person.setLastName(requestDTO.getLastName());
-            lastNameChanged = true;
+            nameChanged = true;
+        }
+        if (requestDTO.getMaternalLastName() != null) {
+            person.setMaternalLastName(requestDTO.getMaternalLastName().isBlank() ? null : requestDTO.getMaternalLastName());
+            nameChanged = true;
         }
 
-        if (firstNameChanged || lastNameChanged) {
-
-            person.setFullName(
-                    buildFullName(
-                            person.getFirstName(),
-                            person.getLastName()
-                    )
-            );
+        if (nameChanged) {
+            person.setFullName(buildFullName(
+                    person.getFirstName(),
+                    person.getSecondName(),
+                    person.getLastName(),
+                    person.getMaternalLastName()
+            ));
         }
 
         if (requestDTO.getEmail() != null &&

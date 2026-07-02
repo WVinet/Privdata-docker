@@ -17,6 +17,7 @@ public class OrganizationResponseDTO {
     private String email;
     private String phone;
     private String address;
+    private String description;
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -33,6 +34,7 @@ public class OrganizationResponseDTO {
             String email,
             String phone,
             String address,
+            String description,
             Boolean isActive,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
@@ -45,6 +47,7 @@ public class OrganizationResponseDTO {
         this.email = email;
         this.phone = phone;
         this.address = address;
+        this.description = description;
         this.isActive = isActive;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -112,6 +115,14 @@ public class OrganizationResponseDTO {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public Boolean getIsActive() {

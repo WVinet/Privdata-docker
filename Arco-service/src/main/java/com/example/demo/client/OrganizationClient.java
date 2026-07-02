@@ -46,6 +46,16 @@ public class OrganizationClient {
                 .toBodilessEntity();
     }
 
+    public void unblockDataSubject(UUID organizationId, UUID dataSubjectId) {
+        orgClient.post()
+                .uri(organizationServiceUrl
+                        + "/api/organizations/" + organizationId
+                        + "/persons/" + dataSubjectId
+                        + "/unblock")
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     public void deleteDataSubject(UUID organizationId, UUID dataSubjectId) {
         orgClient.post()
                 .uri(organizationServiceUrl

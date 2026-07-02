@@ -7,9 +7,13 @@ import com.example.demo.dto.request.arcoRequest.ArcoRequestCreateDTO;
 import com.example.demo.model.ArcoRequest;
 import com.example.demo.shared.ApiResponseDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.util.UUID;
 
 @RestController
@@ -56,6 +60,29 @@ public class AccessController {
                 "Solicitud de acceso creada correctamente",
                 accesoService.crear(dto)
         ));
+    }
+
+    @PostMapping("/{requestId}/response-document")
+    public ResponseEntity<ApiResponseDTO<ArcoRequest>> uploadResponseDocument(
+            @PathVariable UUID requestId,
+            @RequestParam("file") MultipartFile file) {
+
+        ArcoRequest updated = accesoService.uploadResponseDocument(requestId, file);
+        return ResponseEntity.ok(new ApiResponseDTO<>(
+                true, "Documento de respuesta adjuntado correctamente", updated));
+    }
+
+    @GetMapping("/{requestId}/response-document")
+    public ResponseEntity<byte[]> downloadResponseDocument(@PathVariable UUID requestId) {
+        try (InputStream stream = accesoService.downloadResponseDocument(requestId)) {
+            String contentType = accesoService.getResponseDocumentContentType(requestId);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment")
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .body(stream.readAllBytes());
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
 

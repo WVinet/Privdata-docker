@@ -107,6 +107,46 @@ public class ComplianceBffService {
         return result;
     }
 
+    public Object getTerceros(String organizationId, Boolean onlyActive) {
+        return complianceClient.getTerceros(organizationId, onlyActive);
+    }
+
+    public Object getTerceroById(String id) {
+        return complianceClient.getTerceroById(id);
+    }
+
+    public Object createTercero(Object body, String authorization) {
+        Object result = complianceClient.createTercero(body);
+        String orgId = null;
+        String nombre = "nuevo tercero";
+        if (body instanceof Map<?, ?> m) {
+            Object o = m.get("organizationId");
+            Object n = m.get("nombre");
+            if (o != null) orgId  = o.toString();
+            if (n != null) nombre = n.toString();
+        }
+        auditClient.log(orgId, "CREATE", "Tercero",
+                "Tercero registrado: \"" + nombre + "\"",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object updateTercero(String id, Object body, String authorization) {
+        Object result = complianceClient.updateTercero(id, body);
+        auditClient.log(null, "UPDATE", "Tercero",
+                "Tercero actualizado (id: " + id + ")",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object deleteTercero(String id, String authorization) {
+        Object result = complianceClient.deleteTercero(id);
+        auditClient.log(null, "DELETE", "Tercero",
+                "Tercero eliminado (id: " + id + ")",
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
     public Object setConsentDefinitionActive(String id, boolean value, String authorization) {
         Object result = complianceClient.setConsentDefinitionActive(id, value);
         String action = value ? "PUBLICAR" : "RETIRAR";

@@ -7,7 +7,9 @@ import com.privdata.bff_api.client.OrganizationClient;
 import com.privdata.bff_api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -227,6 +229,63 @@ public class ArcoBffService {
 
     public org.springframework.http.ResponseEntity<byte[]> downloadPortability(String id) {
         return arcoClient.downloadPortability(id);
+    }
+
+    public Object uploadRectificationDocument(String id, MultipartFile file, String authorization) {
+        Object result = arcoClient.uploadRectificationDocument(id, file);
+        String orgId = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Documento de respaldo adjuntado a solicitud de rectificación " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public ResponseEntity<byte[]> downloadRectificationDocument(String id) {
+        return arcoClient.downloadRectificationDocument(id);
+    }
+
+    public Object uploadAccessResponseDocument(String id, MultipartFile file, String authorization) {
+        Object result = arcoClient.uploadAccessResponseDocument(id, file);
+        String orgId = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Documento PDF de respuesta adjuntado a solicitud de acceso " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public ResponseEntity<byte[]> downloadAccessResponseDocument(String id) {
+        return arcoClient.downloadAccessResponseDocument(id);
+    }
+
+    public Object uploadOppositionDocument(String id, MultipartFile file, String authorization) {
+        Object result = arcoClient.uploadOppositionDocument(id, file);
+        String orgId = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Documento de respaldo adjuntado a solicitud de oposición " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public ResponseEntity<byte[]> downloadOppositionDocument(String id) {
+        return arcoClient.downloadOppositionDocument(id);
+    }
+
+    public Object applyBlock(String id, String authorization) {
+        Object result = arcoClient.applyBlock(id, JwtUtil.extractEmail(authorization));
+        String orgId = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Bloqueo provisional aplicado para solicitud " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
+    }
+
+    public Object liftBlock(String id, String authorization) {
+        Object result = arcoClient.liftBlock(id);
+        String orgId = extractDataField(result, "organizationId");
+        auditClient.log(orgId, "UPDATE", "Solicitud ARSO",
+                "Bloqueo provisional levantado para solicitud " + id,
+                JwtUtil.extractEmail(authorization));
+        return result;
     }
 
     private String extractDataField(Object result, String key) {

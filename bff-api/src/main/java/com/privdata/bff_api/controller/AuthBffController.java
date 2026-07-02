@@ -108,9 +108,10 @@ public class AuthBffController {
             @RequestHeader("Authorization") String authorization,
             @RequestParam String organizationId,
             @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "50") int size
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false)    String search
     ) {
-        return ResponseEntity.ok(authBffService.getAuditLogs(authorization, organizationId, page, size));
+        return ResponseEntity.ok(authBffService.getAuditLogs(authorization, organizationId, page, size, search));
     }
 
     @PostMapping("/password/forgot")

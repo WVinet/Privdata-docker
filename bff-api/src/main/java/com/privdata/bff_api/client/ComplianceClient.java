@@ -86,6 +86,28 @@ public class ComplianceClient {
         return forward("PATCH", "/api/compliance/consent-definitions/" + id + "/active?value=" + value, null);
     }
 
+    public Object getTerceros(String organizationId, Boolean onlyActive) {
+        StringBuilder uri = new StringBuilder("/api/compliance/terceros?organizationId=").append(organizationId);
+        if (Boolean.TRUE.equals(onlyActive)) uri.append("&onlyActive=true");
+        return forward("GET", uri.toString(), null);
+    }
+
+    public Object getTerceroById(String id) {
+        return forward("GET", "/api/compliance/terceros/" + id, null);
+    }
+
+    public Object createTercero(Object body) {
+        return forward("POST", "/api/compliance/terceros", body);
+    }
+
+    public Object updateTercero(String id, Object body) {
+        return forward("PUT", "/api/compliance/terceros/" + id, body);
+    }
+
+    public Object deleteTercero(String id) {
+        return forward("DELETE", "/api/compliance/terceros/" + id, null);
+    }
+
     private Object forward(String method, String uri, Object body) {
         try {
             var spec = complianceRestClient

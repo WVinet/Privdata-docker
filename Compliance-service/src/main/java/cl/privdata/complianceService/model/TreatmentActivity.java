@@ -56,6 +56,13 @@ public class TreatmentActivity {
     @Column(name = "security_measures", columnDefinition = "TEXT")
     private String securityMeasures;
 
+    // Decisiones automatizadas / perfilamiento - Art. 9 Ley 21.719
+    @Column(name = "has_automated_decisions", nullable = false, columnDefinition = "boolean default false")
+    private boolean hasAutomatedDecisions = false;
+
+    @Column(name = "profiling_description", columnDefinition = "TEXT")
+    private String profilingDescription;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TreatmentActivityStatus status = TreatmentActivityStatus.ACTIVE;
@@ -113,6 +120,12 @@ public class TreatmentActivity {
 
     public String getSecurityMeasures() { return securityMeasures; }
     public void setSecurityMeasures(String securityMeasures) { this.securityMeasures = securityMeasures; }
+
+    public boolean isHasAutomatedDecisions() { return hasAutomatedDecisions; }
+    public void setHasAutomatedDecisions(boolean hasAutomatedDecisions) { this.hasAutomatedDecisions = hasAutomatedDecisions; }
+
+    public String getProfilingDescription() { return profilingDescription; }
+    public void setProfilingDescription(String profilingDescription) { this.profilingDescription = profilingDescription; }
 
     public TreatmentActivityStatus getStatus() { return status; }
     public void setStatus(TreatmentActivityStatus status) { this.status = status; }

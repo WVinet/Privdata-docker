@@ -140,18 +140,21 @@ services:
     container_name: privdata-arco-service
     restart: on-failure
     depends_on:
-      postgres-arco:
-        condition: service_healthy
-      organization-service:
-        condition: service_started
+      - postgres-arco
+      - organization-service
+      - minio
     environment:
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-arco:5432/arco_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
       ORGANIZATION_SERVICE_URL: http://organization-service:8081
-      MAIL_USERNAME: ${MAIL_USERNAME:-test@privdata.cl}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-test}
+      AUTH_SERVICE_URL: http://auth-service:8080
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin123}
     ports:
       - "8082:8082"
     volumes:
@@ -254,9 +257,24 @@ services:
     ports:
       - "5174:80"
 
+  minio:
+    image: minio/minio:latest
+    container_name: privdata-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
 volumes:
   postgres_auth_data:
   postgres_organization_data:
   postgres_arco_data:
   postgres_compliance_data:
   postgres_agencia_data:
+  minio_data:
+  

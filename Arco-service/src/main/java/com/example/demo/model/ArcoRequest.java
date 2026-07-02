@@ -116,6 +116,35 @@ public class ArcoRequest {
     @Column(name = "agency_resolution", nullable = true, columnDefinition = "TEXT")
     private String agencyResolution;
 
+    // Medida provisional de bloqueo durante la investigación de la solicitud
+    @Column(name = "block_applied_at", nullable = true)
+    private LocalDateTime blockAppliedAt;
+
+    @Column(name = "block_lifted_at", nullable = true)
+    private LocalDateTime blockLiftedAt;
+
+    @Column(name = "block_applied_by_email", nullable = true)
+    private String blockAppliedByEmail;
+
+    @Column(name = "block_scope", nullable = true, columnDefinition = "TEXT")
+    private String blockScope;
+
+    // Nombre original del documento de respaldo adjuntado por el titular (uso: Rectificación)
+    @Column(name = "supporting_document_key", nullable = true, columnDefinition = "TEXT")
+    private String supportingDocumentKey;
+
+    @JsonIgnore
+    @Column(name = "supporting_document_data", nullable = true, columnDefinition = "bytea")
+    private byte[] supportingDocumentData;
+
+    // Nombre original del PDF de respuesta adjuntado por el responsable (uso: Acceso)
+    @Column(name = "response_document_key", nullable = true, columnDefinition = "TEXT")
+    private String responseDocumentKey;
+
+    @JsonIgnore
+    @Column(name = "response_document_data", nullable = true, columnDefinition = "bytea")
+    private byte[] responseDocumentData;
+
     @Column(name = "agency_responded_at", nullable = true)
     private LocalDateTime agencyRespondedAt;
 

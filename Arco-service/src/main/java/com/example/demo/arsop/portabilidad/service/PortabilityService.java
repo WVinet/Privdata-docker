@@ -166,6 +166,7 @@ public class PortabilityService {
             request.setResolutionSummary(
                     dto.getComment()
             );
+            autoLiftBlock(request);
         }
 
         portabilityRequestRepository.save(detail);
@@ -228,6 +229,7 @@ public class PortabilityService {
                     dto.getRejectionReason()
             );
 
+            autoLiftBlock(request);
             portabilityRequestRepository.save(detail);
 
             ArcoRequest saved =
@@ -278,6 +280,7 @@ public class PortabilityService {
                 dto.getObservations()
         );
 
+        autoLiftBlock(request);
         portabilityRequestRepository.save(detail);
 
         ArcoRequest saved =
@@ -463,6 +466,12 @@ public class PortabilityService {
                     "No se pudo enviar correo de cambio de estado: "
                             + ex.getMessage()
             );
+        }
+    }
+
+    private void autoLiftBlock(ArcoRequest request) {
+        if (request.getBlockAppliedAt() != null && request.getBlockLiftedAt() == null) {
+            request.setBlockLiftedAt(LocalDateTime.now());
         }
     }
 

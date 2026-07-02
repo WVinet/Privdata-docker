@@ -232,6 +232,17 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public void updateEmailByPersonId(UUID personId, String newEmail) {
+        User user = userRepository.findByPersonId(personId).orElse(null);
+        if (user == null) return;
+        if (!user.getEmail().equalsIgnoreCase(newEmail) && userRepository.existsByEmail(newEmail)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El correo ya está en uso por otro usuario");
+        }
+        user.setEmail(newEmail);
+        userRepository.save(user);
+    }
+
+    @Override
     public void assignRoleToUser(UUID userId, String roleName) {
 
         User user = userRepository.findById(userId)

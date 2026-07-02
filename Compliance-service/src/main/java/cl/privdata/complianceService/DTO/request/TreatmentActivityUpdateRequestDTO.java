@@ -33,10 +33,14 @@ public class TreatmentActivityUpdateRequestDTO {
 
     private String securityMeasures;
 
+    private boolean hasAutomatedDecisions = false;
+    private String profilingDescription;
+
     @NotNull
     private TreatmentActivityStatus status;
 
     private List<UUID> dataCategoryIds;
+    private List<UUID> terceroIds;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -71,6 +75,15 @@ public class TreatmentActivityUpdateRequestDTO {
     public TreatmentActivityStatus getStatus() { return status; }
     public void setStatus(TreatmentActivityStatus status) { this.status = status; }
 
+    public boolean isHasAutomatedDecisions() { return hasAutomatedDecisions; }
+    public void setHasAutomatedDecisions(boolean hasAutomatedDecisions) { this.hasAutomatedDecisions = hasAutomatedDecisions; }
+
+    public String getProfilingDescription() { return profilingDescription; }
+    public void setProfilingDescription(String profilingDescription) { this.profilingDescription = profilingDescription; }
+
     public List<UUID> getDataCategoryIds() { return dataCategoryIds; }
     public void setDataCategoryIds(List<UUID> dataCategoryIds) { this.dataCategoryIds = dataCategoryIds; }
+
+    public List<UUID> getTerceroIds() { return terceroIds; }
+    public void setTerceroIds(List<UUID> terceroIds) { this.terceroIds = terceroIds; }
 }

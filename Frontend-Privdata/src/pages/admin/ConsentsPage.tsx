@@ -132,14 +132,13 @@ function RegistrosTab({ orgId }: { orgId: string }) {
 
   const { data: definitionsData } = useQuery({
     queryKey: ["consent-definitions", orgId],
-    queryFn: () => complianceApi.getConsentDefinitions(orgId).then((r) => r.data ?? []),
+    queryFn: () => complianceApi.getConsentDefinitions(orgId).then((r) => Array.isArray(r.data) ? r.data : []),
     enabled: !!orgId,
   })
 
   const personMap   = new Map<string, Person>((personsData?.data ?? []).map((p) => [p.id, p]))
-  const categoryMap = new Map(
-    (categoriesData ?? []).map((c: DataCategory) => [c.id, c]))
-  const defMap      = new Map<string, ConsentDefinition>((definitionsData ?? []).map((d) => [d.id, d]))
+  const categoryMap = new Map<string, DataCategory>((Array.isArray(categoriesData) ? categoriesData : []).map((c) => [c.id, c]))
+  const defMap      = new Map<string, ConsentDefinition>((Array.isArray(definitionsData) ? definitionsData : []).map((d) => [d.id, d]))
 
   const revokeMutation = useMutation({
     mutationFn: (id: string) => complianceApi.revokeConsent(id),
@@ -458,11 +457,11 @@ function DefinicionesTab({ orgId }: { orgId: string }) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["consent-definitions", orgId],
-    queryFn: () => complianceApi.getConsentDefinitions(orgId).then((r) => r.data ?? []),
+    queryFn: () => complianceApi.getConsentDefinitions(orgId).then((r) => Array.isArray(r.data) ? r.data : []),
     enabled: !!orgId,
   })
 
-  const definitions = data ?? []
+  const definitions = Array.isArray(data) ? data : []
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>

@@ -28,12 +28,13 @@ public class AuditLogController {
     public ResponseEntity<ApiResponseDTO<Page<AuditLogResponse>>> list(
             @RequestParam String organizationId,
             @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "50") int size
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false)    String search
     ) {
         return ResponseEntity.ok(new ApiResponseDTO<>(
                 true,
                 "Eventos de auditoría obtenidos",
-                auditLogService.list(organizationId, page, size)
+                auditLogService.list(organizationId, page, size, search)
         ));
     }
 }

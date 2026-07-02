@@ -130,9 +130,12 @@ public class AuthClient {
         return forward("POST", "/api/auth/me/activate", authorization, body);
     }
 
-    public Object getAuditLogs(String authorization, String organizationId, int page, int size) {
+    public Object getAuditLogs(String authorization, String organizationId, int page, int size, String search) {
         String uri = "/api/auth/audit?organizationId=" + organizationId
                 + "&page=" + page + "&size=" + size;
+        if (search != null && !search.isBlank()) {
+            uri += "&search=" + java.net.URLEncoder.encode(search.trim(), java.nio.charset.StandardCharsets.UTF_8);
+        }
         return forward("GET", uri, authorization, null);
     }
 

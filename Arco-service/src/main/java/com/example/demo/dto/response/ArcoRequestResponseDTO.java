@@ -50,6 +50,16 @@ public class ArcoRequestResponseDTO {
     private String agencyResolution;
     private LocalDateTime agencyRespondedAt;
 
+    // Documentos adjuntos
+    private String supportingDocumentKey;
+    private String responseDocumentKey;
+
+    // Medida provisional de bloqueo
+    private LocalDateTime blockAppliedAt;
+    private LocalDateTime blockLiftedAt;
+    private String blockAppliedByEmail;
+    private String blockScope;
+
     public static ArcoRequestResponseDTO fromEntity(ArcoRequest e) {
         ArcoRequestResponseDTO dto = new ArcoRequestResponseDTO();
         dto.setId(e.getId());
@@ -81,6 +91,12 @@ public class ArcoRequestResponseDTO {
         dto.setAgencyClaimId(e.getAgencyClaimId());
         dto.setAgencyResolution(e.getAgencyResolution());
         dto.setAgencyRespondedAt(e.getAgencyRespondedAt());
+        dto.setSupportingDocumentKey(e.getSupportingDocumentKey());
+        dto.setResponseDocumentKey(e.getResponseDocumentKey());
+        dto.setBlockAppliedAt(e.getBlockAppliedAt());
+        dto.setBlockLiftedAt(e.getBlockLiftedAt());
+        dto.setBlockAppliedByEmail(e.getBlockAppliedByEmail());
+        dto.setBlockScope(e.getBlockScope());
         return dto;
     }
 }

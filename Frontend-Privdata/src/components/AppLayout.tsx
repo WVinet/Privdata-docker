@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/AppSidebar"
 import { useAuth } from "@/hooks/use-auth"
 import { useState } from "react"
 import { Menu } from "lucide-react"
+import { Toaster } from "sonner"
 
 export function AppLayout() {
   const { isAuthenticated, getUser } = useAuth()
@@ -84,6 +85,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <Toaster richColors position="top-right" />
     </div>
   )
 }

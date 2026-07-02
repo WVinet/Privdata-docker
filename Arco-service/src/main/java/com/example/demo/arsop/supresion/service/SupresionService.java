@@ -125,6 +125,7 @@ public class SupresionService {
             request.setResolvedAt(LocalDateTime.now());
 
             request.setResolutionSummary(dto.getComment());
+            autoLiftBlock(request);
         }
 
         suppressionRequestRepository.save(detail);
@@ -186,7 +187,7 @@ public class SupresionService {
             request.setAgencyClaimDeadline(
                     BusinessDaysCalculator.calcularFechaLimite(LocalDateTime.now(), request.getRequestType())
             );
-
+            autoLiftBlock(request);
             suppressionRequestRepository.save(detail);
             ArcoRequest saved = arcoRequestRepository.save(request);
             notificarResolucion(saved);
@@ -207,7 +208,7 @@ public class SupresionService {
             request.setAgencyClaimDeadline(
                     BusinessDaysCalculator.calcularFechaLimite(LocalDateTime.now(), request.getRequestType())
             );
-
+            autoLiftBlock(request);
             suppressionRequestRepository.save(detail);
             ArcoRequest saved = arcoRequestRepository.save(request);
             notificarResolucion(saved);
@@ -244,11 +245,17 @@ public class SupresionService {
         request.setAgencyClaimDeadline(
                 BusinessDaysCalculator.calcularFechaLimite(LocalDateTime.now(), request.getRequestType())
         );
-
+        autoLiftBlock(request);
         suppressionRequestRepository.save(detail);
         ArcoRequest saved = arcoRequestRepository.save(request);
         notificarResolucion(saved);
         return saved;
+    }
+
+    private void autoLiftBlock(ArcoRequest request) {
+        if (request.getBlockAppliedAt() != null && request.getBlockLiftedAt() == null) {
+            request.setBlockLiftedAt(LocalDateTime.now());
+        }
     }
 
     private void notificarCreacion(ArcoRequest request) {

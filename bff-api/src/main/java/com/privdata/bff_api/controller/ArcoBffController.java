@@ -4,6 +4,7 @@ import com.privdata.bff_api.service.ArcoBffService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -189,6 +190,59 @@ public class ArcoBffController {
     @GetMapping("/portability/{id}/download")
     public ResponseEntity<byte[]> downloadPortability(@PathVariable String id) {
         return service.downloadPortability(id);
+    }
+
+    @PostMapping("/rectification/{id}/document")
+    public ResponseEntity<?> uploadRectificationDocument(
+            @PathVariable String id,
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.uploadRectificationDocument(id, file, authorization));
+    }
+
+    @GetMapping("/rectification/{id}/document")
+    public ResponseEntity<byte[]> downloadRectificationDocument(@PathVariable String id) {
+        return service.downloadRectificationDocument(id);
+    }
+
+    @PostMapping("/access/{id}/response-document")
+    public ResponseEntity<?> uploadAccessResponseDocument(
+            @PathVariable String id,
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.uploadAccessResponseDocument(id, file, authorization));
+    }
+
+    @GetMapping("/access/{id}/response-document")
+    public ResponseEntity<byte[]> downloadAccessResponseDocument(@PathVariable String id) {
+        return service.downloadAccessResponseDocument(id);
+    }
+
+    @PostMapping("/opposition/{id}/document")
+    public ResponseEntity<?> uploadOppositionDocument(
+            @PathVariable String id,
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.uploadOppositionDocument(id, file, authorization));
+    }
+
+    @GetMapping("/opposition/{id}/document")
+    public ResponseEntity<byte[]> downloadOppositionDocument(@PathVariable String id) {
+        return service.downloadOppositionDocument(id);
+    }
+
+    @PatchMapping("/{id}/block")
+    public ResponseEntity<?> applyBlock(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.applyBlock(id, authorization));
+    }
+
+    @PatchMapping("/{id}/unblock")
+    public ResponseEntity<?> liftBlock(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ResponseEntity.ok(service.liftBlock(id, authorization));
     }
 
 }

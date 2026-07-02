@@ -153,6 +153,10 @@ public class ArcoRequestService {
 
         solicitud.setStatus(dto.getNewStatus());
 
+        if (dto.getNewStatus() == ArcoStatus.CERRADA) {
+            solicitud.setClosedAt(LocalDateTime.now());
+        }
+
         if (dto.getComment() != null && !dto.getComment().isBlank()) {
             solicitud.setResolutionSummary(dto.getComment());
         }
@@ -163,6 +167,7 @@ public class ArcoRequestService {
             solicitud.setAgencyClaimDeadline(
                 deadlineCalculatorService.addBusinessDays(LocalDateTime.now(), 30)
             );
+            autoLiftBlock(solicitud);
             if (dto.getChangedByEmail() != null && !dto.getChangedByEmail().isBlank()) {
                 solicitud.setResolvedByEmail(dto.getChangedByEmail());
             }
@@ -277,6 +282,7 @@ public class ArcoRequestService {
         solicitud.setAgencyRespondedAt(respondedAt != null ? respondedAt : LocalDateTime.now());
         solicitud.setStatus(ArcoStatus.CERRADA);
         solicitud.setClosedAt(LocalDateTime.now());
+        autoLiftBlock(solicitud);
 
         ArcoRequestStatusHistory historial = new ArcoRequestStatusHistory();
         historial.setArcoRequest(solicitud);
@@ -379,6 +385,7 @@ public class ArcoRequestService {
             solicitud.setStatus(ArcoStatus.RESPONDIDA);
             solicitud.setResolvedAt(LocalDateTime.now());
             solicitud.setAgencyClaimDeadline(deadlineCalculatorService.addBusinessDays(LocalDateTime.now(), 30));
+            autoLiftBlock(solicitud);
 
             ArcoRequest saved = arcoRequestRepository.save(solicitud);
             notificarResolucion(saved);
@@ -388,6 +395,7 @@ public class ArcoRequestService {
             solicitud.setStatus(ArcoStatus.RECHAZADA);
             solicitud.setResolvedAt(LocalDateTime.now());
             solicitud.setAgencyClaimDeadline(deadlineCalculatorService.addBusinessDays(LocalDateTime.now(), 30));
+            autoLiftBlock(solicitud);
             solicitud.setResolutionSummary("Solicitud rechazada por la organización. " + ex.getResponseBodyAsString());
 
             ArcoRequest saved = arcoRequestRepository.save(solicitud);
@@ -409,6 +417,47 @@ public class ArcoRequestService {
     private void ejecutarAnonimizacion(ArcoRequest solicitud) {
         organizationClient.anonymizeDataSubject(solicitud.getOrganizationId(), solicitud.getDataSubjectId());
         solicitud.setResolutionSummary("Se ejecutó la cancelación mediante anonimización lógica. Los datos identificables serán reemplazados por valores no atribuibles.");
+    }
+
+    @Transactional
+    public ArcoRequestResponseDTO applyProvisionalBlock(UUID id, String adminEmail) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
+
+        if (solicitud.getBlockAppliedAt() != null && solicitud.getBlockLiftedAt() == null) {
+            throw new IllegalStateException("Esta solicitud ya tiene un bloqueo provisional activo.");
+        }
+        if (List.of(ArcoStatus.RESPONDIDA, ArcoStatus.RECHAZADA, ArcoStatus.CERRADA).contains(solicitud.getStatus())) {
+            throw new IllegalStateException("No se puede bloquear una solicitud ya resuelta.");
+        }
+
+        // No se modifica el acceso del titular al portal; solo se registra la
+        // suspensión provisional del tratamiento en disputa (Art. 11 Ley 21.719).
+        solicitud.setBlockAppliedAt(LocalDateTime.now());
+        solicitud.setBlockLiftedAt(null);
+        solicitud.setBlockAppliedByEmail(adminEmail);
+        solicitud.setBlockScope("Tratamiento en disputa suspendido preventivamente mientras dura la investigación");
+
+        return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
+    }
+
+    @Transactional
+    public ArcoRequestResponseDTO liftProvisionalBlock(UUID id) {
+        ArcoRequest solicitud = arcoRequestRepository.findById(id)
+                .orElseThrow(() -> new ArcoRequestNotFoundException(id));
+
+        if (solicitud.getBlockAppliedAt() == null || solicitud.getBlockLiftedAt() != null) {
+            throw new IllegalStateException("Esta solicitud no tiene un bloqueo provisional activo.");
+        }
+
+        autoLiftBlock(solicitud);
+        return ArcoRequestResponseDTO.fromEntity(arcoRequestRepository.save(solicitud));
+    }
+
+    private void autoLiftBlock(ArcoRequest solicitud) {
+        if (solicitud.getBlockAppliedAt() != null && solicitud.getBlockLiftedAt() == null) {
+            solicitud.setBlockLiftedAt(LocalDateTime.now());
+        }
     }
 
     private void notificarCreacion(ArcoRequest solicitud) {

@@ -32,6 +32,6 @@ public interface AuthService {
 
     UserResponseDTO getUserById(UUID userId);
 
-    void resendInvite(UUID userId);
+    void updateEmailByPersonId(UUID personId, String newEmail);
 
 }

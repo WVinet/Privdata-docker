@@ -20,11 +20,13 @@ import ArcoPage from "@/pages/admin/ArcoPage"
 import AuditPage from "@/pages/admin/AuditPage"
 import DeactivatedAccountsPage from "@/pages/admin/DeactivatedAccountsPage"
 import RatPage from "@/pages/admin/RatPage"
+import TercerosPage from "@/pages/admin/TercerosPage"
 
 // Admin — mantenedores
-import MiOrganizacionPage from "@/pages/admin/MiOrganizacionPage"
+import OrganizacionPage   from "@/pages/admin/OrganizacionPage"
+import DepartamentosPage  from "@/pages/admin/DepartamentosPage"
+import CargosPage         from "@/pages/admin/CargosPage"
 import UsersPage from "@/pages/admin/UsersPage"
-import RolesPage from "@/pages/admin/RolesPage"
 
 const queryClient = new QueryClient()
 
@@ -53,9 +55,12 @@ function App() {
             <Route path="/cuentas-desactivadas" element={<DeactivatedAccountsPage />} />
             <Route path="/auditoria"       element={<AuditPage />} />
 
-            <Route path="/admin/organizacion" element={<MiOrganizacionPage />} />
-            <Route path="/admin/usuarios"     element={<UsersPage />} />
-            <Route path="/admin/roles"        element={<RolesPage />} />
+            <Route path="/compliance/terceros" element={<TercerosPage />} />
+
+            <Route path="/admin/organizacion"   element={<OrganizacionPage />} />
+            <Route path="/admin/departamentos" element={<DepartamentosPage />} />
+            <Route path="/admin/cargos"        element={<CargosPage />} />
+            <Route path="/admin/usuarios"      element={<UsersPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

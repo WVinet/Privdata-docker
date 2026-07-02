@@ -22,6 +22,7 @@ import type {
   Consent, TreatmentActivity, DataCategory, ConsentPage, ConsentStatus,
   ConsentDefinition, ConsentCreateRequest,
   TreatmentActivityCreateRequest, TreatmentActivityUpdateRequest, TreatmentActivityStatus,
+  Tercero, TerceroCreateRequest, TerceroUpdateRequest,
 } from "@/types/compliance"
 import type { AuditPage } from "@/types/audit"
 
@@ -34,12 +35,19 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? "/api"
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
+  timeout: 30_000,
 })
 
-// Adjunta el JWT en cada request
+// Adjunta el JWT en cada request.
+// Para FormData, elimina el Content-Type del default (application/json) para que
+// axios/browser lo genere automáticamente con el multipart boundary correcto.
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem("privdata_token")
   if (token) config.headers.Authorization = `Bearer ${token}`
+  if (config.data instanceof FormData) {
+    // AxiosHeaders v1.x: usar el método delete() para quitar realmente el header
+    config.headers.delete("Content-Type")
+  }
   return config
 })
 
@@ -230,7 +238,7 @@ export const arcoApi = {
 
   createRectification: (
     arcoRequest: CreateArcoRequest,
-    rectificationData: Partial<Record<"firstName" | "lastName" | "rut" | "email" | "phone" | "position", string>>
+    rectificationData: Partial<Record<"firstName" | "secondName" | "lastName" | "maternalLastName" | "rut" | "email" | "phone" | "position", string>>
   ) =>
     api.post<ApiResponse<ArcoRequest>>("/arco/rectification", { arcoRequest, rectificationData }),
 
@@ -269,6 +277,39 @@ export const arcoApi = {
 
   downloadPortability: (id: string) =>
     api.get<Blob>(`/arco/portability/${id}/download`, { responseType: "blob" }),
+
+  uploadRectificationDocument: (id: string, file: File) => {
+    const form = new FormData()
+    form.append("file", file)
+    return api.post<ApiResponse<ArcoRequest>>(`/arco/rectification/${id}/document`, form)
+  },
+
+  downloadRectificationDocument: (id: string) =>
+    api.get<Blob>(`/arco/rectification/${id}/document`, { responseType: "blob" }),
+
+  uploadOppositionDocument: (id: string, file: File) => {
+    const form = new FormData()
+    form.append("file", file)
+    return api.post<ApiResponse<ArcoRequest>>(`/arco/opposition/${id}/document`, form)
+  },
+
+  downloadOppositionDocument: (id: string) =>
+    api.get<Blob>(`/arco/opposition/${id}/document`, { responseType: "blob" }),
+
+  uploadAccessResponseDocument: (id: string, file: File) => {
+    const form = new FormData()
+    form.append("file", file)
+    return api.post<ApiResponse<ArcoRequest>>(`/arco/access/${id}/response-document`, form)
+  },
+
+  downloadAccessResponseDocument: (id: string) =>
+    api.get<Blob>(`/arco/access/${id}/response-document`, { responseType: "blob" }),
+
+  applyBlock: (id: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/${id}/block`),
+
+  liftBlock: (id: string) =>
+    api.patch<ApiResponse<ArcoRequest>>(`/arco/${id}/unblock`),
 }
 
 // ── Compliance ────────────────────────────────────────────────────────────────
@@ -313,10 +354,27 @@ export const complianceApi = {
     api.get<ConsentDefinition[]>(`/compliance/consents/pending`, { params: { organizationId, personId } }),
 }
 
+export const terceroApi = {
+  list: (organizationId: string, onlyActive?: boolean) =>
+    api.get<Tercero[]>(`/compliance/terceros`, { params: { organizationId, onlyActive } }),
+
+  getById: (id: string) =>
+    api.get<Tercero>(`/compliance/terceros/${id}`),
+
+  create: (body: TerceroCreateRequest) =>
+    api.post<Tercero>(`/compliance/terceros`, body),
+
+  update: (id: string, body: TerceroUpdateRequest) =>
+    api.put<Tercero>(`/compliance/terceros/${id}`, body),
+
+  delete: (id: string) =>
+    api.delete<void>(`/compliance/terceros/${id}`),
+}
+
 // ── Audit ─────────────────────────────────────────────────────────────────────
 export const auditApi = {
-  list: (organizationId: string, page = 0, size = 50) =>
-    api.get<ApiResponse<AuditPage>>("/auth/audit", { params: { organizationId, page, size } }),
+  list: (organizationId: string, page = 0, size = 50, search?: string) =>
+    api.get<ApiResponse<AuditPage>>("/auth/audit", { params: { organizationId, page, size, ...(search ? { search } : {}) } }),
 }
 
 export default api

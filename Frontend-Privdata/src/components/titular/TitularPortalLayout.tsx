@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react"
 import { Home, Bell, Scale, ClipboardList, Menu, X, LogOut } from "lucide-react"
+import { Toaster } from "sonner"
 import { cn } from "@/lib/utils"
 
 export type TitularTab = "inicio" | "consentimientos" | "arco" | "seguimiento"
@@ -283,6 +284,7 @@ export default function TitularPortalLayout({
           {children}
         </main>
       </div>
+      <Toaster richColors position="top-right" />
     </div>
   )
 }

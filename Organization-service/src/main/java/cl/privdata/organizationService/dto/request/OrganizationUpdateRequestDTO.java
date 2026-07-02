@@ -25,6 +25,8 @@ public class OrganizationUpdateRequestDTO {
 
     private String address;
 
+    private String description;
+
     public OrganizationUpdateRequestDTO() {
     }
 
@@ -82,5 +84,13 @@ public class OrganizationUpdateRequestDTO {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }
