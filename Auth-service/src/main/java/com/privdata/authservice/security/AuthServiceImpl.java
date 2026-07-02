@@ -130,7 +130,7 @@ public class AuthServiceImpl implements AuthService {
         userRole.setExpiresAt(LocalDateTime.now().plusYears(99));
         userRoleRepository.save(userRole);
 
-        emailService.sendInviteEmail(savedUser.getEmail(), request.getFirstName(), tempPassword);
+        emailService.sendInviteEmail(savedUser.getEmail(),  tempPassword);
 
         return new InviteResponseDTO(savedUser.getId(), savedUser.getEmail(), tempPassword);
     }
@@ -277,4 +277,25 @@ public class AuthServiceImpl implements AuthService {
 
         userRoleRepository.save(userRole);
     }
+
+    @Override
+        public void resendInvite(UUID userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Usuario no encontrado"));
+
+        String tempPassword = UUID.randomUUID().toString().substring(0, 8);
+
+        user.setPasswordHash(passwordEncoder.encode(tempPassword));
+        user.setStatus(UserStatus.PENDING);
+
+        userRepository.save(user);
+
+        emailService.sendInviteEmail(
+                user.getEmail(),
+                tempPassword
+        );
+        }
 }
